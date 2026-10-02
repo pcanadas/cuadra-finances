@@ -226,6 +226,7 @@ Excluye de todos los cálculos: `esTransferencia`. Excluye de gastos: `esIngreso
 - Tabla paginada (20/página).
 - Filtros: mes, categoría (alfabético), texto libre en descripción.
 - Selector de categoría por fila (asignación manual → `categoriaManual: true`).
+- **Selección múltiple**: checkbox por fila + checkbox de cabecera para seleccionar toda la página. Al seleccionar uno o más, aparece una barra de acción con selector de categoría y botón "Aplicar". Usa `bulkUpdateTransactions` con `categoriaManual: true`. Las descripciones de estos movimientos **no** se evalúan para sugerir ni añadir etiquetas a categorías.
 
 ### `/importar` — Importar
 
@@ -248,7 +249,8 @@ Excluye de todos los cálculos: `esTransferencia`. Excluye de gastos: `esIngreso
 
 - Panel izquierdo: lista de categorías **ordenada alfabéticamente** con contador de subcategorías.
 - Panel derecho: subcategorías + tabla de movimientos de esa categoría.
-- Formulario de añadir subcategoría con nombre, keywords y color.
+- **Gestión de etiquetas con chips**: las palabras clave se muestran como chips en vista normal y se editan con el componente `KeywordEditor` (Enter o coma para añadir, × para eliminar, Backspace para borrar el último). Se normalizan a mayúsculas automáticamente. Igual tanto al editar una subcategoría existente como al crear una nueva.
+- Selector de color al crear y al editar.
 - **Auto-aprendizaje**: al asignar manualmente una subcategoría, `extractKeyword` añade la keyword si no existía.
 - **Auto-asignar**: aplica `categorizeSubcategory` en lote sobre movimientos no manuales.
 - Filtros en la tabla: año, mes, subcategoría, texto.
