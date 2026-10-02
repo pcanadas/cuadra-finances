@@ -1,8 +1,10 @@
 import { useState, useRef, useCallback } from 'react'
 import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
+import useSubcategoryStore from '../store/useSubcategoryStore'
 import { parseFile, mapRows } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
+import db from '../db/db'
 
 const REQUIRED_FIELDS = ['fechaContable', 'descripcion', 'importe']
 
@@ -16,6 +18,55 @@ export default function Importar() {
   const totalTransactions = useTransactionStore((s) => s.transactions.length)
   const categories = useCategoryStore((s) => s.categories)
   const [confirmClear, setConfirmClear] = useState(false)
+
+  const [backupStatus, setBackupStatus] = useState(null) // null | 'restoring' | 'ok' | 'error'
+  const backupRef = useRef()
+
+  async function handleExportBackup() {
+    const [transactions, cats, subcats] = await Promise.all([
+      db.transactions.toArray(),
+      db.categories.toArray(),
+      db.subcategories.toArray(),
+    ])
+    const payload = { version: 1, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats }
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  async function handleImportBackup(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setBackupStatus('restoring')
+    try {
+      const text = await file.text()
+      const payload = JSON.parse(text)
+      if (!payload.version || !payload.transactions || !payload.categories) throw new Error('Formato de backup no válido')
+      await db.transaction('rw', db.transactions, db.categories, db.subcategories, async () => {
+        await db.transactions.clear()
+        await db.categories.clear()
+        await db.subcategories.clear()
+        if (payload.transactions.length)  await db.transactions.bulkPut(payload.transactions)
+        if (payload.categories.length)    await db.categories.bulkPut(payload.categories)
+        if (payload.subcategories?.length) await db.subcategories.bulkPut(payload.subcategories)
+      })
+      // Reload all stores from DB
+      await Promise.all([
+        useTransactionStore.getState().loadFromDB(),
+        useCategoryStore.getState().loadFromDB(),
+        useSubcategoryStore.getState().loadFromDB(),
+      ])
+      setBackupStatus('ok')
+    } catch (err) {
+      console.error(err)
+      setBackupStatus('error')
+    }
+    e.target.value = ''
+  }
 
   const [step, setStep] = useState('upload') // upload | mapping | preview | done
   const [rawRows, setRawRows] = useState([])
@@ -140,6 +191,30 @@ export default function Importar() {
             )}
           </div>
         )}
+      </div>
+
+      {/* Backup / restore panel */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 mb-6">
+        <p className="text-sm font-semibold text-slate-700 mb-1">Copia de seguridad</p>
+        <p className="text-xs text-slate-400 mb-4">Exporta todos tus datos (movimientos, categorías y subcategorías) a un fichero JSON para guardarlos o migrarlos a otra instalación.</p>
+        <div className="flex flex-wrap gap-3 items-center">
+          <button
+            onClick={handleExportBackup}
+            className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
+          >
+            ⬇ Exportar backup
+          </button>
+          <button
+            onClick={() => backupRef.current?.click()}
+            className="px-4 py-2 text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+          >
+            ⬆ Restaurar backup
+          </button>
+          <input ref={backupRef} type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
+          {backupStatus === 'restoring' && <span className="text-xs text-slate-400 animate-pulse">Restaurando…</span>}
+          {backupStatus === 'ok'        && <span className="text-xs text-emerald-600 font-medium">✓ Backup restaurado correctamente</span>}
+          {backupStatus === 'error'     && <span className="text-xs text-red-600 font-medium">✗ Error al restaurar — comprueba que el fichero es un backup válido</span>}
+        </div>
       </div>
 
       {/* Step indicator */}

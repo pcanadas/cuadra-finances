@@ -1,6 +1,6 @@
 # Cuadra Finances
 
-Aplicación web de gestión de finanzas del hogar. Importa extractos bancarios (Bankinter y formato genérico CSV/Excel), categoriza movimientos automáticamente por palabras clave y muestra dashboards con desglose mensual por categoría y subcategoría.
+Aplicación de gestión de finanzas del hogar empaquetada como app de escritorio nativa con Tauri. Importa extractos bancarios (Bankinter y formato genérico CSV/Excel), categoriza movimientos automáticamente por palabras clave y muestra dashboards con desglose mensual por categoría y subcategoría.
 
 ---
 
@@ -18,6 +18,7 @@ Aplicación web de gestión de finanzas del hogar. Importa extractos bancarios (
 | Parseo Excel | XLSX 0.18 |
 | Fechas | date-fns 4 |
 | Linting | Oxlint |
+| App de escritorio | Tauri 2 |
 
 ---
 
@@ -25,12 +26,46 @@ Aplicación web de gestión de finanzas del hogar. Importa extractos bancarios (
 
 ```bash
 npm install
-npm run dev
+npm run dev          # solo frontend en el navegador
+npm run tauri:dev    # app de escritorio con hot-reload (requiere Rust)
 ```
 
 ---
 
+## Generar instalador
+
+```bash
+npm run tauri:build
+```
+
+Genera los instaladores en `src-tauri/target/release/bundle/`:
+- `msi/Cuadra_x.x.x_x64_en-US.msi` — instalador Windows clásico
+- `nsis/Cuadra_x.x.x_x64-setup.exe` — instalador NSIS (recomendado para distribución)
+
+**Requisitos para compilar:** Rust + cargo instalados, WebView2 (incluido en Windows 11).
+
+---
+
+## Copia de seguridad y migración de datos
+
+Desde la página **Importar** hay un panel "Copia de seguridad":
+
+- **Exportar backup** — descarga un fichero `cuadra-backup-YYYY-MM-DD.json` con todas las transacciones, categorías y subcategorías
+- **Restaurar backup** — carga ese fichero y reemplaza todos los datos actuales
+
+Útil para migrar entre instalaciones (p.ej. del navegador a la app de escritorio Tauri) o para hacer backups periódicos.
+
+---
+
 ## Estructura del proyecto
+
+```bash
+src-tauri/               # Core Tauri (Rust)
+├── tauri.conf.json      # Configuración: nombre, ventana, bundle, identificador
+├── icons/               # Iconos generados con `npx tauri icon app-icon.svg`
+├── capabilities/        # Permisos de la app
+└── src/main.rs          # Entry point Rust
+```
 
 ```
 src/
@@ -51,6 +86,7 @@ src/
 │   └── ThemeContext.jsx      # Proveedor de tema oscuro/claro
 ├── hooks/
 │   └── useDarkMode.js        # Toggle dark mode + persistencia en localStorage
+app-icon.svg                  # Icono fuente (1024×1024) para generar todos los tamaños
 ├── utils/
 │   ├── categorize.js        # Lógica de auto-categorización
 │   └── importParsers.js     # Parsers CSV/Excel/Bankinter

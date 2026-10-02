@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Background rounded square -->
+  <rect width="1024" height="1024" rx="224" ry="224" fill="#1a2e38"/>
+
+  <!-- Inner card / panel shape -->
+  <rect x="112" y="160" width="800" height="704" rx="80" ry="80" fill="#233d4c"/>
+
+  <!-- Top accent bar -->
+  <rect x="112" y="160" width="800" height="12" rx="6" ry="6" fill="#fd802e"/>
+
+  <!-- Bar chart bars -->
+  <!-- Bar 1 (short) -->
+  <rect x="200" y="580" width="100" height="200" rx="14" ry="14" fill="#fd802e" opacity="0.7"/>
+  <!-- Bar 2 (tall) -->
+  <rect x="340" y="400" width="100" height="380" rx="14" ry="14" fill="#fd802e"/>
+  <!-- Bar 3 (medium) -->
+  <rect x="480" y="490" width="100" height="290" rx="14" ry="14" fill="#fd802e" opacity="0.85"/>
+  <!-- Bar 4 (tallest) -->
+  <rect x="620" y="330" width="100" height="450" rx="14" ry="14" fill="#fd802e"/>
+
+  <!-- Trend line over bars -->
+  <polyline
+    points="250,560 390,390 530,470 670,320 780,300"
+    fill="none"
+    stroke="#ffffff"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    opacity="0.55"
+  />
+
+  <!-- Dot on last point -->
+  <circle cx="780" cy="300" r="22" fill="#ffffff" opacity="0.7"/>
+
+  <!-- Bottom label strip -->
+  <rect x="112" y="820" width="800" height="44" rx="0" ry="0" fill="#1a2e38" opacity="0.5"/>
+  <rect x="112" y="852" width="800" height="12" rx="6" ry="6" fill="#1a2e38"/>
+
+  <!-- "C" letter watermark bottom-right -->
+  <text x="810" y="790" font-family="system-ui, sans-serif" font-weight="800" font-size="110" fill="#fd802e" opacity="0.18" text-anchor="middle">C</text>
+</svg>
