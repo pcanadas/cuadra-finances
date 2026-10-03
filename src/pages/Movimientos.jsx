@@ -381,14 +381,6 @@ export default function Movimientos() {
           </select>
         </div>
         <div>
-          <label className="text-xs font-medium text-slate-500 block mb-1">Cuenta</label>
-          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={filterAccount} onChange={(e) => { setFilterAccount(e.target.value); setPage(1) }}>
-            <option value="">Todas las cuentas</option>
-            {accounts.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-          </select>
-        </div>
-        <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Buscar</label>
           <input type="text" placeholder="Buscar en descripción..." value={filterText}
             onChange={(e) => { setFilterText(e.target.value); setPage(1) }}
@@ -396,8 +388,8 @@ export default function Movimientos() {
         </div>
         <div className="flex items-end gap-3">
           <span className="text-sm text-slate-400 pb-1">{filtered.length} registros</span>
-          {(filterMonth || filterCategory || filterText || filterAccount) && (
-            <button onClick={() => { setFilterMonth(''); setFilterCategory(''); setFilterText(''); setFilterAccount(''); setPage(1) }}
+          {(filterMonth || filterCategory || filterText) && (
+            <button onClick={() => { setFilterMonth(''); setFilterCategory(''); setFilterText(''); setPage(1) }}
               className="text-xs text-indigo-600 hover:text-indigo-800 underline pb-1">
               Limpiar filtros
             </button>
