@@ -8,6 +8,7 @@ const links = [
   { to: '/importar', label: 'Importar' },
   { to: '/categorias', label: 'Categorías' },
   { to: '/subcategorias', label: 'Subcategorías' },
+  { to: '/acerca', label: 'Acerca de' },
 ]
 
 export default function Navbar() {

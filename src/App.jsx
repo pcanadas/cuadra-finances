@@ -9,6 +9,7 @@ import Importar from './pages/Importar'
 import Categorias from './pages/Categorias'
 import Subcategorias from './pages/Subcategorias'
 import Cuentas from './pages/Cuentas'
+import Acerca from './pages/Acerca'
 import useTransactionStore from './store/useTransactionStore'
 import useCategoryStore from './store/useCategoryStore'
 import useSubcategoryStore from './store/useSubcategoryStore'
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="categorias" element={<Categorias />} />
           <Route path="subcategorias" element={<Subcategorias />} />
           <Route path="cuentas" element={<Cuentas />} />
+          <Route path="acerca" element={<Acerca />} />
         </Route>
       </Routes>
     </BrowserRouter>
