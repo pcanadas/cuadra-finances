@@ -1,11 +1,11 @@
 {
-  "version": "0.1.0",
-  "notes": "Primera versión estable.",
+  "version": "0.2.0",
+  "notes": "Múltiples cuentas bancarias, evolución del saldo con verificador de coherencia, ordenación de tablas, movimientos manuales, backup/restore y app de escritorio Tauri.",
   "pub_date": "2026-10-03T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "",
-      "url": "https://github.com/TU_USUARIO/cuadra-finances/releases/download/v0.1.0/Cuadra_0.1.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQU1PZzJjS0k2ampRNDRtVzlLM2tWdUU5YklsMVp2ZzVYTnkyVUFyMjAxYUdabWRVWXhYVlN2bWFYNmZGSkl3OW1valFabzdLZVFTMjhtQ1lRa25yZkFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMDE0ODg2CWZpbGU6Q3VhZHJhXzAuMi4wX3g2NC1zZXR1cC5leGUKcFVBNTNEdGhMZXZoOEFrVDY5Vi9MTkJ6TEViNmVuSmFuUWN1OGFFNmQrUTZieUdxN3hnYTNyOXVHelh4aHRHVEtxcTJINVdmRVNqQnRncWlkT1ZXREE9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.2.0/Cuadra_0.2.0_x64-setup.exe"
     }
   }
 }
