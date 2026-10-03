@@ -2,9 +2,11 @@ import { useState, useRef, useCallback } from 'react'
 import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
+import useAccountStore from '../store/useAccountStore'
 import { parseFile, mapRows } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
 import db from '../db/db'
+import { tauriImport } from '../utils/tauriImport'
 
 const REQUIRED_FIELDS = ['fechaContable', 'descripcion', 'importe']
 
@@ -17,7 +19,9 @@ export default function Importar() {
   const clearAll = useTransactionStore((s) => s.clearAll)
   const totalTransactions = useTransactionStore((s) => s.transactions.length)
   const categories = useCategoryStore((s) => s.categories)
+  const accounts = useAccountStore((s) => s.accounts)
   const [confirmClear, setConfirmClear] = useState(false)
+  const [importAccountId, setImportAccountId] = useState('')
 
   const [backupStatus, setBackupStatus] = useState(null) // null | 'restoring' | 'ok' | 'error'
   const backupRef = useRef()
@@ -29,11 +33,26 @@ export default function Importar() {
       db.subcategories.toArray(),
     ])
     const payload = { version: 1, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats }
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const json = JSON.stringify(payload, null, 2)
+    const filename = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
+
+    // Tauri: use save dialog
+    try {
+      const { save } = await tauriImport('@tauri-apps/plugin-dialog')
+      const { writeTextFile } = await tauriImport('@tauri-apps/plugin-fs')
+      const filePath = await save({ defaultPath: filename, filters: [{ name: 'JSON', extensions: ['json'] }] })
+      if (filePath) await writeTextFile(filePath, json)
+      return
+    } catch {
+      // Not in Tauri or dialog cancelled — fall through to browser download
+    }
+
+    // Browser fallback
+    const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
+    a.download = filename
     a.click()
     URL.revokeObjectURL(url)
   }
@@ -137,7 +156,9 @@ export default function Importar() {
   }
 
   const handleImport = async () => {
-    const added = await addTransactions(mappedRows)
+    const accountId = importAccountId || accounts[0]?.id || null
+    const rows = accountId ? mappedRows.map((t) => ({ ...t, accountId })) : mappedRows
+    const added = await addTransactions(rows)
     setImportedCount(added)
     setSkippedCount(mappedRows.length - added)
     setStep('done')
@@ -378,13 +399,25 @@ export default function Importar() {
               </tbody>
             </table>
           </div>
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-wrap items-center gap-3 mt-6">
             <button
               onClick={() => setStep('mapping')}
               className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
             >
               Atrás
             </button>
+            <div className="flex items-center gap-2">
+              <label className="text-xs font-medium text-slate-500">Importar en cuenta:</label>
+              <select
+                value={importAccountId}
+                onChange={(e) => setImportAccountId(e.target.value)}
+                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{a.nombre}</option>
+                ))}
+              </select>
+            </div>
             <button
               onClick={handleImport}
               className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"

@@ -48,6 +48,16 @@ const useTransactionStore = create((set, get) => ({
     }))
   },
 
+  addManualTransaction: async (tx) => {
+    const newTx = {
+      ...tx,
+      id: `tx-manual-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      esManual: true,
+    }
+    await db.transactions.put(newTx)
+    set((state) => ({ transactions: [...state.transactions, newTx] }))
+  },
+
   deleteTransaction: async (id) => {
     await db.transactions.delete(id)
     set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }))

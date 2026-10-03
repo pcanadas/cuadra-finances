@@ -36,5 +36,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://raw.githubusercontent.com/TU_USUARIO/cuadra-finances/main/releases/latest.json"
+      ]
+    }
   }
 }

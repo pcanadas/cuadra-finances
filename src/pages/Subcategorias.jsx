@@ -191,6 +191,8 @@ export default function Subcategorias() {
   const [filterMonth, setFilterMonth] = useState('')
   const [filterSubcat, setFilterSubcat] = useState('')
   const [filterText, setFilterText] = useState('')
+  const [sortCol, setSortCol] = useState('fechaContable')
+  const [sortDir, setSortDir] = useState('desc')
 
   // New subcategory form state
   const [newNombre, setNewNombre]     = useState('')
@@ -216,8 +218,23 @@ export default function Subcategorias() {
     return [...years].sort((a, b) => b - a)
   }, [catTransactions])
 
+  function toggleSort(col) {
+    if (sortCol === col) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortCol(col)
+      setSortDir(col === 'fechaContable' ? 'desc' : 'asc')
+    }
+    setPage(1)
+  }
+
+  function SortIcon({ col }) {
+    if (sortCol !== col) return <span className="text-slate-300 ml-0.5">⇅</span>
+    return <span className="text-indigo-500 ml-0.5">{sortDir === 'asc' ? '↑' : '↓'}</span>
+  }
+
   const filteredTransactions = useMemo(() => {
-    return catTransactions.filter((t) => {
+    const filtered = catTransactions.filter((t) => {
       const d = new Date(t.fechaContable)
       if (filterYear && d.getFullYear() !== Number(filterYear)) return false
       if (filterMonth && d.getMonth() + 1 !== Number(filterMonth)) return false
@@ -226,7 +243,24 @@ export default function Subcategorias() {
       if (filterText && !t.descripcion.toLowerCase().includes(filterText.toLowerCase())) return false
       return true
     })
-  }, [catTransactions, filterYear, filterMonth, filterSubcat, filterText])
+    filtered.sort((a, b) => {
+      if (sortCol === 'fechaContable') {
+        const av = new Date(a.fechaContable || 0).getTime()
+        const bv = new Date(b.fechaContable || 0).getTime()
+        return sortDir === 'asc' ? av - bv : bv - av
+      } else if (sortCol === 'descripcion') {
+        const av = (a.descripcion || '').toLowerCase()
+        const bv = (b.descripcion || '').toLowerCase()
+        return sortDir === 'asc' ? av.localeCompare(bv, 'es') : bv.localeCompare(av, 'es')
+      } else if (sortCol === 'importe') {
+        const av = a.importe ?? 0
+        const bv = b.importe ?? 0
+        return sortDir === 'asc' ? av - bv : bv - av
+      }
+      return 0
+    })
+    return filtered
+  }, [catTransactions, filterYear, filterMonth, filterSubcat, filterText, sortCol, sortDir])
 
   const totalPages = Math.max(1, Math.ceil(filteredTransactions.length / PAGE_SIZE))
   const pagedTransactions = filteredTransactions.slice(
@@ -244,6 +278,8 @@ export default function Subcategorias() {
     setFilterMonth('')
     setFilterSubcat('')
     setFilterText('')
+    setSortCol('fechaContable')
+    setSortDir('desc')
   }
 
   async function handleAddSubcategory(e) {
@@ -476,9 +512,18 @@ export default function Subcategorias() {
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-slate-100 bg-slate-50 text-left">
-                            <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fecha</th>
-                            <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Descripción</th>
-                            <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right">Importe</th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-indigo-600"
+                              onClick={() => toggleSort('fechaContable')}>
+                              Fecha<SortIcon col="fechaContable" />
+                            </th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide cursor-pointer select-none hover:text-indigo-600"
+                              onClick={() => toggleSort('descripcion')}>
+                              Descripción<SortIcon col="descripcion" />
+                            </th>
+                            <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide text-right cursor-pointer select-none hover:text-indigo-600"
+                              onClick={() => toggleSort('importe')}>
+                              Importe<SortIcon col="importe" />
+                            </th>
                             <th className="px-4 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wide">Subcategoría</th>
                           </tr>
                         </thead>

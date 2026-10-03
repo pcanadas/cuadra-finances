@@ -71,14 +71,16 @@ src-tauri/               # Core Tauri (Rust)
 src/
 ├── App.jsx                  # Entrada, carga BD y rutas
 ├── db/
-│   └── db.js                # Definición de la base de datos Dexie
+│   └── db.js                # Definición de la base de datos Dexie (v2)
 ├── store/
 │   ├── useTransactionStore.js
 │   ├── useCategoryStore.js
-│   └── useSubcategoryStore.js
+│   ├── useSubcategoryStore.js
+│   └── useAccountStore.js   # CRUD de cuentas bancarias
 ├── pages/
 │   ├── Dashboard.jsx
 │   ├── Movimientos.jsx
+│   ├── Cuentas.jsx          # Evolución del saldo + verificador de coherencia
 │   ├── Importar.jsx
 │   ├── Categorias.jsx
 │   └── Subcategorias.jsx
@@ -92,28 +94,36 @@ app-icon.svg                  # Icono fuente (1024×1024) para generar todos los
 │   └── importParsers.js     # Parsers CSV/Excel/Bankinter
 └── components/
     ├── Layout.jsx
-    └── Navbar.jsx
+    ├── Navbar.jsx
+    └── UpdateChecker.jsx     # Detector de actualizaciones Tauri (import dinámico)
 ```
 
 ---
 
 ## Base de datos (Dexie / IndexedDB)
 
-Base de datos: `CuadraFinances` — versión 1.
+Base de datos: `CuadraFinances` — versión 2.
 
 ```
 transactions
-  id (PK), fechaContable, categoria, subcategoria,
+  id (PK), fechaContable [idx], categoria [idx], subcategoria, accountId [idx],
   fechaValor, descripcion, importe, saldo,
-  categoriaManual, subcategoriaManual
+  categoriaManual, subcategoriaManual, esManual
 
 categories
   id (PK), nombre, palabrasClave[], palabrasExcluidas[],
   color, esTransferencia?, esIngreso?, _order?
 
 subcategories
-  id (PK), categoriaId, nombre, palabrasClave[], color
+  id (PK), categoriaId [idx], nombre, palabrasClave[], color
+
+accounts
+  id (PK), nombre, tipo, color
 ```
+
+La versión 2 añade la tabla `accounts` y el índice `accountId` en transacciones. La migración es automática y no destructiva.
+
+El campo `saldo` en una transacción importada representa el saldo real de la cuenta bancaria **después** de ese movimiento, según el extracto. Es informativo — no se recalcula ni se usa en sumas. Las transacciones manuales no tienen `saldo`.
 
 Cada transacción se almacena como registro individual (no como blob JSON). No hay límite práctico de almacenamiento.
 
@@ -129,9 +139,19 @@ Cada transacción se almacena como registro individual (no como blob JSON). No h
 | `addTransactions(rows)` | Añade transacciones únicas (deduplica por id); devuelve count añadidas |
 | `updateTransaction(id, updates)` | Actualiza campos de una transacción |
 | `bulkUpdateTransactions(map)` | Actualiza múltiples transacciones en una sola escritura a BD |
+| `addManualTransaction(tx)` | Añade una transacción manual con `id: tx-manual-…` y `esManual: true` |
 | `deleteTransaction(id)` | Borra una transacción |
 | `clearAll()` | Borra todos los datos |
 | `getByMonth(year, month)` | Filtra transacciones por mes (en memoria) |
+
+### useAccountStore
+
+| Acción | Descripción |
+|---|---|
+| `loadFromDB()` | Carga cuentas; si está vacío siembra 2 cuentas por defecto (Cuenta principal, Efectivo) |
+| `addAccount(account)` | Añade una cuenta nueva |
+| `updateAccount(id, updates)` | Actualiza nombre, tipo o color |
+| `deleteAccount(id)` | Elimina una cuenta (mínimo 1 debe quedar) |
 
 ### useCategoryStore
 
@@ -260,17 +280,30 @@ Excluye de todos los cálculos: `esTransferencia`. Excluye de gastos: `esIngreso
 ### `/movimientos` — Movimientos
 
 - Tabla paginada (20/página).
-- Filtros: mes, categoría (alfabético), texto libre en descripción.
+- **Pestañas por cuenta**: "Todas" + una pestaña por cuenta con el contador de movimientos.
+- Filtros: mes, categoría (alfabético), cuenta (desplegable independiente de las pestañas), texto libre en descripción. Botón "Limpiar filtros" visible cuando hay filtros activos.
+- **Columnas ordenables**: clic en cabecera Fecha, Descripción o Importe alterna asc/desc (indicador ↑/↓). Por defecto: fecha descendente.
 - Selector de categoría por fila (asignación manual → `categoriaManual: true`).
 - **Selección múltiple**: checkbox por fila + checkbox de cabecera para seleccionar toda la página. Al seleccionar uno o más, aparece una barra de acción con selector de categoría y botón "Aplicar". Usa `bulkUpdateTransactions` con `categoriaManual: true`. Las descripciones de estos movimientos **no** se evalúan para sugerir ni añadir etiquetas a categorías.
+- **Añadir manual**: modal para crear un movimiento con fecha, importe, descripción, cuenta y categoría opcionales. El movimiento queda marcado con `esManual: true` y una etiqueta "manual" en la tabla.
+- **Gestionar cuentas**: modal para añadir/eliminar cuentas (nombre, tipo, color).
+
+### `/cuentas` — Evolución del saldo *(nuevo)*
+
+- Pestañas por cuenta.
+- **Gráfico de línea** con el saldo real según el extracto importado, en dos modos: todos los movimientos (máximo detalle) o un punto por mes (último saldo del mes).
+- **Tarjetas resumen**: saldo actual, saldo inicial, variación total y número de movimientos con saldo.
+- **Verificador de coherencia**: para cada par de transacciones consecutivas comprueba `saldo[i-1] + importe[i] ≈ saldo[i]` (tolerancia 0,02 € por redondeo bancario). Si todo cuadra muestra confirmación verde. Si hay diferencias muestra tabla ámbar con las filas problemáticas (saldo esperado vs real, diferencia exacta). Una diferencia indica movimientos ausentes en el extracto, exportación parcial o transacciones asignadas a la cuenta equivocada.
 
 ### `/importar` — Importar
 
 - Flujo en 4 pasos: subir fichero → mapear columnas → vista previa → confirmar.
 - Drag & drop o click para seleccionar fichero.
 - Auto-mapeo de columnas por nombre heurístico.
+- **Selector de cuenta** en el paso de vista previa: todos los movimientos importados se asignan al `accountId` seleccionado.
 - Categorización automática en vista previa.
 - Botón "Borrar todos los datos" con confirmación doble.
+- **Copia de seguridad**: exporta/restaura un JSON completo con transacciones, categorías, subcategorías y cuentas. En Tauri usa `plugin-dialog` + `plugin-fs` para guardar con diálogo nativo; en el navegador descarga directamente.
 
 ### `/categorias` — Categorías
 
@@ -290,6 +323,7 @@ Excluye de todos los cálculos: `esTransferencia`. Excluye de gastos: `esIngreso
 - **Auto-aprendizaje**: al asignar manualmente una subcategoría, `extractKeyword` añade la keyword si no existía.
 - **Auto-asignar**: aplica `categorizeSubcategory` en lote sobre movimientos no manuales.
 - Filtros en la tabla: año, mes, subcategoría, texto.
+- **Columnas ordenables** en la tabla de movimientos: clic en cabecera Fecha, Descripción o Importe alterna asc/desc. El orden se reinicia al cambiar de categoría.
 
 ---
 
@@ -303,6 +337,9 @@ Excluye de todos los cálculos: `esTransferencia`. Excluye de gastos: `esIngreso
 - **`esIngreso` / `esTransferencia`**: flags en categoría para excluir del cálculo de gastos sin depender del signo del importe (una transacción en categoría "Ingresos" con importe negativo no contamina el desglose de gastos).
 - **Resaltado de máximo en tablas**: solo se resalta si el valor máximo es único en esa columna — si todos los meses tienen el mismo importe no se marca ninguno.
 - **Tema oscuro**: estrategia CSS-first con selectores `html.dark .clase-tailwind` en `index.css`. Los componentes no necesitan `dark:` variants; el cambio de clase en `<html>` es suficiente para cubrir el 95% de la UI. Para elementos que usan colores en props de Recharts (ejes, grid, cursor, tooltips) se lee `dark` del contexto y se pasan valores condicionales directamente.
+- **Múltiples cuentas**: cada transacción tiene `accountId`. Las transacciones sin cuenta aparecen en "Todas" pero no en ninguna pestaña de cuenta individual. El campo `saldo` es informativo (viene del banco), no se recalcula.
+- **Verificador de saldo**: la lógica `saldo[i-1] + importe[i] ≈ saldo[i]` con tolerancia de 2 céntimos detecta huecos en el extracto sin necesidad de recalcular ni mantener saldo propio. Si el banco redondea o hay comisiones fraccionadas puede dar falsos positivos, de ahí la tolerancia.
+- **Tauri**: `HashRouter` en lugar de `BrowserRouter` porque no hay servidor web que resuelva rutas. Los plugins Tauri (`plugin-dialog`, `plugin-fs`, `plugin-updater`) se importan dinámicamente con `try/catch` para que la app siga funcionando en el navegador durante desarrollo. Las actualizaciones no borran los datos de IndexedDB porque el `AppData` del WebView se preserva entre versiones.
 
 ---
 

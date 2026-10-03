@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext'
 const links = [
   { to: '/', label: 'Dashboard' },
   { to: '/movimientos', label: 'Movimientos' },
+  { to: '/cuentas', label: 'Cuentas' },
   { to: '/importar', label: 'Importar' },
   { to: '/categorias', label: 'Categorías' },
   { to: '/subcategorias', label: 'Subcategorías' },

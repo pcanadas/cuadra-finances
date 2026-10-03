@@ -13,4 +13,11 @@ db.version(1).stores({
   subcategories: 'id, categoriaId',
 })
 
+db.version(2).stores({
+  transactions:  'id, fechaContable, categoria, subcategoria, accountId',
+  categories:    'id',
+  subcategories: 'id, categoriaId',
+  accounts:      'id',
+})
+
 export default db
