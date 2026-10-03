@@ -115,35 +115,49 @@ function ConsistencyPanel({ gaps }) {
 
 export default function Cuentas() {
   const transactions = useTransactionStore((s) => s.transactions)
-  const { accounts } = useAccountStore()
+  const { accounts, updateAccount } = useAccountStore()
   const tooltipStyle = useTooltipStyle()
-
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id ?? null)
   const [granularity, setGranularity] = useState('all')   // 'all' | 'monthly'
 
-  // Transactions for selected account that have saldo data, sorted by date asc
-  const accountTxs = useMemo(() => {
-    return [...transactions]
-      .filter((t) => t.accountId === selectedAccountId && t.saldo != null)
-      .sort((a, b) => new Date(a.fechaContable) - new Date(b.fechaContable))
-  }, [transactions, selectedAccountId])
-
-  // All transactions for selected account (incl. manual, no saldo required)
+  // All transactions for selected account sorted by date asc
   const allAccountTxs = useMemo(() => {
     return [...transactions]
       .filter((t) => t.accountId === selectedAccountId)
       .sort((a, b) => new Date(a.fechaContable) - new Date(b.fechaContable))
   }, [transactions, selectedAccountId])
 
+  // Transactions with real saldo data (from bank imports)
+  const accountTxs = useMemo(() => {
+    return allAccountTxs.filter((t) => t.saldo != null)
+  }, [allAccountTxs])
+
+  // Synthetic mode: no real saldo but there are manual transactions
+  const isSynthetic = accountTxs.length === 0 && allAccountTxs.length > 0
+  const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
+  const saldoInicial = selectedAccount?.saldoInicial ?? 0
+
+  // Synthetic transactions with calculated running balance
+  const syntheticTxs = useMemo(() => {
+    if (!isSynthetic) return []
+    let running = saldoInicial
+    return allAccountTxs.map((t) => {
+      running = Math.round((running + (t.importe ?? 0)) * 100) / 100
+      return { ...t, saldoCalculado: running }
+    })
+  }, [allAccountTxs, isSynthetic, saldoInicial])
+
   // Chart data
   const chartData = useMemo(() => {
+    const source = isSynthetic ? syntheticTxs : accountTxs
+    const saldoKey = isSynthetic ? 'saldoCalculado' : 'saldo'
+
     if (granularity === 'monthly') {
-      // One point per month: last saldo of the month
       const byMonth = {}
-      accountTxs.forEach((t) => {
+      source.forEach((t) => {
         const key = t.fechaContable?.slice(0, 7)
         if (!key) return
-        byMonth[key] = t.saldo
+        byMonth[key] = t[saldoKey]
       })
       return Object.entries(byMonth)
         .sort(([a], [b]) => a.localeCompare(b))
@@ -152,19 +166,17 @@ export default function Cuentas() {
           saldo,
         }))
     }
-    // All points
-    return accountTxs.map((t) => ({
-      label: t.fechaContable
-        ? format(new Date(t.fechaContable), 'dd/MM/yyyy')
-        : '—',
-      saldo: t.saldo,
+    return source.map((t) => ({
+      label: t.fechaContable ? format(new Date(t.fechaContable), 'dd/MM/yyyy') : '—',
+      saldo: t[saldoKey],
       importe: t.importe,
       descripcion: t.descripcion,
     }))
-  }, [accountTxs, granularity])
+  }, [accountTxs, syntheticTxs, isSynthetic, granularity])
 
-  // Consistency gaps
+  // Consistency gaps (only for real saldo mode)
   const gaps = useMemo(() => {
+    if (isSynthetic) return []
     const result = []
     for (let i = 1; i < accountTxs.length; i++) {
       const prev = accountTxs[i - 1]
@@ -186,26 +198,37 @@ export default function Cuentas() {
       }
     }
     return result
-  }, [accountTxs])
+  }, [accountTxs, isSynthetic])
 
   // Stats
   const stats = useMemo(() => {
+    if (isSynthetic) {
+      if (syntheticTxs.length === 0) return null
+      const first = syntheticTxs[0]
+      const last  = syntheticTxs[syntheticTxs.length - 1]
+      return {
+        firstDate:  format(new Date(first.fechaContable), 'dd/MM/yyyy'),
+        lastDate:   format(new Date(last.fechaContable),  'dd/MM/yyyy'),
+        firstSaldo: saldoInicial,
+        lastSaldo:  last.saldoCalculado,
+        change:     Math.round((last.saldoCalculado - saldoInicial) * 100) / 100,
+        txCount:    allAccountTxs.length,
+        withSaldo:  allAccountTxs.length,
+      }
+    }
     if (accountTxs.length === 0) return null
     const first = accountTxs[0]
     const last  = accountTxs[accountTxs.length - 1]
-    const change = last.saldo - first.saldo
     return {
       firstDate:  format(new Date(first.fechaContable), 'dd/MM/yyyy'),
       lastDate:   format(new Date(last.fechaContable),  'dd/MM/yyyy'),
       firstSaldo: first.saldo,
       lastSaldo:  last.saldo,
-      change,
-      txCount: allAccountTxs.length,
-      withSaldo: accountTxs.length,
+      change:     last.saldo - first.saldo,
+      txCount:    allAccountTxs.length,
+      withSaldo:  accountTxs.length,
     }
-  }, [accountTxs, allAccountTxs])
-
-  const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
+  }, [accountTxs, syntheticTxs, isSynthetic, saldoInicial, allAccountTxs])
 
   const yMin = useMemo(() => {
     if (!chartData.length) return 'auto'
@@ -245,16 +268,32 @@ export default function Cuentas() {
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
           No hay cuentas configuradas. Ve a Movimientos → Cuentas para añadir una.
         </div>
-      ) : !selectedAccount ? null : accountTxs.length === 0 ? (
+      ) : !selectedAccount ? null : (accountTxs.length === 0 && allAccountTxs.length === 0) ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
-          <p className="font-medium">No hay datos de saldo para "{selectedAccount.nombre}"</p>
-          <p className="text-xs mt-2">
-            El campo saldo está disponible en extractos bancarios importados en formato CSV/XLS.
-            Los movimientos añadidos manualmente no tienen saldo de referencia.
-          </p>
+          <p className="font-medium">No hay movimientos para "{selectedAccount.nombre}"</p>
+          <p className="text-xs mt-2">Importa un extracto o añade movimientos manuales en la sección Movimientos.</p>
         </div>
       ) : (
         <div className="space-y-5">
+          {/* Synthetic mode notice + initial balance */}
+          {isSynthetic && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 flex flex-wrap items-center gap-4">
+              <div className="flex-1 text-sm text-blue-700">
+                <span className="font-semibold">Saldo calculado</span> — esta cuenta no tiene extractos importados.
+                El gráfico se calcula acumulando los movimientos manuales desde el saldo inicial que indiques.
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <label className="text-xs font-medium text-blue-600 whitespace-nowrap">Saldo inicial (€)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={saldoInicial}
+                  onChange={(e) => updateAccount(selectedAccountId, { saldoInicial: parseFloat(e.target.value) || 0 })}
+                  className="w-28 border border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                />
+              </div>
+            </div>
+          )}
           {/* Stats row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -327,10 +366,12 @@ export default function Cuentas() {
           </div>
 
           {/* Consistency check */}
-          <div>
-            <h2 className="text-sm font-semibold text-slate-700 mb-2">Verificación de coherencia</h2>
-            <ConsistencyPanel gaps={gaps} />
-          </div>
+          {!isSynthetic && (
+            <div>
+              <h2 className="text-sm font-semibold text-slate-700 mb-2">Verificación de coherencia</h2>
+              <ConsistencyPanel gaps={gaps} />
+            </div>
+          )}
         </div>
       )}
     </div>

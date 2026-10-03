@@ -2,8 +2,6 @@
 
 App de escritorio para gestión de finanzas personales, construida con React + Tauri. Importa extractos bancarios, categoriza movimientos automáticamente y visualiza la evolución de tus gastos e ingresos.
 
-> Proyecto personal desarrollado como ejercicio práctico con stack moderno. El código es público con fines de portfolio.
-
 ---
 
 ## Descarga

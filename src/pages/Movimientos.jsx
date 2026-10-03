@@ -18,20 +18,21 @@ function formatEur(amount) {
 
 // ─── Modal: añadir transacción manual ────────────────────────────────────────
 
-function ManualTransactionModal({ accounts, categories, defaultAccountId, onSave, onClose }) {
+function ManualTransactionModal({ accounts, categories, defaultAccountId, initialData, onSave, onClose }) {
   const today = new Date().toISOString().slice(0, 10)
-  const [fecha,       setFecha]       = useState(today)
-  const [descripcion, setDescripcion] = useState('')
-  const [importe,     setImporte]     = useState('')
-  const [categoria,   setCategoria]   = useState('')
-  const [accountId,   setAccountId]   = useState(defaultAccountId || accounts[0]?.id || '')
+  const editing = !!initialData
+  const [fecha,       setFecha]       = useState(initialData?.fechaContable ?? today)
+  const [descripcion, setDescripcion] = useState(initialData?.descripcion ?? '')
+  const [importe,     setImporte]     = useState(initialData?.importe != null ? String(initialData.importe) : '')
+  const [categoria,   setCategoria]   = useState(initialData?.categoria ?? '')
+  const [accountId,   setAccountId]   = useState(initialData?.accountId ?? defaultAccountId ?? accounts[0]?.id ?? '')
   const [error,       setError]       = useState('')
 
   const sortedCategories = [...categories].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
 
   function handleSubmit(e) {
     e.preventDefault()
-    const amount = parseFloat(importe.replace(',', '.'))
+    const amount = parseFloat(String(importe).replace(',', '.'))
     if (!fecha)              return setError('La fecha es obligatoria')
     if (!descripcion.trim()) return setError('La descripción es obligatoria')
     if (isNaN(amount))       return setError('El importe no es válido')
@@ -51,7 +52,9 @@ function ManualTransactionModal({ accounts, categories, defaultAccountId, onSave
         className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-md mx-4"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-base font-bold text-slate-800 mb-4">Añadir movimiento manual</h2>
+        <h2 className="text-base font-bold text-slate-800 mb-4">
+          {editing ? 'Editar movimiento manual' : 'Añadir movimiento manual'}
+        </h2>
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -92,7 +95,7 @@ function ManualTransactionModal({ accounts, categories, defaultAccountId, onSave
           <div className="flex gap-2 pt-1">
             <button type="submit"
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
-              Guardar
+              {editing ? 'Guardar cambios' : 'Guardar'}
             </button>
             <button type="button" onClick={onClose}
               className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
@@ -174,8 +177,9 @@ export default function Movimientos() {
   const transactions        = useTransactionStore((s) => s.transactions)
   const updateTransaction   = useTransactionStore((s) => s.updateTransaction)
   const bulkUpdateTransactions = useTransactionStore((s) => s.bulkUpdateTransactions)
-  const addManualTransaction = useTransactionStore((s) => s.addManualTransaction)
-  const categories          = useCategoryStore((s) => s.categories)
+  const addManualTransaction    = useTransactionStore((s) => s.addManualTransaction)
+  const deleteTransaction       = useTransactionStore((s) => s.deleteTransaction)
+  const categories              = useCategoryStore((s) => s.categories)
   const { accounts, addAccount, deleteAccount } = useAccountStore()
 
   const [activeAccountId, setActiveAccountId] = useState('__all__')
@@ -189,6 +193,7 @@ export default function Movimientos() {
   const [selected,        setSelected]        = useState(new Set())
   const [bulkCategory,    setBulkCategory]    = useState('')
   const [showManual,      setShowManual]      = useState(false)
+  const [editingTx,       setEditingTx]       = useState(null)
   const [showAccounts,    setShowAccounts]    = useState(false)
 
   const monthOptions = useMemo(() => {
@@ -452,6 +457,7 @@ export default function Movimientos() {
                   <th className="text-right px-4 py-3 font-medium text-slate-600">Saldo</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Cuenta</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Categoría</th>
+                  <th className="w-16"></th>
                 </tr>
               </thead>
               <tbody>
@@ -498,6 +504,27 @@ export default function Movimientos() {
                           {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                         </select>
                       </td>
+                      <td className="px-4 py-3 w-16">
+                        {t.esManual && (
+                          <div className="flex gap-1">
+                            <button
+                              onClick={() => setEditingTx(t)}
+                              className="text-indigo-400 hover:text-indigo-600 transition-colors px-1"
+                              title="Editar"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                              </svg>
+                            </button>
+                            <button
+                              onClick={async () => { if (window.confirm('¿Eliminar este movimiento?')) await deleteTransaction(t.id) }}
+                              className="text-red-400 hover:text-red-600 transition-colors text-sm px-1"
+                              title="Eliminar"
+                            >✕</button>
+                          </div>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}
@@ -532,6 +559,15 @@ export default function Movimientos() {
           defaultAccountId={activeAccountId !== '__all__' ? activeAccountId : accounts[0]?.id}
           onSave={async (tx) => { await addManualTransaction(tx); setShowManual(false) }}
           onClose={() => setShowManual(false)}
+        />
+      )}
+      {editingTx && (
+        <ManualTransactionModal
+          accounts={accounts}
+          categories={categories}
+          initialData={editingTx}
+          onSave={async (tx) => { await updateTransaction(editingTx.id, tx); setEditingTx(null) }}
+          onClose={() => setEditingTx(null)}
         />
       )}
       {showAccounts && (
