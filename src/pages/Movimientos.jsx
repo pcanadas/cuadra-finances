@@ -227,13 +227,15 @@ export default function Movimientos() {
     return <span className="text-indigo-500 ml-1">{sortDir === 'asc' ? '↑' : '↓'}</span>
   }
 
+  const defaultAccountId = accounts[0]?.id ?? null
+
   const filtered = useMemo(() => {
     let result = [...transactions]
     if (activeAccountId !== '__all__') {
-      result = result.filter((t) => t.accountId === activeAccountId)
+      result = result.filter((t) => (t.accountId ?? defaultAccountId) === activeAccountId)
     }
     if (filterAccount) {
-      result = result.filter((t) => t.accountId === filterAccount)
+      result = result.filter((t) => (t.accountId ?? defaultAccountId) === filterAccount)
     }
     if (filterMonth) result = result.filter((t) => t.fechaContable?.startsWith(filterMonth))
     if (filterCategory) {
@@ -338,7 +340,7 @@ export default function Movimientos() {
           Todas ({transactions.length})
         </button>
         {accounts.map((a) => {
-          const count = transactions.filter((t) => t.accountId === a.id).length
+          const count = transactions.filter((t) => (t.accountId ?? defaultAccountId) === a.id).length
           return (
             <button
               key={a.id}

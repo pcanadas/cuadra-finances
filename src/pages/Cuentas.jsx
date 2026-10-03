@@ -30,6 +30,83 @@ function useTooltipStyle() {
 
 const TOLERANCE = 0.02   // cents rounding from bank PDFs
 
+// Reorders transactions by chaining saldos globally across all dates:
+// saldo[i-1] + importe[i] ≈ saldo[i]
+//
+// Bankinter interleaves transactions with different fechaContable within the same
+// export block (e.g. a 31/01 transfer appears after 01/02 payments). Sorting by
+// date breaks the saldo chain. This function reconstructs the bank's original
+// order using the saldo values as a linked list, regardless of date.
+//
+// Complexity: O(n) — uses a predecessor-saldo map for O(1) lookups.
+function chainGlobal(txs) {
+  const withSaldo    = txs.filter((t) => t.saldo != null && t.importe != null)
+  const withoutSaldo = txs.filter((t) => t.saldo == null || t.importe == null)
+
+  if (withSaldo.length <= 1) return txs
+
+  // Map: Math.round(predecessorSaldo * 100) → [candidates]
+  // predecessorSaldo of t = t.saldo - t.importe  (the balance just before t)
+  const predMap = new Map()
+  withSaldo.forEach((t) => {
+    const key = Math.round((t.saldo - t.importe) * 100)
+    if (!predMap.has(key)) predMap.set(key, [])
+    predMap.get(key).push(t)
+  })
+
+  // Chain starts: transactions whose predecessor saldo doesn't match any tx's saldo
+  const saldoSet = new Set(withSaldo.map((t) => Math.round(t.saldo * 100)))
+  const starts = withSaldo.filter((t) => !saldoSet.has(Math.round((t.saldo - t.importe) * 100)))
+
+  const visited = new Set()
+  const chains = []
+
+  function walkChain(startTx) {
+    const chain = []
+    let cur = startTx
+    while (cur && !visited.has(cur)) {
+      visited.add(cur)
+      chain.push(cur)
+      const candidates = predMap.get(Math.round(cur.saldo * 100)) ?? []
+      const unvisited = candidates.filter((t) => !visited.has(t))
+      // When multiple candidates match (same importe/saldo), prefer the one
+      // whose bankRowIndex comes right after the current one in the original
+      // bank export order.
+      unvisited.sort((a, b) => {
+        const aIdx = a.bankRowIndex ?? Infinity
+        const bIdx = b.bankRowIndex ?? Infinity
+        return aIdx - bIdx
+      })
+      cur = unvisited[0] ?? null
+    }
+    if (chain.length > 0) chains.push(chain)
+  }
+
+  starts.forEach(walkChain)
+
+  // Handle any unvisited transactions (isolated chains from separate import batches)
+  withSaldo.forEach((t) => { if (!visited.has(t)) walkChain(t) })
+
+  // Sort chains chronologically by their earliest fechaContable so that
+  // inter-chain gaps always represent forward jumps in time, not backward ones.
+  chains.sort((a, b) => {
+    const dateA = a[0]?.fechaContable ?? ''
+    const dateB = b[0]?.fechaContable ?? ''
+    const d = dateA.localeCompare(dateB)
+    if (d !== 0) return d
+    // Tiebreak: chain whose first tx appeared earlier in the bank export
+    const idxA = a[0]?.bankRowIndex ?? Infinity
+    const idxB = b[0]?.bankRowIndex ?? Infinity
+    return idxA - idxB
+  })
+
+  const ordered = chains.flat()
+
+  // Transactions without saldo (manual) go at the end — they're not part of the chain
+  ordered.push(...withoutSaldo)
+  return ordered
+}
+
 // ─── custom tooltip ───────────────────────────────────────────────────────────
 
 function BalanceTooltip({ active, payload, tooltipStyle }) {
@@ -53,7 +130,63 @@ function BalanceTooltip({ active, payload, tooltipStyle }) {
 
 // ─── consistency checker ──────────────────────────────────────────────────────
 
-function ConsistencyPanel({ gaps }) {
+// Fingerprint that uniquely identifies a gap
+function gapKey(g) {
+  return `${g.prevDate}|${g.currDate}|${g.prevSaldo}|${g.diff}`
+}
+
+function EditGapModal({ tx, onSave, onClose }) {
+  const [fechaContable, setFechaContable] = useState(tx.fechaContable ?? '')
+  const [fechaValor,    setFechaValor]    = useState(tx.fechaValor    ?? '')
+  const [descripcion,   setDescripcion]   = useState(tx.descripcion   ?? '')
+
+  async function handleSave() {
+    await onSave({ fechaContable, fechaValor, descripcion })
+    onClose()
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md">
+        <h3 className="text-base font-semibold text-slate-800 mb-4">Editar movimiento</h3>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Fecha contable</label>
+            <input type="date" value={fechaContable} onChange={(e) => setFechaContable(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Fecha valor</label>
+            <input type="date" value={fechaValor} onChange={(e) => setFechaValor(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Descripción</label>
+            <input type="text" value={descripcion} onChange={(e) => setDescripcion(e.target.value)}
+              className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+          </div>
+          <div className="bg-slate-50 rounded-lg px-3 py-2 text-xs text-slate-500 space-y-1">
+            <div>Importe: <span className={tx.importe >= 0 ? 'text-green-600' : 'text-red-500'}>{formatEur(tx.importe)}</span></div>
+            <div>Saldo: <span className="font-medium text-slate-700">{formatEur(tx.saldo)}</span></div>
+          </div>
+        </div>
+        <div className="flex gap-2 mt-5 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:text-slate-700">Cancelar</button>
+          <button onClick={handleSave} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium">Guardar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConsistencyPanel({ gaps, acknowledgedGaps, onAcknowledge, onUnacknowledge, onEditTx }) {
+  const [showAcknowledged, setShowAcknowledged] = useState(false)
+  const [editingGap, setEditingGap] = useState(null)
+  const acknowledgedSet = new Set(acknowledgedGaps ?? [])
+
+  const pending      = gaps.filter((g) => !acknowledgedSet.has(gapKey(g)))
+  const acknowledged = gaps.filter((g) =>  acknowledgedSet.has(gapKey(g)))
+
   if (gaps.length === 0) {
     return (
       <div className="flex items-center gap-2 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-700">
@@ -63,50 +196,103 @@ function ConsistencyPanel({ gaps }) {
     )
   }
 
-  return (
-    <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-2">
-        <span className="text-amber-500 text-lg">⚠</span>
-        <span className="text-sm font-semibold text-amber-700">
-          {gaps.length} inconsistencia{gaps.length !== 1 ? 's' : ''} detectada{gaps.length !== 1 ? 's' : ''}
-        </span>
-        <span className="text-xs text-amber-500 ml-1">— puede haber movimientos ausentes en el extracto</span>
-      </div>
+  function GapTable({ rows, isAcknowledged }) {
+    return (
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead className="bg-slate-50 border-b border-slate-100">
             <tr>
               <th className="text-left px-4 py-2 font-semibold text-slate-500">Fecha anterior</th>
               <th className="text-left px-4 py-2 font-semibold text-slate-500">Fecha actual</th>
-              <th className="text-left px-4 py-2 font-semibold text-slate-500 max-w-xs">Descripción</th>
+              <th className="text-left px-4 py-2 font-semibold text-slate-500">Descripción</th>
               <th className="text-right px-4 py-2 font-semibold text-slate-500">Saldo anterior</th>
               <th className="text-right px-4 py-2 font-semibold text-slate-500">+ Importe</th>
               <th className="text-right px-4 py-2 font-semibold text-slate-500">Esperado</th>
               <th className="text-right px-4 py-2 font-semibold text-slate-500">Saldo real</th>
               <th className="text-right px-4 py-2 font-semibold text-slate-500">Diferencia</th>
+              <th className="px-4 py-2 text-left font-semibold text-slate-500">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {gaps.map((g, i) => (
-              <tr key={i} className="border-b border-slate-50 last:border-b-0 hover:bg-amber-50 transition-colors">
+            {rows.map((g, i) => (
+              <tr key={i} className={`border-b border-slate-50 last:border-b-0 transition-colors ${isAcknowledged ? 'opacity-50' : 'hover:bg-amber-50'}`}>
                 <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{g.prevDate}</td>
                 <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{g.currDate}</td>
                 <td className="px-4 py-2 text-slate-700 max-w-xs truncate" title={g.descripcion}>{g.descripcion || '—'}</td>
                 <td className="px-4 py-2 text-right text-slate-600 whitespace-nowrap">{formatEur(g.prevSaldo)}</td>
-                <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${g.importe >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                  {formatEur(g.importe)}
-                </td>
+                <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${g.importe >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatEur(g.importe)}</td>
                 <td className="px-4 py-2 text-right text-slate-400 whitespace-nowrap">{formatEur(g.expected)}</td>
                 <td className="px-4 py-2 text-right font-semibold text-slate-700 whitespace-nowrap">{formatEur(g.actual)}</td>
                 <td className="px-4 py-2 text-right font-semibold text-amber-600 whitespace-nowrap">{formatEur(g.diff)}</td>
+                <td className="px-4 py-2 whitespace-nowrap">
+                  <div className="flex gap-1 items-center">
+                    {g.currTx && (
+                      <button
+                        onClick={() => setEditingGap(g)}
+                        className="text-xs text-indigo-500 hover:text-indigo-700 transition-colors px-2 py-1 rounded border border-indigo-200 hover:bg-indigo-50"
+                        title="Editar el movimiento para corregir la inconsistencia"
+                      >Editar</button>
+                    )}
+                    {isAcknowledged ? (
+                      <button
+                        onClick={() => onUnacknowledge(gapKey(g))}
+                        className="text-xs text-slate-400 hover:text-amber-600 transition-colors px-2 py-1 rounded"
+                        title="Marcar como pendiente"
+                      >Reabrir</button>
+                    ) : (
+                      <button
+                        onClick={() => onAcknowledge(gapKey(g))}
+                        className="text-xs text-green-600 hover:text-green-700 font-medium transition-colors px-2 py-1 rounded border border-green-200 hover:bg-green-50"
+                        title="Marcar como revisada — sé que este hueco existe y no necesito importar más datos"
+                      >Revisada ✓</button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">
-        Una diferencia puede indicar transacciones no incluidas en el extracto importado, o transacciones asignadas a la cuenta equivocada.
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-amber-200 shadow-sm overflow-hidden">
+      <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center gap-2 flex-wrap">
+        <span className="text-amber-500 text-lg">⚠</span>
+        <span className="text-sm font-semibold text-amber-700">
+          {pending.length} inconsistencia{pending.length !== 1 ? 's' : ''} pendiente{pending.length !== 1 ? 's' : ''}
+        </span>
+        {acknowledged.length > 0 && (
+          <span className="text-xs text-slate-400 ml-auto">
+            {acknowledged.length} revisada{acknowledged.length !== 1 ? 's' : ''} —{' '}
+            <button onClick={() => setShowAcknowledged((v) => !v)} className="underline hover:text-slate-600">
+              {showAcknowledged ? 'ocultar' : 'mostrar'}
+            </button>
+          </span>
+        )}
       </div>
+
+      {pending.length > 0 && <GapTable rows={pending} isAcknowledged={false} />}
+
+      {showAcknowledged && acknowledged.length > 0 && (
+        <>
+          <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-400 font-medium">Revisadas</div>
+          <GapTable rows={acknowledged} isAcknowledged={true} />
+        </>
+      )}
+
+      <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 text-xs text-slate-400">
+        Usa <strong>Editar</strong> para corregir la fecha u otros datos del movimiento. Usa <strong>Revisada ✓</strong> para archivar huecos conocidos entre extractos.
+      </div>
+
+      {editingGap && (
+        <EditGapModal
+          tx={editingGap.currTx}
+          onSave={(updates) => onEditTx(editingGap.currTx.id, updates)}
+          onClose={() => setEditingGap(null)}
+        />
+      )}
     </div>
   )
 }
@@ -115,25 +301,45 @@ function ConsistencyPanel({ gaps }) {
 
 export default function Cuentas() {
   const transactions = useTransactionStore((s) => s.transactions)
+  const updateTransaction = useTransactionStore((s) => s.updateTransaction)
   const { accounts, updateAccount } = useAccountStore()
   const tooltipStyle = useTooltipStyle()
   const [selectedAccountId, setSelectedAccountId] = useState(accounts[0]?.id ?? null)
-  const [granularity, setGranularity] = useState('all')   // 'all' | 'monthly'
 
-  // All transactions for selected account sorted by date asc
+  const defaultAccountId = accounts[0]?.id ?? null
+
+  // All transactions for selected account, ordered by date then chained within each day
+  // so that saldo[i-1] + importe[i] ≈ saldo[i] regardless of import direction.
+  // Transactions without accountId (imported before multi-account support) are treated
+  // as belonging to the first/default account.
   const allAccountTxs = useMemo(() => {
-    return [...transactions]
-      .filter((t) => t.accountId === selectedAccountId)
-      .sort((a, b) => new Date(a.fechaContable) - new Date(b.fechaContable))
-  }, [transactions, selectedAccountId])
+    const filtered = transactions.filter((t) => {
+      const effectiveId = t.accountId ?? defaultAccountId
+      return effectiveId === selectedAccountId
+    })
+    return chainGlobal(filtered)
+  }, [transactions, selectedAccountId, defaultAccountId])
 
-  // Transactions with real saldo data (from bank imports)
+  // Date-sorted transactions (for chart and stats — preserves chronological order)
+  const allAccountTxsDateSorted = useMemo(() => {
+    return [...allAccountTxs].sort((a, b) => {
+      const d = new Date(a.fechaContable) - new Date(b.fechaContable)
+      return d !== 0 ? d : (a.id < b.id ? -1 : 1)
+    })
+  }, [allAccountTxs])
+
+  // Transactions with real saldo — chained order for consistency checker
   const accountTxs = useMemo(() => {
     return allAccountTxs.filter((t) => t.saldo != null)
   }, [allAccountTxs])
 
+  // Transactions with real saldo — date order for chart and stats
+  const accountTxsDateSorted = useMemo(() => {
+    return allAccountTxsDateSorted.filter((t) => t.saldo != null)
+  }, [allAccountTxsDateSorted])
+
   // Synthetic mode: no real saldo but there are manual transactions
-  const isSynthetic = accountTxs.length === 0 && allAccountTxs.length > 0
+  const isSynthetic = accountTxsDateSorted.length === 0 && allAccountTxsDateSorted.length > 0
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId)
   const saldoInicial = selectedAccount?.saldoInicial ?? 0
 
@@ -141,38 +347,30 @@ export default function Cuentas() {
   const syntheticTxs = useMemo(() => {
     if (!isSynthetic) return []
     let running = saldoInicial
-    return allAccountTxs.map((t) => {
+    return allAccountTxsDateSorted.map((t) => {
       running = Math.round((running + (t.importe ?? 0)) * 100) / 100
       return { ...t, saldoCalculado: running }
     })
   }, [allAccountTxs, isSynthetic, saldoInicial])
 
-  // Chart data
+  // Chart data — monthly, uses first transaction of each month (opening balance)
   const chartData = useMemo(() => {
-    const source = isSynthetic ? syntheticTxs : accountTxs
+    const source = isSynthetic ? syntheticTxs : accountTxsDateSorted
     const saldoKey = isSynthetic ? 'saldoCalculado' : 'saldo'
-
-    if (granularity === 'monthly') {
-      const byMonth = {}
-      source.forEach((t) => {
-        const key = t.fechaContable?.slice(0, 7)
-        if (!key) return
-        byMonth[key] = t[saldoKey]
-      })
-      return Object.entries(byMonth)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([month, saldo]) => ({
-          label: format(new Date(month + '-01'), 'MMM yyyy', { locale: es }),
-          saldo,
-        }))
-    }
-    return source.map((t) => ({
-      label: t.fechaContable ? format(new Date(t.fechaContable), 'dd/MM/yyyy') : '—',
-      saldo: t[saldoKey],
-      importe: t.importe,
-      descripcion: t.descripcion,
-    }))
-  }, [accountTxs, syntheticTxs, isSynthetic, granularity])
+    const byMonth = {}
+    source.forEach((t) => {
+      const key = t.fechaContable?.slice(0, 7)
+      if (!key) return
+      // Keep only the first transaction per month (opening balance of the month)
+      if (!(key in byMonth)) byMonth[key] = t[saldoKey]
+    })
+    return Object.entries(byMonth)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, saldo]) => ({
+        label: format(new Date(month + '-02'), 'MMM yyyy', { locale: es }),
+        saldo,
+      }))
+  }, [accountTxsDateSorted, syntheticTxs, isSynthetic])
 
   // Consistency gaps (only for real saldo mode)
   const gaps = useMemo(() => {
@@ -194,6 +392,7 @@ export default function Cuentas() {
           expected,
           actual: curr.saldo,
           diff,
+          currTx: curr,
         })
       }
     }
@@ -216,19 +415,19 @@ export default function Cuentas() {
         withSaldo:  allAccountTxs.length,
       }
     }
-    if (accountTxs.length === 0) return null
-    const first = accountTxs[0]
-    const last  = accountTxs[accountTxs.length - 1]
+    if (accountTxsDateSorted.length === 0) return null
+    const first = accountTxsDateSorted[0]
+    const last  = accountTxsDateSorted[accountTxsDateSorted.length - 1]
     return {
       firstDate:  format(new Date(first.fechaContable), 'dd/MM/yyyy'),
       lastDate:   format(new Date(last.fechaContable),  'dd/MM/yyyy'),
       firstSaldo: first.saldo,
       lastSaldo:  last.saldo,
       change:     last.saldo - first.saldo,
-      txCount:    allAccountTxs.length,
-      withSaldo:  accountTxs.length,
+      txCount:    allAccountTxsDateSorted.length,
+      withSaldo:  accountTxsDateSorted.length,
     }
-  }, [accountTxs, syntheticTxs, isSynthetic, saldoInicial, allAccountTxs])
+  }, [accountTxsDateSorted, syntheticTxs, isSynthetic, saldoInicial, allAccountTxsDateSorted])
 
   const yMin = useMemo(() => {
     if (!chartData.length) return 'auto'
@@ -312,26 +511,9 @@ export default function Cuentas() {
 
           {/* Chart */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-700">
-                Saldo de "{selectedAccount.nombre}"
-              </h2>
-              <div className="flex gap-1">
-                {[['all', 'Todos los movimientos'], ['monthly', 'Por mes']].map(([v, lbl]) => (
-                  <button
-                    key={v}
-                    onClick={() => setGranularity(v)}
-                    className={`px-3 py-1 text-xs rounded-md font-medium transition-colors ${
-                      granularity === v
-                        ? 'bg-indigo-600 text-white'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
-                  >
-                    {lbl}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <h2 className="text-sm font-semibold text-slate-700 mb-4">
+              Saldo de "{selectedAccount.nombre}"
+            </h2>
             <ResponsiveContainer width="100%" height={320}>
               <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 10 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -369,7 +551,19 @@ export default function Cuentas() {
           {!isSynthetic && (
             <div>
               <h2 className="text-sm font-semibold text-slate-700 mb-2">Verificación de coherencia</h2>
-              <ConsistencyPanel gaps={gaps} />
+              <ConsistencyPanel
+                gaps={gaps}
+                acknowledgedGaps={selectedAccount?.acknowledgedGaps}
+                onAcknowledge={(key) => {
+                  const current = selectedAccount?.acknowledgedGaps ?? []
+                  updateAccount(selectedAccountId, { acknowledgedGaps: [...current, key] })
+                }}
+                onUnacknowledge={(key) => {
+                  const current = selectedAccount?.acknowledgedGaps ?? []
+                  updateAccount(selectedAccountId, { acknowledgedGaps: current.filter((k) => k !== key) })
+                }}
+                onEditTx={(id, updates) => updateTransaction(id, updates)}
+              />
             </div>
           )}
         </div>

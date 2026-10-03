@@ -6,9 +6,11 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Cuadra_0.3.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Cuadra_0.4.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
 No requiere instalación de dependencias. Incluye actualizaciones automáticas.
+
+> **Actualización desde una versión anterior** — los datos no se pierden. Cuadra guarda movimientos, categorías y configuración en IndexedDB (WebView2), una carpeta del perfil de Windows que el instalador no modifica. Puedes instalar encima o desinstalar primero; el resultado es el mismo.
 
 ---
 
@@ -22,7 +24,9 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 - **Evolución de saldo para cuentas de efectivo** — modo sintético con saldo inicial configurable cuando no hay extracto importado
 - **Selección múltiple** para categorizar en lote
 - **Dashboard anual** con gráficos de barras, tarta, tabla de gastos por categoría × mes y comparativa interanual
-- **Evolución del saldo** por cuenta con verificador de coherencia (detecta huecos en el extracto)
+- **Evolución del saldo** por cuenta con verificador de coherencia (detecta huecos en el extracto) y opciones de editar o marcar como revisada
+- **Escala √ en gráficos** — toggle para comprimir barras cuando un mes outlier aplasta el resto
+- **Página Acerca de** — versión instalada y comprobador de actualizaciones
 - **Tema oscuro/claro** con paleta personalizada y persistencia
 - **Copia de seguridad** exportable/restaurable en JSON
 - **Actualizaciones automáticas** firmadas con minisign vía tauri-plugin-updater
@@ -73,14 +77,15 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
 ```
 transactions   id, fechaContable[idx], categoria[idx], accountId[idx],
-               descripcion, importe, saldo, categoriaManual, esManual, subcategoria
+               descripcion, importe, saldo, categoriaManual, esManual, subcategoria,
+               bankRowIndex
 
 categories     id, nombre, palabrasClave[], palabrasExcluidas[],
                color, esIngreso?, esTransferencia?, _order?
 
 subcategories  id, categoriaId[idx], nombre, palabrasClave[], color
 
-accounts       id, nombre, tipo, color, saldoInicial?
+accounts       id, nombre, tipo, color, saldoInicial?, acknowledgedGaps[]
 ```
 
 La versión 2 añade `accounts` e índice `accountId`. La migración Dexie es automática y no destructiva.
@@ -126,13 +131,19 @@ Cuatro stores independientes sin `persist` middleware — la persistencia la ges
 
 ### Verificador de coherencia de saldo
 
-Para cada par de transacciones consecutivas de una cuenta comprueba:
+Usa `chainGlobal()` para reconstruir el orden original del banco por enlace de saldos (`saldo[i-1] + importe[i] = saldo[i]`), sin depender del orden por fecha. Esto resuelve el problema de Bankinter, que intercala transacciones con distinta `fechaContable` dentro del mismo bloque de exportación.
+
+Para cada par de transacciones consecutivas en la cadena comprueba:
 
 ```
 |saldo[i-1] + importe[i] - saldo[i]| > 0.02 €  →  inconsistencia
 ```
 
-La tolerancia de 2 céntimos absorbe redondeos bancarios. Una inconsistencia indica movimientos ausentes en el extracto, exportación parcial o transacciones asignadas a la cuenta equivocada.
+La tolerancia de 2 céntimos absorbe redondeos bancarios. Cada inconsistencia ofrece dos acciones:
+- **Editar** — corregir fecha, descripción u otros campos del movimiento
+- **Revisada ✓** — marcar como hueco conocido (persiste en `account.acknowledgedGaps` vía Dexie)
+
+`bankRowIndex` se guarda al importar cada transacción para desambiguar candidatos con el mismo importe/saldo.
 
 ### Tema oscuro
 

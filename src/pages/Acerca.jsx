@@ -1,18 +1,25 @@
 import { useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
 
-const APP_VERSION = '0.3.0'
+const APP_VERSION = '0.4.0'
+const IS_TAURI = '__TAURI_INTERNALS__' in window
 
 export default function Acerca() {
   const [checking, setChecking] = useState(false)
-  const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'error'
+  const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'error' | 'notauri'
   const [updateInfo, setUpdateInfo] = useState(null)
+  const [errorMsg, setErrorMsg] = useState(null)
   const [installing, setInstalling] = useState(false)
 
   async function checkUpdates() {
+    if (!IS_TAURI) {
+      setResult('notauri')
+      return
+    }
     setChecking(true)
     setResult(null)
     setUpdateInfo(null)
+    setErrorMsg(null)
     try {
       const { check } = await tauriImport('@tauri-apps/plugin-updater')
       const upd = await check()
@@ -22,7 +29,8 @@ export default function Acerca() {
       } else {
         setResult('uptodate')
       }
-    } catch {
+    } catch (e) {
+      setErrorMsg(String(e?.message ?? e))
       setResult('error')
     } finally {
       setChecking(false)
@@ -69,8 +77,14 @@ export default function Acerca() {
           {result === 'uptodate' && (
             <p className="text-center text-sm text-green-600">Tienes la última versión instalada.</p>
           )}
+          {result === 'notauri' && (
+            <p className="text-center text-sm text-slate-400">Las actualizaciones automáticas solo están disponibles en la app de escritorio.</p>
+          )}
           {result === 'error' && (
-            <p className="text-center text-sm text-red-500">No se pudo contactar con el servidor de actualizaciones.</p>
+            <div className="text-center">
+              <p className="text-sm text-red-500">No se pudo comprobar actualizaciones.</p>
+              {errorMsg && <p className="text-xs text-red-400 mt-1 font-mono break-all">{errorMsg}</p>}
+            </div>
           )}
           {result === 'available' && updateInfo && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-col gap-2">

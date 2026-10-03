@@ -180,6 +180,7 @@ export function mapRows(rows, mapping) {
 
     return {
       id: `tx-${Date.now()}-${i}-${Math.random().toString(36).slice(2)}`,
+      bankRowIndex: i,
       fechaContable: parseDate(row[mapping.fechaContable]),
       fechaValor: mapping.fechaValor ? parseDate(row[mapping.fechaValor]) : '',
       descripcion: String(row[mapping.descripcion] ?? '').trim(),

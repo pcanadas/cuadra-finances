@@ -13,13 +13,14 @@ const useTransactionStore = create((set, get) => ({
   addTransactions: async (newTransactions) => {
     const existing = get().transactions
     const existingIds = new Set(existing.map((t) => t.id))
-    // Content fingerprint: same date + description + amount = duplicate
+    // Content fingerprint: date + description + amount + saldo (saldo makes it unique even
+    // when two transactions have identical date/description/amount on the same day)
     const existingFingerprints = new Set(
-      existing.map((t) => `${t.fechaContable}|${t.descripcion}|${t.importe}`)
+      existing.map((t) => `${t.fechaContable}|${t.descripcion}|${t.importe}|${t.saldo ?? ''}`)
     )
     const unique = newTransactions.filter((t) => {
       if (existingIds.has(t.id)) return false
-      if (existingFingerprints.has(`${t.fechaContable}|${t.descripcion}|${t.importe}`)) return false
+      if (existingFingerprints.has(`${t.fechaContable}|${t.descripcion}|${t.importe}|${t.saldo ?? ''}`)) return false
       return true
     })
     if (unique.length === 0) return 0

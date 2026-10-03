@@ -36,11 +36,17 @@ export default function Importar() {
     const json = JSON.stringify(payload, null, 2)
     const filename = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
 
-    // Tauri: write to Downloads folder directly
+    // Tauri: show save dialog so the user picks where to save
     try {
-      const { writeTextFile, BaseDirectory } = await tauriImport('@tauri-apps/plugin-fs')
-      await writeTextFile(filename, json, { baseDir: BaseDirectory.Download })
-      alert(`Backup guardado en tu carpeta Descargas:\n${filename}`)
+      const { save } = await tauriImport('@tauri-apps/plugin-dialog')
+      const { writeTextFile } = await tauriImport('@tauri-apps/plugin-fs')
+      const filePath = await save({
+        defaultPath: filename,
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+      })
+      if (!filePath) return   // user cancelled
+      await writeTextFile(filePath, json)
+      alert(`Backup guardado en:\n${filePath}`)
       return
     } catch {
       // Not in Tauri — fall through to browser download

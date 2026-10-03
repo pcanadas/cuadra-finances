@@ -24,6 +24,13 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 const formatEur = (amount) =>
   new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
 
+// Y-axis tick: smart abbreviation that avoids duplicate labels
+const formatYAxis = (v) => {
+  const abs = Math.abs(v)
+  if (abs >= 10000) return `${(v / 1000).toFixed(0)}k`
+  return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(v)
+}
+
 const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const MONTH_NAMES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -183,6 +190,7 @@ export default function Dashboard() {
   const [selectedYear,       setSelectedYear]       = useState(new Date().getFullYear())
   const [selectedCategory,   setSelectedCategory]   = useState('')
   const [expandedCategories, setExpandedCategories] = useState(new Set())
+  const [logScale,           setLogScale]           = useState(false)
 
   const toggleCategoryExpand = (id) =>
     setExpandedCategories((prev) => {
@@ -448,13 +456,21 @@ export default function Dashboard() {
 
       {/* ── 2. Monthly bar chart ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-        <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">📊 Evolución mensual</p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📊 Evolución mensual</p>
+          <button
+            onClick={() => setLogScale((v) => !v)}
+            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${logScale ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+          >
+            {logScale ? 'Escala √' : 'Escala lineal'}
+          </button>
+        </div>
         <p className="text-slate-400 text-xs mb-5">Gastos e ingresos mes a mes · {selectedYear}</p>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
             <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
             <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} scale={logScale ? 'sqrt' : 'auto'} domain={logScale ? [0, 'auto'] : [0, 'auto']} />
             <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#2d5264' : '#f8fafc' }} />
             <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
             <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
@@ -488,7 +504,7 @@ export default function Dashboard() {
             <LineChart data={categoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
               <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomLineTooltip />} />
               <Line type="monotone" dataKey="total" stroke="#c4b5fd" strokeWidth={2} dot={{ r: 3, fill: '#c4b5fd' }} activeDot={{ r: 5 }} />
             </LineChart>
@@ -543,7 +559,7 @@ export default function Dashboard() {
             <BarChart data={yearlyComparison} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
               <XAxis dataKey="year" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#2d5264' : '#f8fafc' }} />
               <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
               <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
