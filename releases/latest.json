@@ -1,11 +1,11 @@
 {
-  "version": "0.2.0",
-  "notes": "Múltiples cuentas bancarias, evolución del saldo con verificador de coherencia, ordenación de tablas, movimientos manuales, backup/restore y app de escritorio Tauri.",
+  "version": "0.3.0",
+  "notes": "Editar y eliminar movimientos manuales, evolución de saldo para cuentas de efectivo y fix de exportación de backup.",
   "pub_date": "2026-10-03T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQU1PZzJjS0k2ampRNDRtVzlLM2tWdUU5YklsMVp2ZzVYTnkyVUFyMjAxYUdabWRVWXhYVlN2bWFYNmZGSkl3OW1valFabzdLZVFTMjhtQ1lRa25yZkFBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMDE0ODg2CWZpbGU6Q3VhZHJhXzAuMi4wX3g2NC1zZXR1cC5leGUKcFVBNTNEdGhMZXZoOEFrVDY5Vi9MTkJ6TEViNmVuSmFuUWN1OGFFNmQrUTZieUdxN3hnYTNyOXVHelh4aHRHVEtxcTJINVdmRVNqQnRncWlkT1ZXREE9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.2.0/Cuadra_0.2.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUNOWVAyclZUaUlZR2NyRXRWUmNuSG1Kdy9GR3lRVmVybm9Rd09JREtwUXdzOE1BRUl5Sm5kN2tQZzdmd294Skxpb1RUY0cybk53VzB4OWl0TTVpemdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMDI4MzE0CWZpbGU6Q3VhZHJhXzAuMy4wX3g2NC1zZXR1cC5leGUKajVoOEFNdS9aR1lBcVMraVJqdlNTNmJoZVlIL0xxa25PYll2V1FJRkdDckloNE1VK2N5YUxtQW5FcE56V0t3aXBqYlErQTZHY0Q3a0VpdC8raVdjQmc9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.3.0/Cuadra_0.3.0_x64-setup.exe"
     }
   }
 }
