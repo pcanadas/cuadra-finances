@@ -6,7 +6,7 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Cuadra_0.2.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Cuadra_0.3.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
 No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
@@ -17,7 +17,9 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 - **Importación de extractos bancarios** — Bankinter (XLS nativo) y formato genérico CSV/Excel con mapeo de columnas configurable
 - **Categorización automática** por palabras clave con soporte de excepciones (`palabrasExcluidas`)
 - **Subcategorías** con auto-aprendizaje: al asignar manualmente una subcategoría, la keyword se añade automáticamente para futuras importaciones
-- **Múltiples cuentas** — pestañas por cuenta, movimientos manuales, badges de color
+- **Múltiples cuentas** — pestañas por cuenta, badges de color
+- **Movimientos manuales** editables y eliminables desde la tabla
+- **Evolución de saldo para cuentas de efectivo** — modo sintético con saldo inicial configurable cuando no hay extracto importado
 - **Selección múltiple** para categorizar en lote
 - **Dashboard anual** con gráficos de barras, tarta, tabla de gastos por categoría × mes y comparativa interanual
 - **Evolución del saldo** por cuenta con verificador de coherencia (detecta huecos en el extracto)
@@ -71,17 +73,27 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
 ```
 transactions   id, fechaContable[idx], categoria[idx], accountId[idx],
-               descripcion, importe, saldo, categoriaManual, esManual
+               descripcion, importe, saldo, categoriaManual, esManual, subcategoria
 
 categories     id, nombre, palabrasClave[], palabrasExcluidas[],
                color, esIngreso?, esTransferencia?, _order?
 
 subcategories  id, categoriaId[idx], nombre, palabrasClave[], color
 
-accounts       id, nombre, tipo, color
+accounts       id, nombre, tipo, color, saldoInicial?
 ```
 
 La versión 2 añade `accounts` e índice `accountId`. La migración Dexie es automática y no destructiva.
+
+### Saldo sintético (cuentas de efectivo)
+
+Para cuentas sin extracto bancario importado, Cuentas calcula el saldo acumulado a partir de los movimientos manuales:
+
+```
+saldo[i] = saldoInicial + Σ importe[0..i]
+```
+
+`saldoInicial` se guarda en el objeto `account` y es editable desde la propia página. El verificador de coherencia se oculta en este modo (no hay saldo real con el que comparar).
 
 ### Estado (Zustand)
 
@@ -143,9 +155,10 @@ npm run tauri:dev    # app de escritorio con hot-reload (requiere Rust + cargo)
 
 ### Generar instalador
 
-```bash
+```powershell
 # Configurar firma (necesario una vez por sesión)
-$env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content src-tauri/signing/cuadra.key -Raw)
+# .TrimEnd() evita que el salto de línea final rompa la firma
+$env:TAURI_SIGNING_PRIVATE_KEY = (Get-Content src-tauri/signing/cuadra.key -Raw).TrimEnd()
 $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "tu-contraseña"
 
 npm run tauri:build
