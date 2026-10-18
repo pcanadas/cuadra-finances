@@ -62,9 +62,13 @@ export function extractKeyword(descripcion) {
 /**
  * Apply auto-categorization to a list of transactions.
  */
-export function autoCategorize(transactions, categories) {
-  return transactions.map((t) => ({
-    ...t,
-    categoria: t.categoria || categorizeTransaction(t.descripcion, categories),
-  }))
+export function autoCategorize(transactions, categories, subcategories = []) {
+  return transactions.map((t) => {
+    const catId = t.categoria || categorizeTransaction(t.descripcion, categories)
+    const relevantSubs = catId
+      ? subcategories.filter((s) => s.categoriaId === catId)
+      : subcategories
+    const subId = t.subcategoria || categorizeSubcategory(t.descripcion, relevantSubs)
+    return { ...t, categoria: catId, subcategoria: subId }
+  })
 }

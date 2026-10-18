@@ -4,6 +4,8 @@ import { es } from 'date-fns/locale'
 import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
 import useAccountStore from '../store/useAccountStore'
+import useSubcategoryStore from '../store/useSubcategoryStore'
+import { extractKeyword } from '../utils/categorize'
 
 const PAGE_SIZE = 20
 
@@ -181,20 +183,57 @@ export default function Movimientos() {
   const deleteTransaction       = useTransactionStore((s) => s.deleteTransaction)
   const categories              = useCategoryStore((s) => s.categories)
   const { accounts, addAccount, deleteAccount } = useAccountStore()
+  const subcategories = useSubcategoryStore((s) => s.subcategories)
+  const addSubcategory = useSubcategoryStore((s) => s.addSubcategory)
 
   const [activeAccountId, setActiveAccountId] = useState('__all__')
   const [filterMonth,     setFilterMonth]     = useState('')
   const [filterCategory,  setFilterCategory]  = useState('')
   const [filterAccount,   setFilterAccount]   = useState('')
   const [filterText,      setFilterText]      = useState('')
+  const [filterSubcategory, setFilterSubcategory] = useState('')
+  const [filterType,      setFilterType]      = useState('')
   const [sortCol,         setSortCol]         = useState('fechaContable')
   const [sortDir,         setSortDir]         = useState('desc')
   const [page,            setPage]            = useState(1)
   const [selected,        setSelected]        = useState(new Set())
   const [bulkCategory,    setBulkCategory]    = useState('')
+  const [bulkSubcategory, setBulkSubcategory] = useState('')
   const [showManual,      setShowManual]      = useState(false)
   const [editingTx,       setEditingTx]       = useState(null)
   const [showAccounts,    setShowAccounts]    = useState(false)
+  const [undoStack,       setUndoStack]       = useState([]) // [{id, prev}, ...]
+
+  const MAX_UNDO = 30
+
+  async function trackAndUpdate(id, updates) {
+    const tx = transactions.find((t) => t.id === id)
+    if (!tx) return
+    const prev = {}
+    for (const key of Object.keys(updates)) prev[key] = tx[key] ?? null
+    setUndoStack((s) => [...s.slice(-(MAX_UNDO - 1)), { id, prev }])
+    await updateTransaction(id, updates)
+  }
+
+  async function trackAndBulkUpdate(updatesMap) {
+    const entries = []
+    for (const [id, updates] of Object.entries(updatesMap)) {
+      const tx = transactions.find((t) => t.id === id)
+      if (!tx) continue
+      const prev = {}
+      for (const key of Object.keys(updates)) prev[key] = tx[key] ?? null
+      entries.push({ id, prev })
+    }
+    setUndoStack((s) => [...s.slice(-(MAX_UNDO - entries.length)), ...entries])
+    await bulkUpdateTransactions(updatesMap)
+  }
+
+  async function handleUndo() {
+    if (undoStack.length === 0) return
+    const last = undoStack[undoStack.length - 1]
+    await updateTransaction(last.id, last.prev)
+    setUndoStack((s) => s.slice(0, -1))
+  }
 
   const monthOptions = useMemo(() => {
     const set = new Set()
@@ -243,6 +282,13 @@ export default function Movimientos() {
         filterCategory === 'sin-categoria' ? !t.categoria : t.categoria === filterCategory
       )
     }
+    if (filterSubcategory) {
+      result = result.filter((t) =>
+        filterSubcategory === 'sin-subcategoria' ? !t.subcategoria : t.subcategoria === filterSubcategory
+      )
+    }
+    if (filterType === 'ingreso') result = result.filter((t) => t.importe >= 0)
+    else if (filterType === 'gasto') result = result.filter((t) => t.importe < 0)
     if (filterText.trim()) {
       const q = filterText.trim().toLowerCase()
       result = result.filter((t) => t.descripcion?.toLowerCase().includes(q))
@@ -263,7 +309,7 @@ export default function Movimientos() {
       return sortDir === 'asc' ? av - bv : bv - av
     })
     return result
-  }, [transactions, activeAccountId, filterAccount, filterMonth, filterCategory, filterText, sortCol, sortDir])
+  }, [transactions, activeAccountId, filterAccount, filterMonth, filterCategory, filterSubcategory, filterType, filterText, sortCol, sortDir])
 
   const totalPages    = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated     = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -290,12 +336,18 @@ export default function Movimientos() {
   }
 
   async function applyBulkCategory() {
-    if (!bulkCategory || selected.size === 0) return
+    if ((!bulkCategory && !bulkSubcategory) || selected.size === 0) return
     const updatesMap = {}
-    selected.forEach((id) => { updatesMap[id] = { categoria: bulkCategory, categoriaManual: true } })
-    await bulkUpdateTransactions(updatesMap)
+    selected.forEach((id) => {
+      const updates = {}
+      if (bulkCategory) { updates.categoria = bulkCategory; updates.categoriaManual = true }
+      if (bulkSubcategory) { updates.subcategoria = bulkSubcategory; updates.subcategoriaManual = true }
+      updatesMap[id] = updates
+    })
+    await trackAndBulkUpdate(updatesMap)
     setSelected(new Set())
     setBulkCategory('')
+    setBulkSubcategory('')
   }
 
   const formatDate = (iso) => {
@@ -320,6 +372,13 @@ export default function Movimientos() {
             className="px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
             Cuentas
           </button>
+          {undoStack.length > 0 && (
+            <button onClick={handleUndo}
+              className="px-3 py-1.5 text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+              title="Deshacer último cambio">
+              ↩ Deshacer ({undoStack.length})
+            </button>
+          )}
           <button onClick={() => setShowManual(true)}
             className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
             + Añadir manual
@@ -381,6 +440,27 @@ export default function Movimientos() {
           </select>
         </div>
         <div>
+          <label className="text-xs font-medium text-slate-500 block mb-1">Subcategoría</label>
+          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            value={filterSubcategory} onChange={(e) => { setFilterSubcategory(e.target.value); setPage(1) }}>
+            <option value="">Todas</option>
+            <option value="sin-subcategoria">Sin subcategoría</option>
+            {(filterCategory && filterCategory !== 'sin-categoria'
+              ? subcategories.filter((s) => s.categoriaId === filterCategory)
+              : subcategories
+            ).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs font-medium text-slate-500 block mb-1">Tipo</label>
+          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1) }}>
+            <option value="">Todos</option>
+            <option value="ingreso">Ingresos</option>
+            <option value="gasto">Gastos</option>
+          </select>
+        </div>
+        <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Buscar</label>
           <input type="text" placeholder="Buscar en descripción..." value={filterText}
             onChange={(e) => { setFilterText(e.target.value); setPage(1) }}
@@ -389,7 +469,7 @@ export default function Movimientos() {
         <div className="flex items-end gap-3">
           <span className="text-sm text-slate-400 pb-1">{filtered.length} registros</span>
           {(filterMonth || filterCategory || filterText) && (
-            <button onClick={() => { setFilterMonth(''); setFilterCategory(''); setFilterText(''); setPage(1) }}
+            <button onClick={() => { setFilterMonth(''); setFilterCategory(''); setFilterSubcategory(''); setFilterType(''); setFilterText(''); setPage(1) }}
               className="text-xs text-indigo-600 hover:text-indigo-800 underline pb-1">
               Limpiar filtros
             </button>
@@ -404,15 +484,25 @@ export default function Movimientos() {
             {selected.size} movimiento{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
           </span>
           <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={bulkCategory} onChange={(e) => setBulkCategory(e.target.value)}>
-            <option value="">— Seleccionar categoría —</option>
+            value={bulkCategory} onChange={(e) => { setBulkCategory(e.target.value); setBulkSubcategory('') }}>
+            <option value="">— Categoría —</option>
             {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
           </select>
-          <button onClick={applyBulkCategory} disabled={!bulkCategory}
+          {bulkCategory && (() => {
+            const subs = subcategories.filter((s) => s.categoriaId === bulkCategory)
+            return subs.length > 0 ? (
+              <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                value={bulkSubcategory} onChange={(e) => setBulkSubcategory(e.target.value)}>
+                <option value="">— Subcategoría —</option>
+                {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+              </select>
+            ) : null
+          })()}
+          <button onClick={applyBulkCategory} disabled={!bulkCategory && !bulkSubcategory}
             className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg transition-colors">
             Aplicar
           </button>
-          <button onClick={() => { setSelected(new Set()); setBulkCategory('') }}
+          <button onClick={() => { setSelected(new Set()); setBulkCategory(''); setBulkSubcategory('') }}
             className="text-xs text-indigo-500 hover:text-indigo-700 ml-auto">
             ✕ Cancelar selección
           </button>
@@ -451,6 +541,7 @@ export default function Movimientos() {
                   <th className="text-right px-4 py-3 font-medium text-slate-600">Saldo</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Cuenta</th>
                   <th className="text-left px-4 py-3 font-medium text-slate-600">Categoría</th>
+                  <th className="text-left px-4 py-3 font-medium text-slate-600">Subcategoría</th>
                   <th className="w-16"></th>
                 </tr>
               </thead>
@@ -492,11 +583,46 @@ export default function Movimientos() {
                         <select
                           className="border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[140px]"
                           value={t.categoria || ''}
-                          onChange={(e) => updateTransaction(t.id, { categoria: e.target.value || null, categoriaManual: true })}
+                          onChange={(e) => trackAndUpdate(t.id, { categoria: e.target.value || null, categoriaManual: true, subcategoria: null })}
                         >
                           <option value="">Sin categoría</option>
                           {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
                         </select>
+                      </td>
+                      <td className="px-4 py-3">
+                        {(() => {
+                          const subs = t.categoria ? subcategories.filter((s) => s.categoriaId === t.categoria) : []
+                          return t.categoria ? (
+                            <select
+                              className="border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[130px]"
+                              value={t.subcategoria || ''}
+                              onChange={async (e) => {
+                                if (e.target.value === '__new__') {
+                                  const nombre = window.prompt('Nombre de la nueva subcategoría:')
+                                  if (!nombre?.trim()) return
+                                  const kw = extractKeyword(t.descripcion)
+                                  const cat = categories.find((c) => c.id === t.categoria)
+                                  await addSubcategory({
+                                    categoriaId: t.categoria,
+                                    nombre: nombre.trim(),
+                                    palabrasClave: kw ? [kw] : [],
+                                    color: cat?.color || '#94a3b8',
+                                  })
+                                  const created = useSubcategoryStore.getState().subcategories.slice(-1)[0]
+                                  if (created) await trackAndUpdate(t.id, { subcategoria: created.id, subcategoriaManual: true })
+                                } else {
+                                  trackAndUpdate(t.id, { subcategoria: e.target.value || null, subcategoriaManual: true })
+                                }
+                              }}
+                            >
+                              <option value="">—</option>
+                              {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                              <option value="__new__">＋ Nueva...</option>
+                            </select>
+                          ) : (
+                            <span className="text-xs text-slate-400">—</span>
+                          )
+                        })()}
                       </td>
                       <td className="px-4 py-3 w-16">
                         {t.esManual && (

@@ -1,11 +1,11 @@
 {
-  "version": "0.4.0",
-  "notes": "Verificador de coherencia mejorado (chainGlobal), página Acerca de, escala √ en gráficos, etiquetas de eje Y legibles, editar/revisar inconsistencias y correcciones varias.",
-  "pub_date": "2026-10-03T00:00:00Z",
+  "version": "0.5.0",
+  "notes": "Detección automática de subcategorías en importación, edición masiva de categoría/subcategoría en vista previa y en Movimientos, filtros por subcategoría y tipo, edición inline de subcategoría, creación rápida de subcategorías, botón deshacer, sugerencias de keywords para subcategorías, comparación mensual entre años, comparación de múltiples categorías y exportar gráficos a PNG.",
+  "pub_date": "2026-10-18T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUdYTXpDNmJmVGI4QVFEVHE3MzVjbFlUQ09BMnFXVHBTMG9BdWZDUS9peDdtWjFZREowaG1uSWl5V2xGSElNdUFQU0RVWjQvR1U3MkhZckYycXBwOHdFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxMDQxMzAwCWZpbGU6Q3VhZHJhXzAuNC4wX3g2NC1zZXR1cC5leGUKTWpKOGlPd3cydUhHRXliZUFidktOYnN1N1JXYTVMcnVGSGdpZXViR0g1OEdubGdMT2MybVB1N3ZVNmxTTDl5N3VYbEZxdGUzaUlHV2FMUVVUMHlvQ3c9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.4.0/Cuadra_0.4.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUVNbmVtcWN5dW5UalpiWnF1NG9zdWp4WFZQZk8zcWFyN0JRa1ZpbE1tTFBrUnVrRjNPTmNUWlpNcVhyUWlyNkxVUzVVakk5Rm1EdkxubGNET0xDeXdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzM4NjYxCWZpbGU6Q3VhZHJhXzAuNS4wX3g2NC1zZXR1cC5leGUKamtsZWpDTkVxa2FhRTMrbWRPWExVaDkrK1lWZHptaEtGZG9VTkF0QUpqY2VTVk1tTE9pUFpwcFQ3ME80Wk1KVzFacmNVT3E2aXJmV056QmNQc1ppRGc9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.5.0/Cuadra_0.5.0_x64-setup.exe"
     }
   }
 }

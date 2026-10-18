@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.5.0] — 2026-10-18
+
+### Añadido
+- **Detección automática de subcategorías en importación** — `autoCategorize` ahora asigna subcategorías por palabras clave además de categorías, filtrando solo las subcategorías pertenecientes a la categoría detectada
+- **Columna Subcategoría en vista previa de importación** — la tabla del paso de preview muestra la subcategoría auto-asignada con badge de color
+- **Edición masiva en vista previa de importación** — seleccionar movimientos con checkboxes y cambiar categoría/subcategoría en lote antes de importar
+- **Subcategoría en edición masiva de Movimientos** — la barra de acciones masivas ahora permite asignar subcategoría además de categoría
+- **Subcategoría inline en tabla de Movimientos** — cada fila muestra un selector de subcategoría filtrado por la categoría del movimiento
+- **Filtro por subcategoría** en la página de Movimientos, con opción "Sin subcategoría"
+- **Filtro por tipo (Ingreso/Gasto)** en la página de Movimientos
+- **Botón Deshacer** — permite revertir los últimos cambios de categoría/subcategoría (hasta 30 acciones), visible en la barra superior de Movimientos
+- **Sugerencias de palabras clave para subcategorías** — panel en Subcategorías que detecta movimientos asignados manualmente sin keyword coincidente y sugiere añadirla (con opción de descartar, persistido en localStorage)
+- **Creación rápida de subcategoría desde Movimientos** — opción "＋ Nueva..." en el selector inline de subcategoría, crea la subcategoría con palabra clave auto-extraída y la asigna al movimiento
+- **Comparación mensual entre años** — botón "Comparar" en el gráfico de evolución mensual que superpone barras del año seleccionado vs el anterior
+- **Comparación de múltiples categorías** — botón "Comparar categorías" en el gráfico de distribución, permite seleccionar hasta 6 categorías y ver sus líneas de gasto mensuales superpuestas con chips de selección
+- **Exportar gráficos a PNG** — botón "📷 PNG" en los gráficos de evolución mensual, distribución/comparación, comparativa anual y comparación mensual entre años; exporta a 2x resolución con fondo blanco
+
+---
+
 ## [0.4.0] — 2026-10-03
 
 ### Añadido

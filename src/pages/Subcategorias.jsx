@@ -198,6 +198,48 @@ export default function Subcategorias() {
   const [newNombre, setNewNombre]     = useState('')
   const [newKeywords, setNewKeywords] = useState([])
   const [newColor, setNewColor]       = useState(PRESET_COLORS[0])
+  const [dismissedSubSugg, setDismissedSubSugg] = useState(() => {
+    try { return new Set(JSON.parse(localStorage.getItem('cuadra-dismissed-sub-suggestions') || '[]')) }
+    catch { return new Set() }
+  })
+
+  function dismissSubSuggestion(subId, kw) {
+    setDismissedSubSugg((prev) => {
+      const next = new Set(prev)
+      next.add(`${subId}::${kw}`)
+      localStorage.setItem('cuadra-dismissed-sub-suggestions', JSON.stringify([...next]))
+      return next
+    })
+  }
+
+  const subSuggestions = useMemo(() => {
+    if (!selectedCatId || catSubcats.length === 0) return []
+    const subMap = Object.fromEntries(catSubcats.map((s) => [s.id, s]))
+    const sugg = {} // subId -> Set of candidate keywords
+
+    catTransactions
+      .filter((t) => t.subcategoriaManual && t.subcategoria && t.descripcion)
+      .forEach((t) => {
+        const sub = subMap[t.subcategoria]
+        if (!sub) return
+        const upper = t.descripcion.toUpperCase().replace(/\s+/g, ' ').trim()
+        const alreadyMatched = sub.palabrasClave.some((kw) =>
+          upper.includes(kw.toUpperCase().replace(/\s+/g, ' ').trim())
+        )
+        if (alreadyMatched) return
+        const candidate = extractKeyword(t.descripcion)
+        if (!candidate) return
+        if (!sugg[t.subcategoria]) sugg[t.subcategoria] = new Set()
+        sugg[t.subcategoria].add(candidate)
+      })
+
+    return Object.entries(sugg)
+      .map(([subId, kwSet]) => ({
+        sub: subMap[subId],
+        keywords: [...kwSet].filter((kw) => !dismissedSubSugg.has(`${subId}::${kw}`)),
+      }))
+      .filter((s) => s.keywords.length > 0)
+  }, [catTransactions, catSubcats, selectedCatId, dismissedSubSugg])
 
   const selectedCategory = categories.find((c) => c.id === selectedCatId)
 
@@ -453,6 +495,44 @@ export default function Subcategorias() {
                   </button>
                 </form>
               </div>
+
+              {/* Subcategory keyword suggestions */}
+              {subSuggestions.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                  <p className="text-sm font-semibold text-amber-800 mb-3">
+                    💡 Sugerencias de palabras clave para subcategorías
+                  </p>
+                  <p className="text-xs text-amber-600 mb-3">
+                    Basadas en movimientos asignados manualmente cuya descripción no coincide con ninguna palabra clave existente.
+                  </p>
+                  <div className="space-y-2">
+                    {subSuggestions.map(({ sub, keywords }) => (
+                      <div key={sub.id} className="flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+                          style={{ backgroundColor: (sub.color || '#94a3b8') + '22', color: sub.color || '#94a3b8' }}>
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sub.color || '#94a3b8' }} />
+                          {sub.nombre}
+                        </span>
+                        {keywords.map((kw) => (
+                          <span key={kw} className="inline-flex items-center gap-1 text-xs bg-white border border-amber-200 rounded-full px-2 py-0.5">
+                            <button
+                              className="text-green-600 hover:text-green-800 font-bold"
+                              title="Añadir palabra clave"
+                              onClick={() => updateSubcategory(sub.id, { palabrasClave: [...sub.palabrasClave, kw] })}
+                            >+</button>
+                            <span className="text-amber-800">{kw}</span>
+                            <button
+                              className="text-slate-400 hover:text-red-500"
+                              title="Descartar sugerencia"
+                              onClick={() => dismissSubSuggestion(sub.id, kw)}
+                            >×</button>
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Transactions preview */}
               <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">

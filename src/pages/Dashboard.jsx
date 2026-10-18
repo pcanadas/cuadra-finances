@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useCallback } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import {
   BarChart,
@@ -44,6 +44,45 @@ function toPastel(hex, amount = 0.55) {
   const pg = Math.round(g + (255 - g) * amount)
   const pb = Math.round(b + (255 - b) * amount)
   return `rgb(${pr},${pg},${pb})`
+}
+
+// ─── export helper ──────────────────────────────────────────────────────────
+
+function exportChartAsPng(containerRef, filename = 'chart') {
+  const el = containerRef.current
+  if (!el) return
+  const svg = el.querySelector('svg')
+  if (!svg) return
+  const svgData = new XMLSerializer().serializeToString(svg)
+  const canvas = document.createElement('canvas')
+  const rect = svg.getBoundingClientRect()
+  const scale = 2
+  canvas.width = rect.width * scale
+  canvas.height = rect.height * scale
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = '#ffffff'
+  ctx.fillRect(0, 0, canvas.width, canvas.height)
+  const img = new Image()
+  img.onload = () => {
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+    const a = document.createElement('a')
+    a.download = `${filename}.png`
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+  }
+  img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)))
+}
+
+function ExportButton({ containerRef, filename }) {
+  return (
+    <button
+      onClick={() => exportChartAsPng(containerRef, filename)}
+      className="text-xs px-2 py-1 rounded-lg border bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100 transition-colors"
+      title="Exportar como PNG"
+    >
+      📷 PNG
+    </button>
+  )
 }
 
 // ─── sub-components ─────────────────────────────────────────────────────────
@@ -189,8 +228,15 @@ export default function Dashboard() {
 
   const [selectedYear,       setSelectedYear]       = useState(new Date().getFullYear())
   const [selectedCategory,   setSelectedCategory]   = useState('')
+  const [selectedCategories, setSelectedCategories] = useState([]) // multi-category comparison
   const [expandedCategories, setExpandedCategories] = useState(new Set())
   const [logScale,           setLogScale]           = useState(false)
+  const [showCompareMonth,   setShowCompareMonth]   = useState(false)
+
+  const chartMonthlyRef = useRef(null)
+  const chartPieRef     = useRef(null)
+  const chartCompareRef = useRef(null)
+  const chartYearlyRef  = useRef(null)
 
   const toggleCategoryExpand = (id) =>
     setExpandedCategories((prev) => {
@@ -401,6 +447,37 @@ export default function Dashboard() {
 
   const hasIngresoData = ingresosMonthlySummaryFinal.some((r) => r.total > 0)
 
+  // ── month-by-month year comparison ──
+  const prevYear = selectedYear - 1
+  const hasPrevYear = availableYears.includes(prevYear)
+  const monthCompareData = useMemo(() => {
+    if (!hasPrevYear) return []
+    const prevYearTx = transactions.filter((t) =>
+      new Date(t.fechaContable).getFullYear() === prevYear && !transferCatIds.has(t.categoria)
+    )
+    const prevGastos = prevYearTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria))
+    return Array.from({ length: 12 }, (_, i) => ({
+      mes: MONTH_LABELS[i],
+      [`gastos_${selectedYear}`]: gastosTx.filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + Math.abs(t.importe), 0),
+      [`gastos_${prevYear}`]: prevGastos.filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + Math.abs(t.importe), 0),
+    }))
+  }, [gastosTx, transactions, selectedYear, prevYear, hasPrevYear, transferCatIds, ingresoCatIds])
+
+  // ── multi-category line comparison ──
+  const COMPARE_COLORS = ['#8b5cf6', '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#ec4899']
+  const multiCategoryLineData = useMemo(() => {
+    if (selectedCategories.length === 0) return []
+    return Array.from({ length: 12 }, (_, i) => {
+      const row = { mes: i + 1 }
+      selectedCategories.forEach((catId) => {
+        row[catId] = gastosTx
+          .filter((t) => new Date(t.fechaContable).getMonth() === i && (t.categoria === catId || (catId === '__sin__' && !t.categoria)))
+          .reduce((s, t) => s + Math.abs(t.importe), 0)
+      })
+      return row
+    })
+  }, [gastosTx, selectedCategories])
+
   // ── multi-year comparison ──
   const yearlyComparison = useMemo(() => {
     return availableYears.slice().reverse().map((year) => {
@@ -458,14 +535,26 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
         <div className="flex items-center justify-between mb-1">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📊 Evolución mensual</p>
-          <button
-            onClick={() => setLogScale((v) => !v)}
-            className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${logScale ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
-          >
-            {logScale ? 'Escala √' : 'Escala lineal'}
-          </button>
+          <div className="flex items-center gap-2">
+            {hasPrevYear && (
+              <button
+                onClick={() => setShowCompareMonth((v) => !v)}
+                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${showCompareMonth ? 'bg-violet-100 border-violet-300 text-violet-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+              >
+                {showCompareMonth ? `vs ${prevYear}` : 'Comparar'}
+              </button>
+            )}
+            <button
+              onClick={() => setLogScale((v) => !v)}
+              className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${logScale ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+            >
+              {logScale ? 'Escala √' : 'Escala lineal'}
+            </button>
+            <ExportButton containerRef={chartMonthlyRef} filename={`evolucion-mensual-${selectedYear}`} />
+          </div>
         </div>
         <p className="text-slate-400 text-xs mb-5">Gastos e ingresos mes a mes · {selectedYear}</p>
+        <div ref={chartMonthlyRef}>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
             <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
@@ -477,29 +566,102 @@ export default function Dashboard() {
             <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
+        </div>
+
+        {/* Month-by-month year comparison */}
+        {showCompareMonth && hasPrevYear && (
+          <div className="mt-6" ref={chartCompareRef}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-slate-500 text-xs font-medium">Gastos: {selectedYear} vs {prevYear}</p>
+              <ExportButton containerRef={chartCompareRef} filename={`comparacion-${selectedYear}-vs-${prevYear}`} />
+            </div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={monthCompareData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+                <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+                <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#2d5264' : '#f8fafc' }} />
+                <Legend formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} iconType="circle" iconSize={8} />
+                <Bar dataKey={`gastos_${selectedYear}`} name={`${selectedYear}`} fill="#fca5a5" radius={[4, 4, 0, 0]} />
+                <Bar dataKey={`gastos_${prevYear}`} name={`${prevYear}`} fill="#c4b5fd" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* ── 3. Pie / line chart (standalone) ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-6" ref={chartPieRef}>
         <div className="flex flex-wrap items-start gap-4 mb-4">
           <div className="flex-1 min-w-0">
             <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">
-              🥧 {selectedCategory ? 'Evolución mensual de categoría' : 'Distribución de gastos'}
+              🥧 {selectedCategories.length > 0 ? 'Comparación de categorías' : selectedCategory ? 'Evolución mensual de categoría' : 'Distribución de gastos'}
             </p>
             <p className="text-slate-400 text-xs">
-              {selectedCategory ? 'Gasto mensual de la categoría seleccionada' : 'Top 8 categorías de gasto'}
+              {selectedCategories.length > 0 ? 'Gasto mensual de las categorías seleccionadas' : selectedCategory ? 'Gasto mensual de la categoría seleccionada' : 'Top 8 categorías de gasto'}
             </p>
           </div>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 max-w-[200px]"
-          >
-            <option value="">— Ver distribución —</option>
-            {categoryBreakdown.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedCategory}
+              onChange={(e) => { setSelectedCategory(e.target.value); setSelectedCategories([]) }}
+              className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 max-w-[200px]"
+            >
+              <option value="">— Ver distribución —</option>
+              {categoryBreakdown.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+            {categoryBreakdown.length > 1 && (
+              <button
+                onClick={() => {
+                  if (selectedCategories.length > 0) {
+                    setSelectedCategories([])
+                  } else {
+                    setSelectedCategories(categoryBreakdown.slice(0, 4).map((c) => c.id))
+                    setSelectedCategory('')
+                  }
+                }}
+                className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${selectedCategories.length > 0 ? 'bg-violet-100 border-violet-300 text-violet-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+              >
+                {selectedCategories.length > 0 ? 'Quitar comparación' : 'Comparar categorías'}
+              </button>
+            )}
+            <ExportButton containerRef={chartPieRef} filename={`distribucion-gastos-${selectedYear}`} />
+          </div>
         </div>
-        {selectedCategory ? (
+
+        {/* Multi-category selector chips */}
+        {selectedCategories.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {categoryBreakdown.slice(0, 10).map((c, i) => {
+              const active = selectedCategories.includes(c.id)
+              return (
+                <button key={c.id}
+                  onClick={() => setSelectedCategories((prev) => active ? prev.filter((id) => id !== c.id) : prev.length < 6 ? [...prev, c.id] : prev)}
+                  className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border transition-colors ${active ? 'border-transparent font-medium' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                  style={active ? { backgroundColor: c.color + '22', color: c.color, borderColor: c.color + '44' } : undefined}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: c.color }} />
+                  {c.nombre}
+                </button>
+              )
+            })}
+            <span className="text-xs text-slate-400 self-center ml-1">(máx. 6)</span>
+          </div>
+        )}
+        {selectedCategories.length > 0 ? (
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={multiCategoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+              <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
+              <Tooltip content={<CustomBarTooltip />} />
+              {selectedCategories.map((catId, i) => {
+                const cat = categoryBreakdown.find((c) => c.id === catId)
+                return <Line key={catId} type="monotone" dataKey={catId} name={cat?.nombre || catId} stroke={cat?.color || COMPARE_COLORS[i]} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+              })}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : selectedCategory ? (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={categoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
@@ -551,10 +713,14 @@ export default function Dashboard() {
       {/* ── 6. Comparativa anual ── */}
       {yearlyComparison.length > 1 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-indigo-200 p-6">
-          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">📅 Comparativa anual</p>
+          <div className="flex items-center justify-between mb-0.5">
+            <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📅 Comparativa anual</p>
+            <ExportButton containerRef={chartYearlyRef} filename="comparativa-anual" />
+          </div>
           <p className="text-slate-400 text-xs mb-5">Evolución de gastos, ingresos y balance por año</p>
 
           {/* Bar chart */}
+          <div ref={chartYearlyRef}>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={yearlyComparison} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
@@ -566,6 +732,7 @@ export default function Dashboard() {
               <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          </div>
 
           {/* Comparison table */}
           <div className="mt-5 overflow-x-auto">

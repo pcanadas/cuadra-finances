@@ -6,7 +6,7 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Cuadra_0.4.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Cuadra_0.5.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
 No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
@@ -18,12 +18,21 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
 - **Importación de extractos bancarios** — Bankinter (XLS nativo) y formato genérico CSV/Excel con mapeo de columnas configurable
 - **Categorización automática** por palabras clave con soporte de excepciones (`palabrasExcluidas`)
+- **Detección automática de subcategorías** en importación — asigna subcategorías por keywords al importar, con vista previa en la tabla de importación
 - **Subcategorías** con auto-aprendizaje: al asignar manualmente una subcategoría, la keyword se añade automáticamente para futuras importaciones
+- **Sugerencias de keywords para subcategorías** — panel que detecta asignaciones manuales sin keyword coincidente y sugiere añadirla
 - **Múltiples cuentas** — pestañas por cuenta, badges de color
 - **Movimientos manuales** editables y eliminables desde la tabla
+- **Edición inline de categoría y subcategoría** en la tabla de movimientos
+- **Creación rápida de subcategoría** desde la tabla de movimientos (opción "＋ Nueva..." en el selector inline)
 - **Evolución de saldo para cuentas de efectivo** — modo sintético con saldo inicial configurable cuando no hay extracto importado
-- **Selección múltiple** para categorizar en lote
+- **Selección múltiple** para categorizar y subcategorizar en lote (en Movimientos y en la vista previa de importación)
+- **Filtros avanzados en Movimientos** — por mes, categoría, subcategoría, tipo (ingreso/gasto) y búsqueda de texto
+- **Deshacer cambios** — botón para revertir los últimos cambios de categoría/subcategoría (hasta 30 acciones)
 - **Dashboard anual** con gráficos de barras, tarta, tabla de gastos por categoría × mes y comparativa interanual
+- **Comparación mensual entre años** — superpone barras del año seleccionado vs el anterior
+- **Comparación de múltiples categorías** — selecciona hasta 6 categorías y compara su evolución mensual
+- **Exportar gráficos a PNG** — botón en cada gráfico del Dashboard para descargar a 2x resolución
 - **Evolución del saldo** por cuenta con verificador de coherencia (detecta huecos en el extracto) y opciones de editar o marcar como revisada
 - **Escala √ en gráficos** — toggle para comprimir barras cuando un mes outlier aplasta el resto
 - **Página Acerca de** — versión instalada y comprobador de actualizaciones
@@ -106,7 +115,7 @@ Cuatro stores independientes sin `persist` middleware — la persistencia la ges
 
 | Store | Responsabilidad |
 |---|---|
-| `useTransactionStore` | CRUD de movimientos + `bulkUpdateTransactions` para re-categorización masiva |
+| `useTransactionStore` | CRUD de movimientos + `bulkUpdateTransactions` para re-categorización/subcategorización masiva |
 | `useCategoryStore` | CRUD + reordenación drag & drop + migración automática de flags |
 | `useSubcategoryStore` | CRUD de subcategorías |
 | `useAccountStore` | CRUD de cuentas bancarias con seed de datos por defecto |
@@ -118,6 +127,7 @@ Cuatro stores independientes sin `persist` middleware — la persistencia la ges
 1. Normaliza descripción (mayúsculas + colapsa whitespace — Bankinter inserta dobles espacios en nombres Bizum)
 2. Por cada categoría en orden: si hay match en `palabrasExcluidas` → salta; si hay match en `palabrasClave` → asigna
 3. Fallback a "Otros"
+4. Para cada movimiento categorizado, busca subcategoría entre las subcategorías de esa categoría por keyword match
 
 `extractKeyword()` elimina prefijos bancarios comunes (`PAGO BIZUM A`, `TRANSF /`, `RECIBO /`...) y devuelve la parte significativa para auto-aprendizaje de keywords.
 

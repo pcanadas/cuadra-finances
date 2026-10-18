@@ -19,6 +19,7 @@ export default function Importar() {
   const clearAll = useTransactionStore((s) => s.clearAll)
   const totalTransactions = useTransactionStore((s) => s.transactions.length)
   const categories = useCategoryStore((s) => s.categories)
+  const subcategories = useSubcategoryStore((s) => s.subcategories)
   const accounts = useAccountStore((s) => s.accounts)
   const [confirmClear, setConfirmClear] = useState(false)
   const [importAccountId, setImportAccountId] = useState('')
@@ -101,6 +102,9 @@ export default function Importar() {
   const [error, setError] = useState('')
   const [importedCount, setImportedCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
+  const [previewSelected, setPreviewSelected] = useState(new Set())
+  const [previewBulkCat, setPreviewBulkCat] = useState('')
+  const [previewBulkSub, setPreviewBulkSub] = useState('')
   const fileRef = useRef()
 
   const handleFile = async (file) => {
@@ -155,9 +159,30 @@ export default function Importar() {
     }
     setError('')
     const rows = mapRows(rawRows, mapping)
-    const categorized = autoCategorize(rows, categories)
+    const categorized = autoCategorize(rows, categories, subcategories)
     setMappedRows(categorized)
     setStep('preview')
+  }
+
+  function togglePreviewSelect(i) {
+    setPreviewSelected((prev) => { const n = new Set(prev); n.has(i) ? n.delete(i) : n.add(i); return n })
+  }
+  function togglePreviewSelectAll() {
+    if (previewSelected.size === mappedRows.length) setPreviewSelected(new Set())
+    else setPreviewSelected(new Set(mappedRows.map((_, i) => i)))
+  }
+  function applyPreviewBulk() {
+    if ((!previewBulkCat && !previewBulkSub) || previewSelected.size === 0) return
+    setMappedRows((rows) => rows.map((r, i) => {
+      if (!previewSelected.has(i)) return r
+      const updates = { ...r }
+      if (previewBulkCat) updates.categoria = previewBulkCat
+      if (previewBulkSub) updates.subcategoria = previewBulkSub
+      return updates
+    }))
+    setPreviewSelected(new Set())
+    setPreviewBulkCat('')
+    setPreviewBulkSub('')
   }
 
   const handleImport = async () => {
@@ -367,22 +392,66 @@ export default function Importar() {
           <h2 className="text-base font-semibold text-slate-700 mb-1">Vista previa</h2>
           <p className="text-sm text-slate-500 mb-5">
             {mappedRows.length} movimientos listos para importar. Se aplicó categorización automática.
+            <span className="block text-xs text-slate-400 mt-1">Selecciona movimientos para cambiar categoría/subcategoría en lote antes de importar.</span>
           </p>
+
+          {/* Bulk action bar */}
+          {previewSelected.size > 0 && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-indigo-700">
+                {previewSelected.size} seleccionado{previewSelected.size !== 1 ? 's' : ''}
+              </span>
+              <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                value={previewBulkCat} onChange={(e) => { setPreviewBulkCat(e.target.value); setPreviewBulkSub('') }}>
+                <option value="">— Categoría —</option>
+                {[...categories].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+              {previewBulkCat && (() => {
+                const subs = subcategories.filter((s) => s.categoriaId === previewBulkCat)
+                return subs.length > 0 ? (
+                  <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    value={previewBulkSub} onChange={(e) => setPreviewBulkSub(e.target.value)}>
+                    <option value="">— Subcategoría —</option>
+                    {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                  </select>
+                ) : null
+              })()}
+              <button onClick={applyPreviewBulk} disabled={!previewBulkCat && !previewBulkSub}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm px-4 py-1.5 rounded-lg transition-colors">
+                Aplicar
+              </button>
+              <button onClick={() => { setPreviewSelected(new Set()); setPreviewBulkCat(''); setPreviewBulkSub('') }}
+                className="text-xs text-indigo-500 hover:text-indigo-700 ml-auto">
+                ✕ Cancelar
+              </button>
+            </div>
+          )}
+
           <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
             <table className="text-sm w-full">
               <thead className="bg-slate-50 sticky top-0">
                 <tr>
+                  <th className="px-2 py-2 text-center">
+                    <input type="checkbox" checked={previewSelected.size === mappedRows.length && mappedRows.length > 0}
+                      onChange={togglePreviewSelectAll} className="accent-indigo-600" />
+                  </th>
                   <th className="px-4 py-2 text-left font-medium text-slate-600">Fecha</th>
                   <th className="px-4 py-2 text-left font-medium text-slate-600">Descripción</th>
                   <th className="px-4 py-2 text-right font-medium text-slate-600">Importe</th>
                   <th className="px-4 py-2 text-left font-medium text-slate-600">Categoría</th>
+                  <th className="px-4 py-2 text-left font-medium text-slate-600">Subcategoría</th>
                 </tr>
               </thead>
               <tbody>
                 {mappedRows.map((row, i) => {
                   const cat = categories.find((c) => c.id === row.categoria)
+                  const sub = subcategories.find((s) => s.id === row.subcategoria)
                   return (
-                    <tr key={i} className="border-t border-slate-100">
+                    <tr key={i} className={`border-t border-slate-100 ${previewSelected.has(i) ? 'bg-indigo-50' : ''}`}>
+                      <td className="px-2 py-2 text-center">
+                        <input type="checkbox" checked={previewSelected.has(i)}
+                          onChange={() => togglePreviewSelect(i)} className="accent-indigo-600" />
+                      </td>
                       <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{row.fechaContable}</td>
                       <td className="px-4 py-2 text-slate-700 max-w-xs truncate">{row.descripcion}</td>
                       <td className={`px-4 py-2 text-right font-medium ${row.importe >= 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -396,6 +465,16 @@ export default function Importar() {
                           </span>
                         ) : (
                           <span className="text-slate-400 text-xs">Sin categoría</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2">
+                        {sub ? (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium" style={{ backgroundColor: (sub.color || cat?.color || '#94a3b8') + '22', color: sub.color || cat?.color || '#94a3b8' }}>
+                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: sub.color || cat?.color || '#94a3b8' }} />
+                            {sub.nombre}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-xs">—</span>
                         )}
                       </td>
                     </tr>
