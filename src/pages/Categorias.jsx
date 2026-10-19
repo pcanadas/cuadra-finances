@@ -1,7 +1,10 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import useCategoryStore from '../store/useCategoryStore'
 import useTransactionStore from '../store/useTransactionStore'
+import useAccountStore from '../store/useAccountStore'
 import { categorizeTransaction } from '../utils/categorize'
+import useSubcategoryStore from '../store/useSubcategoryStore'
+import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -9,7 +12,7 @@ const PRESET_COLORS = [
   '#22c55e', '#6366f1', '#ff9900', '#94a3b8', '#16a34a',
 ]
 
-function CategoryCard({ category, onUpdate, onDelete, txCount }) {
+function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
   const [editing, setEditing] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
@@ -21,6 +24,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount }) {
       setNombre(category.nombre)
       setColor(category.color)
       setEsTransferencia(category.esTransferencia || false)
+      setCuentaDestinoId(category.cuentaDestinoId || '')
     }
   }, [category])
   const [nombre, setNombre] = useState(category.nombre)
@@ -28,6 +32,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount }) {
   const [exclusions, setExclusions] = useState([...(category.palabrasExcluidas || [])])
   const [color, setColor] = useState(category.color)
   const [esTransferencia, setEsTransferencia] = useState(category.esTransferencia || false)
+  const [cuentaDestinoId, setCuentaDestinoId] = useState(category.cuentaDestinoId || '')
   const [newKw, setNewKw] = useState('')
   const [newEx, setNewEx] = useState('')
   const [editingKw, setEditingKw] = useState(null) // index being edited
@@ -71,7 +76,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount }) {
   }
 
   const handleSave = async () => {
-    await onUpdate(category.id, { nombre, palabrasClave: keywords, palabrasExcluidas: exclusions, color, esTransferencia })
+    await onUpdate(category.id, { nombre, palabrasClave: keywords, palabrasExcluidas: exclusions, color, esTransferencia, cuentaDestinoId: esTransferencia ? (cuentaDestinoId || null) : null })
     setEditing(false)
   }
 
@@ -81,6 +86,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount }) {
     setExclusions([...(category.palabrasExcluidas || [])])
     setColor(category.color)
     setEsTransferencia(category.esTransferencia || false)
+    setCuentaDestinoId(category.cuentaDestinoId || '')
     setNewKw('')
     setNewEx('')
     setEditing(false)
@@ -210,16 +216,32 @@ function CategoryCard({ category, onUpdate, onDelete, txCount }) {
               />
             </div>
           </div>
-          <div className="flex items-center gap-2 pt-1">
+          <div className="space-y-2 pt-1">
             <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={esTransferencia}
-                onChange={(e) => setEsTransferencia(e.target.checked)}
+                onChange={(e) => { setEsTransferencia(e.target.checked); if (!e.target.checked) setCuentaDestinoId('') }}
                 className="rounded border-slate-300"
               />
               Transferencia interna (excluir de gastos)
             </label>
+            {esTransferencia && accounts.length > 0 && (
+              <div className="ml-5">
+                <label className="text-xs text-slate-500 block mb-1">Cuenta destino de la transferencia</label>
+                <select
+                  value={cuentaDestinoId}
+                  onChange={(e) => setCuentaDestinoId(e.target.value)}
+                  className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                >
+                  <option value="">— Sin especificar —</option>
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>{a.nombre}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-1">Los gastos de esta categoría se reflejarán como ingresos en la cuenta destino.</p>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 pt-1">
             <button
@@ -311,7 +333,10 @@ function CategoryCard({ category, onUpdate, onDelete, txCount }) {
             <span className="text-xs text-slate-400">{txCount} movimiento{txCount !== 1 ? 's' : ''}</span>
             {category.esTransferencia && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
-                Transferencia interna
+                Transferencia interna{(() => {
+                  const dest = accounts.find((a) => a.id === category.cuentaDestinoId)
+                  return dest ? ` → ${dest.nombre}` : ''
+                })()}
               </span>
             )}
           </div>
@@ -328,6 +353,10 @@ export default function Categorias() {
   const transactions = useTransactionStore((s) => s.transactions)
   const updateTransaction = useTransactionStore((s) => s.updateTransaction)
   const bulkUpdateTransactions = useTransactionStore((s) => s.bulkUpdateTransactions)
+  const addManualTransaction = useTransactionStore((s) => s.addManualTransaction)
+  const deleteTransaction = useTransactionStore((s) => s.deleteTransaction)
+  const accounts = useAccountStore((s) => s.accounts)
+  const subcategories = useSubcategoryStore((s) => s.subcategories)
 
   const [showForm, setShowForm] = useState(false)
   const [recatResult, setRecatResult] = useState(null)
@@ -351,9 +380,10 @@ export default function Categorias() {
   const handleRecategorize = () => {
     setRecatLoading(true)
     setRecatResult(null)
-    setTimeout(() => {
+    setTimeout(async () => {
       const freshCategories = useCategoryStore.getState().categories
       const freshTransactions = useTransactionStore.getState().transactions
+      const transferCatIds = new Set(freshCategories.filter((c) => c.esTransferencia).map((c) => c.id))
       const updatesMap = {}
       freshTransactions.forEach((t) => {
         if (t.categoriaManual) return
@@ -361,7 +391,24 @@ export default function Categorias() {
         if (cat !== t.categoria) updatesMap[t.id] = { categoria: cat }
       })
       const updated = Object.keys(updatesMap).length
-      if (updated > 0) bulkUpdateTransactions(updatesMap)
+      if (updated > 0) await bulkUpdateTransactions(updatesMap)
+
+      // Handle transfer pairing for newly categorised transfers
+      const storeActions = { updateTransaction, addManualTransaction, deleteTransaction }
+      const latestTx = useTransactionStore.getState().transactions
+      for (const [id, updates] of Object.entries(updatesMap)) {
+        const tx = latestTx.find((t) => t.id === id)
+        if (!tx) continue
+        const oldTx = freshTransactions.find((t) => t.id === id)
+        const wasTransfer = oldTx && transferCatIds.has(oldTx.categoria)
+        const isTransfer = transferCatIds.has(updates.categoria)
+        if (!wasTransfer && isTransfer) {
+          await handleTransferPairing(tx, latestTx, freshCategories, subcategories, accounts, storeActions)
+        } else if (wasTransfer && !isTransfer && oldTx) {
+          await undoTransferPairing(oldTx, latestTx, storeActions)
+        }
+      }
+
       setRecatResult(updated)
       setRecatLoading(false)
     }, 0)
@@ -577,6 +624,7 @@ export default function Categorias() {
               onUpdate={updateCategory}
               onDelete={deleteCategory}
               txCount={txCountByCategory[cat.id] || 0}
+              accounts={accounts}
             />
           </div>
         ))}

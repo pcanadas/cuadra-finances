@@ -14,18 +14,22 @@ import useTransactionStore from './store/useTransactionStore'
 import useCategoryStore from './store/useCategoryStore'
 import useSubcategoryStore from './store/useSubcategoryStore'
 import useAccountStore from './store/useAccountStore'
+import useBudgetStore from './store/useBudgetStore'
+import useRecurringStore from './store/useRecurringStore'
 
 export default function App() {
   const loadTransactions  = useTransactionStore((s) => s.loadFromDB)
   const loadCategories    = useCategoryStore((s) => s.loadFromDB)
   const loadSubcategories = useSubcategoryStore((s) => s.loadFromDB)
   const loadAccounts      = useAccountStore((s) => s.loadFromDB)
+  const loadBudgets       = useBudgetStore((s) => s.loadFromDB)
+  const loadRecurring     = useRecurringStore((s) => s.loadFromDB)
 
   const [ready, setReady] = useState(false)
   const [error, setError]  = useState(null)
 
   useEffect(() => {
-    Promise.all([loadTransactions(), loadCategories(), loadSubcategories(), loadAccounts()])
+    Promise.all([loadTransactions(), loadCategories(), loadSubcategories(), loadAccounts(), loadBudgets(), loadRecurring()])
       .then(() => setReady(true))
       .catch((err) => {
         console.error('Error loading data from database:', err)

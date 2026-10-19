@@ -5,8 +5,12 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import useAccountStore from '../store/useAccountStore'
 import { parseFile, mapRows } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
+import { handleTransferPairing } from '../utils/transferPairing'
 import db from '../db/db'
 import { tauriImport } from '../utils/tauriImport'
+import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } from '../utils/backupManager'
+import useBudgetStore from '../store/useBudgetStore'
+import useRecurringStore from '../store/useRecurringStore'
 
 const REQUIRED_FIELDS = ['fechaContable', 'descripcion', 'importe']
 
@@ -15,9 +19,13 @@ function formatEur(amount) {
 }
 
 export default function Importar() {
+  const allTransactions = useTransactionStore((s) => s.transactions)
   const addTransactions = useTransactionStore((s) => s.addTransactions)
+  const updateTransaction = useTransactionStore((s) => s.updateTransaction)
+  const addManualTransaction = useTransactionStore((s) => s.addManualTransaction)
+  const deleteTransaction = useTransactionStore((s) => s.deleteTransaction)
   const clearAll = useTransactionStore((s) => s.clearAll)
-  const totalTransactions = useTransactionStore((s) => s.transactions.length)
+  const totalTransactions = allTransactions.length
   const categories = useCategoryStore((s) => s.categories)
   const subcategories = useSubcategoryStore((s) => s.subcategories)
   const accounts = useAccountStore((s) => s.accounts)
@@ -26,14 +34,25 @@ export default function Importar() {
 
   const [backupStatus, setBackupStatus] = useState(null) // null | 'restoring' | 'ok' | 'error'
   const backupRef = useRef()
+  const [backupHistory, setBackupHistory] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [restoringId, setRestoringId] = useState(null)
+
+  async function refreshBackupHistory() {
+    setBackupHistory(await listBackups())
+  }
 
   async function handleExportBackup() {
-    const [transactions, cats, subcats] = await Promise.all([
+    await createBackup('manual: exportación')
+    const [transactions, cats, subcats, accs, budgs, recs] = await Promise.all([
       db.transactions.toArray(),
       db.categories.toArray(),
       db.subcategories.toArray(),
+      db.accounts.toArray(),
+      db.budgets.toArray(),
+      db.recurringExpenses.toArray(),
     ])
-    const payload = { version: 1, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats }
+    const payload = { version: 1, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats, accounts: accs, budgets: budgs, recurringExpenses: recs }
     const json = JSON.stringify(payload, null, 2)
     const filename = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
 
@@ -71,19 +90,28 @@ export default function Importar() {
       const text = await file.text()
       const payload = JSON.parse(text)
       if (!payload.version || !payload.transactions || !payload.categories) throw new Error('Formato de backup no válido')
-      await db.transaction('rw', db.transactions, db.categories, db.subcategories, async () => {
+      await createBackup('auto: antes de restaurar archivo')
+      await db.transaction('rw', db.transactions, db.categories, db.subcategories, db.accounts, db.budgets, async () => {
         await db.transactions.clear()
         await db.categories.clear()
         await db.subcategories.clear()
+        await db.accounts.clear()
+        await db.budgets.clear()
         if (payload.transactions.length)  await db.transactions.bulkPut(payload.transactions)
         if (payload.categories.length)    await db.categories.bulkPut(payload.categories)
         if (payload.subcategories?.length) await db.subcategories.bulkPut(payload.subcategories)
+        if (payload.accounts?.length)     await db.accounts.bulkPut(payload.accounts)
+        if (payload.budgets?.length)            await db.budgets.bulkPut(payload.budgets)
+        if (payload.recurringExpenses?.length)  await db.recurringExpenses.bulkPut(payload.recurringExpenses)
       })
       // Reload all stores from DB
       await Promise.all([
         useTransactionStore.getState().loadFromDB(),
         useCategoryStore.getState().loadFromDB(),
         useSubcategoryStore.getState().loadFromDB(),
+        useAccountStore.getState().loadFromDB(),
+        useBudgetStore.getState().loadFromDB(),
+        useRecurringStore.getState().loadFromDB(),
       ])
       setBackupStatus('ok')
     } catch (err) {
@@ -191,6 +219,19 @@ export default function Importar() {
     const added = await addTransactions(rows)
     setImportedCount(added)
     setSkippedCount(mappedRows.length - added)
+
+    // Pair imported transactions that were auto-categorised as internal transfers
+    const transferCatIds = new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id))
+    const freshTx = useTransactionStore.getState().transactions
+    const storeActions = { updateTransaction, addManualTransaction, deleteTransaction }
+    for (const row of rows) {
+      if (!transferCatIds.has(row.categoria)) continue
+      const imported = freshTx.find((t) => t.id === row.id)
+      if (imported) {
+        await handleTransferPairing(imported, freshTx, categories, subcategories, accounts, storeActions)
+      }
+    }
+
     setStep('done')
   }
 
@@ -226,7 +267,7 @@ export default function Importar() {
               <>
                 <span className="text-sm text-red-600">¿Eliminar {totalTransactions} movimientos?</span>
                 <button
-                  onClick={async () => { await clearAll(); setConfirmClear(false) }}
+                  onClick={async () => { await createBackup('auto: antes de borrar datos'); await clearAll(); setConfirmClear(false) }}
                   className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700"
                 >Sí, eliminar</button>
                 <button
@@ -262,10 +303,92 @@ export default function Importar() {
             ⬆ Restaurar backup
           </button>
           <input ref={backupRef} type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
+          <button
+            onClick={() => { refreshBackupHistory(); setShowHistory((v) => !v) }}
+            className="px-4 py-2 text-sm border border-slate-300 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
+          >
+            {showHistory ? 'Ocultar historial' : 'Historial de backups'}
+          </button>
           {backupStatus === 'restoring' && <span className="text-xs text-slate-400 animate-pulse">Restaurando…</span>}
           {backupStatus === 'ok'        && <span className="text-xs text-emerald-600 font-medium">✓ Backup restaurado correctamente</span>}
           {backupStatus === 'error'     && <span className="text-xs text-red-600 font-medium">✗ Error al restaurar — comprueba que el fichero es un backup válido</span>}
         </div>
+
+        {/* Backup history */}
+        {showHistory && (
+          <div className="mt-4 border-t border-slate-100 pt-4">
+            <p className="text-xs font-semibold text-slate-600 mb-2">Historial de copias de seguridad (max. 10)</p>
+            {backupHistory.length === 0 ? (
+              <p className="text-xs text-slate-400">No hay copias de seguridad guardadas.</p>
+            ) : (
+              <div className="space-y-2">
+                {backupHistory.map((b) => (
+                  <div key={b.id} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium text-slate-700 truncate">
+                        {new Date(b.createdAt).toLocaleString('es-ES')}
+                        <span className="ml-2 text-slate-400 font-normal">{b.reason}</span>
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        {b.stats.transactions} mov · {b.stats.categories} cat · {b.stats.subcategories} subcat · {b.stats.accounts} cuentas
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 ml-3 shrink-0">
+                      <button
+                        onClick={async () => {
+                          const json = JSON.stringify(backupToJson(b), null, 2)
+                          const blob = new Blob([json], { type: 'application/json' })
+                          const url = URL.createObjectURL(blob)
+                          const a = document.createElement('a')
+                          a.href = url
+                          a.download = `cuadra-backup-${b.createdAt.slice(0, 10)}.json`
+                          a.click()
+                          URL.revokeObjectURL(url)
+                        }}
+                        className="text-[11px] px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-white transition-colors"
+                      >
+                        Descargar
+                      </button>
+                      <button
+                        disabled={restoringId === b.id}
+                        onClick={async () => {
+                          if (!confirm(`¿Restaurar la copia del ${new Date(b.createdAt).toLocaleString('es-ES')}? Se creará una copia de seguridad del estado actual antes de restaurar.`)) return
+                          setRestoringId(b.id)
+                          try {
+                            await restoreBackup(b.id)
+                            await Promise.all([
+                              useTransactionStore.getState().loadFromDB(),
+                              useCategoryStore.getState().loadFromDB(),
+                              useSubcategoryStore.getState().loadFromDB(),
+                              useAccountStore.getState().loadFromDB(),
+                            ])
+                            setBackupStatus('ok')
+                            await refreshBackupHistory()
+                          } catch {
+                            setBackupStatus('error')
+                          }
+                          setRestoringId(null)
+                        }}
+                        className="text-[11px] px-2 py-1 rounded border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors disabled:opacity-50"
+                      >
+                        {restoringId === b.id ? 'Restaurando…' : 'Restaurar'}
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await deleteBackup(b.id)
+                          await refreshBackupHistory()
+                        }}
+                        className="text-[11px] px-2 py-1 rounded border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Step indicator */}

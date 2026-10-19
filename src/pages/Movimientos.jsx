@@ -6,6 +6,8 @@ import useCategoryStore from '../store/useCategoryStore'
 import useAccountStore from '../store/useAccountStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import { extractKeyword } from '../utils/categorize'
+import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
+import * as XLSX from 'xlsx'
 
 const PAGE_SIZE = 20
 
@@ -205,6 +207,8 @@ export default function Movimientos() {
   const [undoStack,       setUndoStack]       = useState([]) // [{id, prev}, ...]
 
   const MAX_UNDO = 30
+  const transferCatIds = useMemo(() => new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id)), [categories])
+  const storeActions = { updateTransaction, addManualTransaction, deleteTransaction }
 
   async function trackAndUpdate(id, updates) {
     const tx = transactions.find((t) => t.id === id)
@@ -213,6 +217,15 @@ export default function Movimientos() {
     for (const key of Object.keys(updates)) prev[key] = tx[key] ?? null
     setUndoStack((s) => [...s.slice(-(MAX_UNDO - 1)), { id, prev }])
     await updateTransaction(id, updates)
+
+    const updatedTx = { ...tx, ...updates }
+    const wasTransfer = transferCatIds.has(tx.categoria)
+    const isTransfer  = transferCatIds.has(updatedTx.categoria)
+    if (!wasTransfer && isTransfer) {
+      await handleTransferPairing(updatedTx, transactions, categories, subcategories, accounts, storeActions)
+    } else if (wasTransfer && !isTransfer) {
+      await undoTransferPairing(tx, transactions, storeActions)
+    }
   }
 
   async function trackAndBulkUpdate(updatesMap) {
@@ -226,6 +239,20 @@ export default function Movimientos() {
     }
     setUndoStack((s) => [...s.slice(-(MAX_UNDO - entries.length)), ...entries])
     await bulkUpdateTransactions(updatesMap)
+
+    // Handle transfer pairing for each updated transaction
+    for (const [id, updates] of Object.entries(updatesMap)) {
+      const tx = transactions.find((t) => t.id === id)
+      if (!tx) continue
+      const updatedTx = { ...tx, ...updates }
+      const wasTransfer = transferCatIds.has(tx.categoria)
+      const isTransfer  = transferCatIds.has(updatedTx.categoria)
+      if (!wasTransfer && isTransfer) {
+        await handleTransferPairing(updatedTx, transactions, categories, subcategories, accounts, storeActions)
+      } else if (wasTransfer && !isTransfer) {
+        await undoTransferPairing(tx, transactions, storeActions)
+      }
+    }
   }
 
   async function handleUndo() {
@@ -323,6 +350,24 @@ export default function Movimientos() {
     setBulkCategory('')
   }
 
+  function exportToExcel() {
+    const catMap = Object.fromEntries(categories.map((c) => [c.id, c.nombre]))
+    const subMap = Object.fromEntries(subcategories.map((s) => [s.id, s.nombre]))
+    const accMap = Object.fromEntries(accounts.map((a) => [a.id, a.nombre]))
+    const rows = filtered.map((t) => ({
+      Fecha: t.fechaContable,
+      Descripción: t.descripcion,
+      Importe: t.importe,
+      Categoría: catMap[t.categoria] || '',
+      Subcategoría: subMap[t.subcategoria] || '',
+      Cuenta: accMap[t.accountId] || '',
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Movimientos')
+    XLSX.writeFile(wb, `movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`)
+  }
+
   function toggleSelect(id) {
     setSelected((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   }
@@ -368,6 +413,11 @@ export default function Movimientos() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800">Movimientos</h1>
         <div className="flex gap-2">
+          <button onClick={exportToExcel}
+            className="px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+            title={`Exportar ${filtered.length} movimientos filtrados a Excel`}>
+            Exportar Excel
+          </button>
           <button onClick={() => setShowAccounts(true)}
             className="px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
             Cuentas

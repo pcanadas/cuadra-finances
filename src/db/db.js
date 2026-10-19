@@ -20,4 +20,14 @@ db.version(2).stores({
   accounts:      'id',
 })
 
+db.version(3).stores({
+  transactions:  'id, fechaContable, categoria, subcategoria, accountId',
+  categories:    'id',
+  subcategories: 'id, categoriaId',
+  accounts:      'id',
+  backups:       'id, createdAt',
+  budgets:       'id, categoriaId',
+  recurringExpenses: 'id',
+})
+
 export default db

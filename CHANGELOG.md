@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.6.0] — 2026-10-19
+
+### Añadido
+- **Cuenta destino en transferencias internas** — las categorías y subcategorías marcadas como transferencia interna pueden asociar una cuenta destino; se muestra como badge "→ Cuenta" en la vista de Categorías y Subcategorías, permitiendo modelar el flujo entre cuentas
+- **Contrapartidas automáticas en transferencias** — al categorizar un movimiento como transferencia interna con cuenta destino, se crea automáticamente el ingreso en la cuenta destino (inmediato para efectivo) o se casa con un movimiento importado existente (por fecha ±3 días e importe); estos ingresos de traspaso no se contabilizan como ingreso real; funciona desde Movimientos (inline y masivo), Importar y Re-categorizar todo en Categorías
+- **Versión dinámica en Acerca de** — `APP_VERSION` se lee de `package.json` en tiempo de build en lugar de estar hardcodeado
+- **Pruebas automatizadas** — Vitest con 39 tests unitarios para las utilidades core: categorización (`categorize.js`), emparejamiento de transferencias (`transferPairing.js`) y parseo de importaciones (`importParsers.js`); scripts `npm test` y `npm run test:watch`
+- **Historial de backups** — se guardan automáticamente hasta 10 copias de seguridad en IndexedDB antes de operaciones destructivas (borrar datos, restaurar backup); panel "Historial de backups" en Importar con opciones de restaurar, descargar y eliminar cada copia; también se guarda copia al exportar manualmente
+- **Presupuestos mensuales** — sección en el Dashboard para definir límites de gasto por categoría; barras de progreso con código de color (verde/ámbar/rojo) que muestran el gasto del mes actual vs el límite; botones para añadir, editar y quitar presupuestos; datos incluidos en backup/restore
+- **Exportar a Excel** — botón "Exportar Excel" en Movimientos que genera un fichero XLSX con los movimientos filtrados (fecha, descripción, importe, categoría, subcategoría, cuenta)
+- **Gastos fijos y planificación** — sección "Gastos fijos" en el Dashboard para registrar gastos recurrentes comprometidos (hipoteca, gimnasio, seguros, suscripciones…); periodicidad configurable (mensual, bimestral, trimestral, semestral, anual); fecha de fin opcional para préstamos y suscripciones temporales; panel de previsión con gastos fijos/mes, ingreso medio y disponible estimado; seguimiento del mes actual (pagado ✓ / pendiente ○); sugerencias automáticas basadas en el historial de movimientos; datos incluidos en backup/restore
+
+### Eliminado
+- **Exportar gráficos a PNG** — eliminada la funcionalidad por baja calidad de los resultados
+
+### Corregido
+- **Pantalla en blanco en Subcategorías** — el `useMemo` de sugerencias de keywords referenciaba variables (`catSubcats`, `catTransactions`) antes de su declaración, causando un crash al entrar en la página
+
+---
+
 ## [0.5.0] — 2026-10-18
 
 ### Añadido
@@ -15,7 +35,6 @@
 - **Creación rápida de subcategoría desde Movimientos** — opción "＋ Nueva..." en el selector inline de subcategoría, crea la subcategoría con palabra clave auto-extraída y la asigna al movimiento
 - **Comparación mensual entre años** — botón "Comparar" en el gráfico de evolución mensual que superpone barras del año seleccionado vs el anterior
 - **Comparación de múltiples categorías** — botón "Comparar categorías" en el gráfico de distribución, permite seleccionar hasta 6 categorías y ver sus líneas de gasto mensuales superpuestas con chips de selección
-- **Exportar gráficos a PNG** — botón "📷 PNG" en los gráficos de evolución mensual, distribución/comparación, comparativa anual y comparación mensual entre años; exporta a 2x resolución con fondo blanco
 
 ---
 

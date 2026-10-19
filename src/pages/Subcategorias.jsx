@@ -2,6 +2,7 @@ import { useState, useMemo, useRef } from 'react'
 import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useTransactionStore from '../store/useTransactionStore'
+import useAccountStore from '../store/useAccountStore'
 import { categorizeSubcategory, extractKeyword } from '../utils/categorize'
 
 const PRESET_COLORS = [
@@ -71,11 +72,12 @@ function KeywordEditor({ keywords, onChange }) {
 
 // ─── subcategory row ─────────────────────────────────────────────────────────
 
-function SubcatRow({ sub, onSave, onDelete }) {
+function SubcatRow({ sub, onSave, onDelete, isTransferCategory, accounts }) {
   const [editing, setEditing]   = useState(false)
   const [nombre, setNombre]     = useState(sub.nombre)
   const [keywords, setKeywords] = useState([...sub.palabrasClave])
   const [color, setColor]       = useState(sub.color ?? PRESET_COLORS[0])
+  const [cuentaDestinoId, setCuentaDestinoId] = useState(sub.cuentaDestinoId || '')
 
   // sync if parent updates
   useMemo(() => {
@@ -83,11 +85,12 @@ function SubcatRow({ sub, onSave, onDelete }) {
       setNombre(sub.nombre)
       setKeywords([...sub.palabrasClave])
       setColor(sub.color ?? PRESET_COLORS[0])
+      setCuentaDestinoId(sub.cuentaDestinoId || '')
     }
   }, [sub])
 
   function handleSave() {
-    onSave(sub.id, { nombre: nombre.trim(), palabrasClave: keywords, color })
+    onSave(sub.id, { nombre: nombre.trim(), palabrasClave: keywords, color, cuentaDestinoId: isTransferCategory ? (cuentaDestinoId || null) : null })
     setEditing(false)
   }
 
@@ -95,6 +98,7 @@ function SubcatRow({ sub, onSave, onDelete }) {
     setNombre(sub.nombre)
     setKeywords([...sub.palabrasClave])
     setColor(sub.color ?? PRESET_COLORS[0])
+    setCuentaDestinoId(sub.cuentaDestinoId || '')
     setEditing(false)
   }
 
@@ -126,6 +130,20 @@ function SubcatRow({ sub, onSave, onDelete }) {
           </div>
           {/* Keywords */}
           <KeywordEditor keywords={keywords} onChange={setKeywords} />
+          {/* Transfer destination */}
+          {isTransferCategory && accounts.length > 0 && (
+            <div>
+              <label className="text-xs text-slate-500 block mb-1">Cuenta destino</label>
+              <select
+                value={cuentaDestinoId}
+                onChange={(e) => setCuentaDestinoId(e.target.value)}
+                className="border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                <option value="">— Sin especificar —</option>
+                {accounts.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+              </select>
+            </div>
+          )}
           {/* Actions */}
           <div className="flex gap-2">
             <button
@@ -164,6 +182,14 @@ function SubcatRow({ sub, onSave, onDelete }) {
             ) : (
               <p className="text-xs text-slate-400 mt-0.5 italic">Sin etiquetas</p>
             )}
+            {isTransferCategory && sub.cuentaDestinoId && (() => {
+              const dest = accounts.find((a) => a.id === sub.cuentaDestinoId)
+              return dest ? (
+                <span className="inline-block mt-1 text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
+                  → {dest.nombre}
+                </span>
+              ) : null
+            })()}
           </div>
           <button
             onClick={() => setEditing(true)}
@@ -184,6 +210,7 @@ export default function Subcategorias() {
   const { subcategories, addSubcategory, updateSubcategory, deleteSubcategory } =
     useSubcategoryStore()
   const { transactions, updateTransaction } = useTransactionStore()
+  const accounts = useAccountStore((s) => s.accounts)
 
   const [selectedCatId, setSelectedCatId] = useState(null)
   const [page, setPage] = useState(1)
@@ -198,6 +225,7 @@ export default function Subcategorias() {
   const [newNombre, setNewNombre]     = useState('')
   const [newKeywords, setNewKeywords] = useState([])
   const [newColor, setNewColor]       = useState(PRESET_COLORS[0])
+  const [newCuentaDestinoId, setNewCuentaDestinoId] = useState('')
   const [dismissedSubSugg, setDismissedSubSugg] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('cuadra-dismissed-sub-suggestions') || '[]')) }
     catch { return new Set() }
@@ -211,6 +239,20 @@ export default function Subcategorias() {
       return next
     })
   }
+
+  const selectedCategory = categories.find((c) => c.id === selectedCatId)
+
+  const catSubcats = useMemo(
+    () => subcategories.filter((s) => s.categoriaId === selectedCatId),
+    [subcategories, selectedCatId]
+  )
+
+  const catTransactions = useMemo(() => {
+    if (!selectedCatId) return []
+    return transactions.filter(
+      (t) => t.categoria === selectedCatId || t.categoriaManual === selectedCatId
+    )
+  }, [transactions, selectedCatId])
 
   const subSuggestions = useMemo(() => {
     if (!selectedCatId || catSubcats.length === 0) return []
@@ -240,20 +282,6 @@ export default function Subcategorias() {
       }))
       .filter((s) => s.keywords.length > 0)
   }, [catTransactions, catSubcats, selectedCatId, dismissedSubSugg])
-
-  const selectedCategory = categories.find((c) => c.id === selectedCatId)
-
-  const catSubcats = useMemo(
-    () => subcategories.filter((s) => s.categoriaId === selectedCatId),
-    [subcategories, selectedCatId]
-  )
-
-  const catTransactions = useMemo(() => {
-    if (!selectedCatId) return []
-    return transactions.filter(
-      (t) => t.categoria === selectedCatId || t.categoriaManual === selectedCatId
-    )
-  }, [transactions, selectedCatId])
 
   const availableYears = useMemo(() => {
     const years = new Set(catTransactions.map((t) => new Date(t.fechaContable).getFullYear()))
@@ -332,10 +360,12 @@ export default function Subcategorias() {
       nombre: newNombre.trim(),
       palabrasClave: newKeywords,
       color: newColor,
+      ...(selectedCategory?.esTransferencia && newCuentaDestinoId ? { cuentaDestinoId: newCuentaDestinoId } : {}),
     })
     setNewNombre('')
     setNewKeywords([])
     setNewColor(PRESET_COLORS[0])
+    setNewCuentaDestinoId('')
   }
 
   async function handleAutoAssign() {
@@ -453,6 +483,8 @@ export default function Subcategorias() {
                         sub={sub}
                         onSave={(id, updates) => updateSubcategory(id, updates)}
                         onDelete={(id) => deleteSubcategory(id)}
+                        isTransferCategory={selectedCategory?.esTransferencia || false}
+                        accounts={accounts}
                       />
                     ))}
                   </ul>
@@ -487,6 +519,19 @@ export default function Subcategorias() {
                     </div>
                   </div>
                   <KeywordEditor keywords={newKeywords} onChange={setNewKeywords} />
+                  {selectedCategory?.esTransferencia && accounts.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-slate-500">Cuenta destino:</label>
+                      <select
+                        value={newCuentaDestinoId}
+                        onChange={(e) => setNewCuentaDestinoId(e.target.value)}
+                        className="border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                      >
+                        <option value="">— Sin especificar —</option>
+                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                      </select>
+                    </div>
+                  )}
                   <button
                     type="submit"
                     className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-3 py-1.5 rounded-md transition-colors"

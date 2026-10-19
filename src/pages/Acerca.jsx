@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
-
-const APP_VERSION = '0.4.0'
+import { version as APP_VERSION } from '../../package.json'
 const IS_TAURI = '__TAURI_INTERNALS__' in window
 
 export default function Acerca() {
