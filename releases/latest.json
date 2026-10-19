@@ -1,11 +1,11 @@
 {
-  "version": "0.5.0",
-  "notes": "Detección automática de subcategorías en importación, edición masiva de categoría/subcategoría en vista previa y en Movimientos, filtros por subcategoría y tipo, edición inline de subcategoría, creación rápida de subcategorías, botón deshacer, sugerencias de keywords para subcategorías, comparación mensual entre años, comparación de múltiples categorías y exportar gráficos a PNG.",
-  "pub_date": "2026-10-18T00:00:00Z",
+  "version": "0.6.0",
+  "notes": "Cuenta destino en transferencias internas, contrapartidas automáticas en transferencias, versión dinámica en Acerca de, pruebas automatizadas, historial de backups, presupuestos mensuales, exportar a Excel, pestaña Gastos fijos, widget de previsión en Dashboard, colores de KPIs mejorados y corrección de pantalla en blanco en Subcategorías.",
+  "pub_date": "2026-10-19T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUVNbmVtcWN5dW5UalpiWnF1NG9zdWp4WFZQZk8zcWFyN0JRa1ZpbE1tTFBrUnVrRjNPTmNUWlpNcVhyUWlyNkxVUzVVakk5Rm1EdkxubGNET0xDeXdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyMzM4NjYxCWZpbGU6Q3VhZHJhXzAuNS4wX3g2NC1zZXR1cC5leGUKamtsZWpDTkVxa2FhRTMrbWRPWExVaDkrK1lWZHptaEtGZG9VTkF0QUpqY2VTVk1tTE9pUFpwcFQ3ME80Wk1KVzFacmNVT3E2aXJmV056QmNQc1ppRGc9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.5.0/Cuadra_0.5.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUxoaHI4Y2FGRlJ5Yi9NTVBkWFZnZHNyWmxWR21QYk0rcERiVXBDejRkbG9makZ2MC9ob0YzZW9SektNYXNkdXF2SVA5ME1LS0NNYnkvZjFqSFJyUUFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNDE4NTQ5CWZpbGU6Q3VhZHJhXzAuNi4wX3g2NC1zZXR1cC5leGUKeloxbjQzaFl6eE9VNysraHg3UnM3MVpOdGVFUUQrU0F4cHEvOVNhOWNOdzlsLzFFaGhuWlQ2Q1V0RGc1TzRXVFdFQmxpWU9xT1pjeGY1bnBTcjcyQmc9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.6.0/Cuadra_0.6.0_x64-setup.exe"
     }
   }
 }
