@@ -84,6 +84,7 @@ html.dark .bg-violet-50  { background-color: #1e2a3d !important; }
 html.dark .bg-amber-50   { background-color: #3d2210 !important; }
 html.dark .bg-indigo-50  { background-color: #1a2e38 !important; }
 html.dark .bg-red-50     { background-color: #3d1a1a !important; }
+html.dark .bg-orange-50  { background-color: #3d2a10 !important; }
 
 /* Amber / suggestions panel — reutilizamos el naranja acento */
 html.dark .border-amber-200              { border-color: #c4561a !important; }

@@ -33,6 +33,14 @@ const formatYAxis = (v) => {
   return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(v)
 }
 
+const PERIOD_MONTHS = { mensual: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 }
+function isDueInMonth(item, month) {
+  if (item.periodicidad === 'mensual') return true
+  const ref = item.mesReferencia ?? 0
+  const interval = PERIOD_MONTHS[item.periodicidad] || 1
+  return ((month - ref) % 12 + 12) % 12 % interval === 0
+}
+
 const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const MONTH_NAMES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -482,22 +490,55 @@ export default function Dashboard() {
     return recurringItems.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= today))
   }, [recurringItems])
 
-  // Split recurring into income vs expense based on category esIngreso flag
-  const fixedIncomeMonthly = useMemo(
-    () => activeRecurring
-      .filter((r) => r.categoriaId && ingresoCatIds.has(r.categoriaId))
-      .reduce((s, r) => s + r.importe * (PERIOD_FACTOR[r.periodicidad] || 1), 0),
-    [activeRecurring, ingresoCatIds],
-  )
-  const fixedExpenseMonthly = useMemo(
-    () => activeRecurring
-      .filter((r) => !r.categoriaId || !ingresoCatIds.has(r.categoriaId))
-      .reduce((s, r) => s + r.importe * (PERIOD_FACTOR[r.periodicidad] || 1), 0),
-    [activeRecurring, ingresoCatIds],
+  // Only items due this month
+  const dueThisMonth = useMemo(
+    () => activeRecurring.filter((r) => isDueInMonth(r, currentMonth)),
+    [activeRecurring, currentMonth],
   )
 
-  // Variable expenses already spent this month
-  const variableSpentThisMonth = useMemo(() => {
+  // Split due-this-month into income vs expense
+  const fixedIncomeMonthly = useMemo(
+    () => dueThisMonth
+      .filter((r) => r.categoriaId && ingresoCatIds.has(r.categoriaId))
+      .reduce((s, r) => s + r.importe, 0),
+    [dueThisMonth, ingresoCatIds],
+  )
+  const fixedExpenseMonthly = useMemo(
+    () => dueThisMonth
+      .filter((r) => !r.categoriaId || !ingresoCatIds.has(r.categoriaId))
+      .reduce((s, r) => s + r.importe, 0),
+    [dueThisMonth, ingresoCatIds],
+  )
+
+  // Which fixed expenses have already been paid this month?
+  const fixedStatus = useMemo(() => {
+    const monthTx = transactions.filter((t) => {
+      const d = new Date(t.fechaContable)
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+    })
+
+    return dueThisMonth.map((r) => {
+      const isIncome = ingresoCatIds.has(r.categoriaId)
+      const pool = isIncome ? monthTx.filter((t) => t.importe > 0) : monthTx.filter((t) => t.importe < 0)
+      const tolerant = (t) => Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3
+      const match = r.subcategoriaId
+        ? pool.find((t) => t.subcategoria === r.subcategoriaId && tolerant(t))
+        : r.categoriaId
+          ? pool.find((t) => t.categoria === r.categoriaId && tolerant(t))
+          : (() => {
+              const words = r.nombre.toUpperCase().split(/\s+/).filter((w) => w.length >= 4)
+              return words.length > 0 ? pool.find((t) => { const d = (t.descripcion || '').toUpperCase(); return words.every((w) => d.includes(w)) && tolerant(t) }) : null
+            })()
+      return { ...r, paid: !!match, paidAmount: match ? Math.abs(match.importe) : null }
+    })
+  }, [dueThisMonth, transactions, currentMonth, currentYear, ingresoCatIds])
+
+  // Total expenses this month minus what's been identified as fixed payments = variable
+  const fixedPaidTotal = useMemo(
+    () => fixedStatus.filter((r) => r.paid && !ingresoCatIds.has(r.categoriaId)).reduce((s, r) => s + (r.paidAmount ?? r.importe), 0),
+    [fixedStatus, ingresoCatIds],
+  )
+  const totalSpentThisMonth = useMemo(() => {
     return transactions.filter((t) => {
       const d = new Date(t.fechaContable)
       return d.getFullYear() === currentYear && d.getMonth() === currentMonth &&
@@ -505,27 +546,8 @@ export default function Dashboard() {
     }).reduce((s, t) => s + Math.abs(t.importe), 0)
   }, [transactions, currentYear, currentMonth, transferCatIds, ingresoCatIds])
 
+  const variableSpentThisMonth = totalSpentThisMonth - fixedPaidTotal
   const availableEstimate = fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
-
-  // Which fixed expenses have already been paid this month?
-  const fixedStatus = useMemo(() => {
-    const now = new Date()
-    const thisMonth = now.getMonth()
-    const thisYear = now.getFullYear()
-    const monthTx = transactions.filter((t) => {
-      const d = new Date(t.fechaContable)
-      return d.getMonth() === thisMonth && d.getFullYear() === thisYear && t.importe < 0
-    })
-
-    return activeRecurring.map((r) => {
-      const norm = r.nombre.toUpperCase().slice(0, 20)
-      const match = monthTx.find((t) =>
-        (t.descripcion || '').toUpperCase().includes(norm) &&
-        Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3, // within 30% tolerance
-      )
-      return { ...r, paid: !!match, paidAmount: match ? Math.abs(match.importe) : null }
-    })
-  }, [recurringItems, transactions])
 
   // ── empty state ──
   if (transactions.length === 0) {
@@ -561,10 +583,10 @@ export default function Dashboard() {
           </select>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <SummaryCard title="Gastos del año" value={formatEur(totalGastos)} subtitle={`${gastosTx.length} movimientos`} valueClass="text-rose-500" cardClass="bg-rose-50" borderClass="border-rose-200" />
-          <SummaryCard title="Ingresos del año" value={formatEur(totalIngresos)} subtitle={`${ingresosTx.length} movimientos`} valueClass="text-emerald-600" cardClass="bg-emerald-50" borderClass="border-emerald-200" />
-          <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-50" borderClass="border-violet-200" />
-          <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-700" cardClass="bg-amber-50" borderClass="border-amber-200" />
+          <SummaryCard title="Gastos del año" value={formatEur(totalGastos)} subtitle={`${gastosTx.length} movimientos`} valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20" />
+          <SummaryCard title="Ingresos del año" value={formatEur(totalIngresos)} subtitle={`${ingresosTx.length} movimientos`} valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
+          <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20" />
+          <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
         </div>
       </div>
 
@@ -581,24 +603,28 @@ export default function Dashboard() {
 
           {/* Forecast metrics */}
           {activeRecurring.length > 0 && (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3 mb-4">
-              <div className="bg-emerald-50 rounded-xl p-3">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-3 mb-4">
+              <div className="bg-emerald-500/10 rounded-xl p-3">
                 <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos</p>
-                <p className="text-lg font-bold text-emerald-700">{formatEur(fixedIncomeMonthly)}</p>
+                <p className="text-lg font-bold text-emerald-600">{formatEur(fixedIncomeMonthly)}</p>
               </div>
-              <div className="bg-rose-50 rounded-xl p-3">
-                <p className="text-[11px] text-rose-600 uppercase font-semibold">Gastos fijos</p>
-                <p className="text-lg font-bold text-rose-600">{formatEur(fixedExpenseMonthly)}</p>
+              <div className="bg-rose-500/10 rounded-xl p-3">
+                <p className="text-[11px] text-rose-500 uppercase font-semibold">Gastos fijos</p>
+                <p className="text-lg font-bold text-rose-500">{formatEur(fixedExpenseMonthly)}</p>
               </div>
-              <div className="bg-amber-50 rounded-xl p-3">
-                <p className="text-[11px] text-amber-600 uppercase font-semibold">Pagados / Pendientes</p>
-                <p className="text-lg font-bold text-amber-700">
+              <div className="bg-amber-500/10 rounded-xl p-3">
+                <p className="text-[11px] text-amber-600 uppercase font-semibold">Gastos variables</p>
+                <p className="text-lg font-bold text-amber-600">{formatEur(variableSpentThisMonth)}</p>
+              </div>
+              <div className="bg-sky-500/10 rounded-xl p-3">
+                <p className="text-[11px] text-sky-600 uppercase font-semibold">Pagados / Pendientes</p>
+                <p className="text-lg font-bold text-sky-600">
                   {fixedStatus.filter((r) => r.paid).length} / {fixedStatus.filter((r) => !r.paid).length}
                 </p>
               </div>
-              <div className={`rounded-xl p-3 ${availableEstimate >= 0 ? 'bg-indigo-50' : 'bg-red-50'}`}>
-                <p className={`text-[11px] uppercase font-semibold ${availableEstimate >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>Disponible estimado</p>
-                <p className={`text-lg font-bold ${availableEstimate >= 0 ? 'text-indigo-700' : 'text-red-600'}`}>{formatEur(availableEstimate)}</p>
+              <div className={`rounded-xl p-3 ${availableEstimate >= 0 ? 'bg-violet-500/10' : 'bg-red-500/10'}`}>
+                <p className={`text-[11px] uppercase font-semibold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>Disponible estimado</p>
+                <p className={`text-lg font-bold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{formatEur(availableEstimate)}</p>
               </div>
             </div>
           )}

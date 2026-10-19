@@ -1,16 +1,35 @@
 import { useState, useMemo } from 'react'
 import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
+import useSubcategoryStore from '../store/useSubcategoryStore'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
 
 const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 const PERIOD_LABELS = { mensual: 'Mensual', bimestral: 'Bimestral', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }
+const PERIOD_MONTHS = { mensual: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 }
+const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+/** Returns true if the item is due in the given month (0-11) */
+function isDueInMonth(item, month) {
+  if (item.periodicidad === 'mensual') return true
+  const ref = item.mesReferencia ?? 0 // 0-11
+  const interval = PERIOD_MONTHS[item.periodicidad] || 1
+  // Check if (month - ref) is a multiple of interval (mod 12)
+  const diff = ((month - ref) % 12 + 12) % 12
+  return diff % interval === 0
+}
+
+/** Returns the list of month indices (0-11) when the item is due */
+function getDueMonths(item) {
+  return Array.from({ length: 12 }, (_, i) => i).filter((m) => isDueInMonth(item, m))
+}
 
 export default function GastosFijos() {
   const transactions = useTransactionStore((s) => s.transactions)
   const categories   = useCategoryStore((s) => s.categories)
+  const subcategories = useSubcategoryStore((s) => s.subcategories)
   const budgets      = useBudgetStore((s) => s.budgets)
   const setBudget    = useBudgetStore((s) => s.setBudget)
   const { items: recurringItems, addItem: addRecurring, updateItem: updateRecurring, deleteItem: deleteRecurring } = useRecurringStore()
@@ -22,7 +41,7 @@ export default function GastosFijos() {
   // ── form state ──
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState({ nombre: '', importe: '', categoriaId: '', periodicidad: 'mensual', fechaFin: '' })
+  const [form, setForm] = useState({ nombre: '', importe: '', categoriaId: '', subcategoriaId: '', periodicidad: 'mensual', fechaFin: '', mesReferencia: '' })
 
   // ── budget edit state ──
   const [editBudgetCat, setEditBudgetCat] = useState(null)
@@ -74,18 +93,26 @@ export default function GastosFijos() {
     [transactions, currentMonth, currentYear],
   )
 
+  // Only items due this month
+  const dueThisMonth = useMemo(() => activeItems.filter((r) => isDueInMonth(r, currentMonth)), [activeItems, currentMonth])
+
   const fixedStatus = useMemo(() => {
-    return activeItems.map((r) => {
-      const norm = r.nombre.toUpperCase().slice(0, 20)
+    return dueThisMonth.map((r) => {
       const isIncome = ingresoCatIds.has(r.categoriaId)
       const pool = isIncome ? monthTx.filter((t) => t.importe > 0) : monthTx.filter((t) => t.importe < 0)
-      const match = pool.find((t) =>
-        (t.descripcion || '').toUpperCase().includes(norm) &&
-        Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3,
-      )
+      const tolerant = (t) => Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3
+      // Priority: subcategory > category > name words
+      const match = r.subcategoriaId
+        ? pool.find((t) => t.subcategoria === r.subcategoriaId && tolerant(t))
+        : r.categoriaId
+          ? pool.find((t) => t.categoria === r.categoriaId && tolerant(t))
+          : (() => {
+              const words = r.nombre.toUpperCase().split(/\s+/).filter((w) => w.length >= 4)
+              return words.length > 0 ? pool.find((t) => { const d = (t.descripcion || '').toUpperCase(); return words.every((w) => d.includes(w)) && tolerant(t) }) : null
+            })()
       return { ...r, paid: !!match, paidAmount: match ? Math.abs(match.importe) : null, isIncome }
     })
-  }, [activeItems, monthTx, ingresoCatIds])
+  }, [dueThisMonth, monthTx, ingresoCatIds])
 
   // Suggestions: expenses in 3+ months, not already added, not dismissed
   const suggestions = useMemo(() => {
@@ -94,20 +121,20 @@ export default function GastosFijos() {
     const existingNames = new Set(recurringItems.map((r) => normalize(r.nombre)))
     const yearTx = transactions.filter((t) => {
       const y = new Date(t.fechaContable).getFullYear()
-      return y === currentYear && t.importe < 0 && !transferCatIds.has(t.categoria)
+      return y === currentYear && !transferCatIds.has(t.categoria)
     })
     const groups = {}
     yearTx.forEach((t) => {
       const key = normalize(t.descripcion)
       if (key.length < 4) return
-      if (!groups[key]) groups[key] = { desc: t.descripcion, months: new Set(), total: 0, count: 0, catId: t.categoria }
+      if (!groups[key]) groups[key] = { desc: t.descripcion, months: new Set(), total: 0, count: 0, catId: t.categoria, subcatId: t.subcategoria, isIncome: t.importe > 0 }
       groups[key].months.add(new Date(t.fechaContable).getMonth())
       groups[key].total += Math.abs(t.importe)
       groups[key].count += 1
     })
     return Object.entries(groups)
       .filter(([, g]) => g.months.size >= 3)
-      .map(([key, g]) => ({ key, nombre: g.desc, media: g.total / g.count, catId: g.catId }))
+      .map(([key, g]) => ({ key, nombre: g.desc, media: g.total / g.count, catId: g.catId, subcatId: g.subcatId, isIncome: g.isIncome }))
       .filter((s) => !existingNames.has(normalize(s.nombre)) && !dismissed.has(s.key))
       .sort((a, b) => b.media - a.media)
       .slice(0, 12)
@@ -131,10 +158,10 @@ export default function GastosFijos() {
   function openForm(item) {
     if (item) {
       setEditingId(item.id)
-      setForm({ nombre: item.nombre, importe: String(item.importe), categoriaId: item.categoriaId || '', periodicidad: item.periodicidad, fechaFin: item.fechaFin || '' })
+      setForm({ nombre: item.nombre, importe: String(item.importe), categoriaId: item.categoriaId || '', subcategoriaId: item.subcategoriaId || '', periodicidad: item.periodicidad, fechaFin: item.fechaFin || '', mesReferencia: item.mesReferencia != null ? String(item.mesReferencia) : '' })
     } else {
       setEditingId(null)
-      setForm({ nombre: '', importe: '', categoriaId: '', periodicidad: 'mensual', fechaFin: '' })
+      setForm({ nombre: '', importe: '', categoriaId: '', subcategoriaId: '', periodicidad: 'mensual', fechaFin: '', mesReferencia: '' })
     }
     setShowForm(true)
   }
@@ -144,8 +171,10 @@ export default function GastosFijos() {
       nombre: form.nombre.trim(),
       importe: parseFloat(form.importe) || 0,
       categoriaId: form.categoriaId || null,
+      subcategoriaId: form.subcategoriaId || null,
       periodicidad: form.periodicidad,
       fechaFin: form.fechaFin || null,
+      mesReferencia: form.periodicidad !== 'mensual' && form.mesReferencia !== '' ? parseInt(form.mesReferencia) : null,
     }
     if (!data.nombre || data.importe <= 0) return
     if (editingId) await updateRecurring(editingId, data)
@@ -169,24 +198,24 @@ export default function GastosFijos() {
 
       {/* ── Summary cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
-          <p className="text-[11px] text-emerald-500 uppercase font-semibold">Ingresos fijos / mes</p>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
+          <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos / mes</p>
           <p className="text-lg font-bold text-emerald-600">{formatEur(totalFixedIncome)}</p>
-          <p className="text-[11px] text-emerald-400">{incomeItems.length} concepto{incomeItems.length !== 1 ? 's' : ''}</p>
+          <p className="text-[11px] text-emerald-500/60">{incomeItems.length} concepto{incomeItems.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
+        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
           <p className="text-[11px] text-rose-500 uppercase font-semibold">Gastos fijos / mes</p>
           <p className="text-lg font-bold text-rose-500">{formatEur(totalFixedExpenses)}</p>
-          <p className="text-[11px] text-rose-400">{expenseItems.length} concepto{expenseItems.length !== 1 ? 's' : ''}</p>
+          <p className="text-[11px] text-rose-500/60">{expenseItems.length} concepto{expenseItems.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className={`border rounded-xl p-4 ${totalFixedIncome - totalFixedExpenses >= 0 ? 'bg-violet-50 border-violet-200' : 'bg-amber-50 border-amber-200'}`}>
-          <p className="text-[11px] text-slate-500 uppercase font-semibold">Disponible tras fijos</p>
+        <div className={`border rounded-xl p-4 ${totalFixedIncome - totalFixedExpenses >= 0 ? 'bg-violet-500/10 border-violet-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+          <p className={`text-[11px] uppercase font-semibold ${totalFixedIncome - totalFixedExpenses >= 0 ? 'text-violet-600' : 'text-amber-600'}`}>Disponible tras fijos</p>
           <p className={`text-lg font-bold ${totalFixedIncome - totalFixedExpenses >= 0 ? 'text-violet-600' : 'text-amber-600'}`}>{formatEur(totalFixedIncome - totalFixedExpenses)}</p>
           <p className="text-[11px] text-slate-400">Ingresos − gastos fijos</p>
         </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+        <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl p-4">
           <p className="text-[11px] text-slate-500 uppercase font-semibold">Gastos fijos anuales</p>
-          <p className="text-lg font-bold text-slate-700">{formatEur(totalFixedExpenses * 12)}</p>
+          <p className="text-lg font-bold text-slate-600">{formatEur(totalFixedExpenses * 12)}</p>
           <p className="text-[11px] text-slate-400">Proyección anual</p>
         </div>
       </div>
@@ -200,15 +229,31 @@ export default function GastosFijos() {
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm flex-1 min-w-[140px] focus:outline-none focus:ring-2 focus:ring-indigo-300" autoFocus />
             <input type="number" min="0" step="1" placeholder="Importe" value={form.importe} onChange={(e) => setForm((f) => ({ ...f, importe: e.target.value }))}
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            <select value={form.categoriaId} onChange={(e) => setForm((f) => ({ ...f, categoriaId: e.target.value }))}
+            <select value={form.categoriaId} onChange={(e) => setForm((f) => ({ ...f, categoriaId: e.target.value, subcategoriaId: '' }))}
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
               <option value="">Categoría…</option>
               {sortedCats.map((c) => <option key={c.id} value={c.id}>{c.nombre}{c.esIngreso ? ' (ingreso)' : ''}</option>)}
             </select>
-            <select value={form.periodicidad} onChange={(e) => setForm((f) => ({ ...f, periodicidad: e.target.value }))}
+            {form.categoriaId && subcategories.filter((s) => s.categoriaId === form.categoriaId).length > 0 && (
+              <select value={form.subcategoriaId} onChange={(e) => setForm((f) => ({ ...f, subcategoriaId: e.target.value }))}
+                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="">Subcategoría…</option>
+                {subcategories.filter((s) => s.categoriaId === form.categoriaId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((s) => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+            )}
+            <select value={form.periodicidad} onChange={(e) => setForm((f) => ({ ...f, periodicidad: e.target.value, mesReferencia: e.target.value === 'mensual' ? '' : f.mesReferencia }))}
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
               {Object.entries(PERIOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
+            {form.periodicidad !== 'mensual' && (
+              <select value={form.mesReferencia} onChange={(e) => setForm((f) => ({ ...f, mesReferencia: e.target.value }))}
+                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
+                <option value="">Mes de cobro…</option>
+                {MONTH_SHORT.map((m, i) => <option key={i} value={i}>{m}</option>)}
+              </select>
+            )}
             <div className="flex items-center gap-1">
               <label className="text-xs text-slate-400 whitespace-nowrap">Fin:</label>
               <input type="date" value={form.fechaFin} onChange={(e) => setForm((f) => ({ ...f, fechaFin: e.target.value }))}
@@ -238,7 +283,7 @@ export default function GastosFijos() {
               <p className="text-[11px] text-emerald-500 uppercase font-semibold mb-1">Ingresos fijos</p>
               <div className="space-y-1 mb-3">
                 {fixedStatus.filter((r) => r.isIncome).map((r) => (
-                  <ItemRow key={r.id} r={r} categories={categories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
+                  <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
                 ))}
               </div>
             </>
@@ -250,7 +295,7 @@ export default function GastosFijos() {
               <p className="text-[11px] text-rose-500 uppercase font-semibold mb-1">Gastos fijos</p>
               <div className="space-y-1">
                 {fixedStatus.filter((r) => !r.isIncome).map((r) => (
-                  <ItemRow key={r.id} r={r} categories={categories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
+                  <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
                 ))}
               </div>
             </>
@@ -324,17 +369,17 @@ export default function GastosFijos() {
       {suggestions.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <p className="text-sm font-semibold text-slate-700 mb-1">Sugerencias detectadas</p>
-          <p className="text-xs text-slate-400 mb-3">Gastos que aparecen en 3 o más meses — pulsa para añadir o ✕ para descartar</p>
+          <p className="text-xs text-slate-400 mb-3">Gastos e ingresos que aparecen en 3 o más meses — pulsa para añadir o ✕ para descartar</p>
           <div className="flex flex-wrap gap-2">
             {suggestions.map((s) => (
-              <div key={s.key} className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border border-cyan-200 bg-cyan-50">
+              <div key={s.key} className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border ${s.isIncome ? 'border-green-300 bg-green-100' : 'border-cyan-200 bg-cyan-50'}`}>
                 <button
-                  onClick={() => { openForm(null); setForm({ nombre: s.nombre, importe: String(Math.round(s.media * 100) / 100), categoriaId: s.catId || '', periodicidad: 'mensual', fechaFin: '' }) }}
-                  className="text-cyan-700 hover:text-cyan-900 truncate max-w-[160px]"
+                  onClick={() => { openForm(null); setForm({ nombre: s.nombre, importe: String(Math.round(s.media * 100) / 100), categoriaId: s.catId || '', subcategoriaId: s.subcatId || '', periodicidad: 'mensual', fechaFin: '', mesReferencia: '' }) }}
+                  className={`truncate max-w-[160px] ${s.isIncome ? 'text-green-800 hover:text-green-950' : 'text-cyan-700 hover:text-cyan-900'}`}
                 >
-                  + {s.nombre} <span className="text-cyan-400">~{formatEur(s.media)}</span>
+                  + {s.nombre} <span className={s.isIncome ? 'text-green-600' : 'text-cyan-400'}>~{formatEur(s.media)}</span>
                 </button>
-                <button onClick={() => dismissSuggestion(s.key)} className="text-cyan-300 hover:text-red-500 ml-0.5" title="Descartar sugerencia">✕</button>
+                <button onClick={() => dismissSuggestion(s.key)} className={`ml-0.5 hover:text-red-500 ${s.isIncome ? 'text-green-400' : 'text-cyan-300'}`} title="Descartar sugerencia">✕</button>
               </div>
             ))}
           </div>
@@ -345,15 +390,22 @@ export default function GastosFijos() {
 }
 
 // ── Item row component ──
-function ItemRow({ r, categories, onEdit, onDelete }) {
+function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
   const cat = categories.find((c) => c.id === r.categoriaId)
+  const subcat = subcategories?.find((s) => s.id === r.subcategoriaId)
   return (
     <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
       <div className="flex items-center gap-2 min-w-0">
         <span className={`text-sm ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>{r.paid ? '✓' : '○'}</span>
         <span className="text-sm text-slate-700 truncate">{r.nombre}</span>
         {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
+        {subcat && <span className="text-[10px] text-slate-500">{subcat.nombre}</span>}
         <span className="text-[10px] text-slate-400">{PERIOD_LABELS[r.periodicidad] || r.periodicidad}</span>
+        {r.periodicidad !== 'mensual' && (
+          <span className="text-[10px] text-indigo-400" title="Meses de cobro">
+            {getDueMonths(r).map((m) => MONTH_SHORT[m]).join(', ')}
+          </span>
+        )}
         {r.fechaFin && <span className="text-[10px] text-amber-500">hasta {r.fechaFin}</span>}
       </div>
       <div className="flex items-center gap-2 shrink-0">

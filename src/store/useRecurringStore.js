@@ -8,6 +8,7 @@ import db from '../db/db'
  *   nombre:      string,       // "Gimnasio", "Hipoteca"…
  *   importe:     number,       // estimated amount per period (positive)
  *   categoriaId: string|null,
+ *   subcategoriaId: string|null,
  *   periodicidad: 'mensual'|'bimestral'|'trimestral'|'semestral'|'anual',
  *   fechaFin:    string|null,  // ISO date — null = indefinido
  *   activo:      boolean,
