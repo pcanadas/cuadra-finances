@@ -6,7 +6,7 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Cuadra_0.5.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Cuadra_0.6.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
 No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
@@ -29,15 +29,21 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 - **Selección múltiple** para categorizar y subcategorizar en lote (en Movimientos y en la vista previa de importación)
 - **Filtros avanzados en Movimientos** — por mes, categoría, subcategoría, tipo (ingreso/gasto) y búsqueda de texto
 - **Deshacer cambios** — botón para revertir los últimos cambios de categoría/subcategoría (hasta 30 acciones)
-- **Dashboard anual** con gráficos de barras, tarta, tabla de gastos por categoría × mes y comparativa interanual
+- **Transferencias internas** — cuenta destino configurable por categoría/subcategoría; contrapartida automática (inmediata para efectivo, casado por fecha ±3 días e importe para cuentas bancarias); los traspasos no se contabilizan como ingreso real
+- **Dashboard anual** con gráficos de barras, tarta, tabla de gastos por categoría × mes, comparativa interanual y widget de previsión mensual
+- **Widget de previsión del mes** — ingresos fijos, gastos fijos, gastos variables, pagados/pendientes y disponible estimado; solo contabiliza items cuya periodicidad toca en el mes actual
 - **Comparación mensual entre años** — superpone barras del año seleccionado vs el anterior
 - **Comparación de múltiples categorías** — selecciona hasta 6 categorías y compara su evolución mensual
-- **Exportar gráficos a PNG** — botón en cada gráfico del Dashboard para descargar a 2x resolución
+- **Gastos fijos y planificación** — página dedicada para gestionar gastos e ingresos recurrentes; periodicidad configurable (mensual, bimestral, trimestral, semestral, anual) con mes de referencia; fecha de fin opcional; matching inteligente por subcategoría → categoría → palabras del nombre; sugerencias auto-detectadas de gastos e ingresos descartables; presupuestos por categoría con barras de progreso
+- **Presupuestos mensuales** — límites de gasto por categoría con barras de progreso (verde/ámbar/rojo)
+- **Exportar a Excel** — botón en Movimientos que genera un XLSX con los movimientos filtrados
 - **Evolución del saldo** por cuenta con verificador de coherencia (detecta huecos en el extracto) y opciones de editar o marcar como revisada
 - **Escala √ en gráficos** — toggle para comprimir barras cuando un mes outlier aplasta el resto
-- **Página Acerca de** — versión instalada y comprobador de actualizaciones
+- **Pruebas automatizadas** — Vitest con 39 tests unitarios para categorización, emparejamiento de transferencias y parseo de importaciones
+- **Historial de backups** — hasta 10 copias automáticas en IndexedDB antes de operaciones destructivas; restaurar, descargar y eliminar desde Importar
+- **Página Acerca de** — versión dinámica desde `package.json` y comprobador de actualizaciones
 - **Tema oscuro/claro** con paleta personalizada y persistencia
-- **Copia de seguridad** exportable/restaurable en JSON
+- **Copia de seguridad** exportable/restaurable en JSON (incluye categorías, subcategorías, cuentas, presupuestos y gastos fijos)
 - **Actualizaciones automáticas** firmadas con minisign vía tauri-plugin-updater
 
 ---
@@ -55,6 +61,7 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 | Parseo CSV | PapaParse 5 |
 | Parseo Excel | XLSX 0.18 |
 | Fechas | date-fns 4 |
+| Tests | Vitest 5 |
 | App de escritorio | Tauri 2 (Rust) |
 | Firma de actualizaciones | minisign (tauri-plugin-updater) |
 
@@ -82,22 +89,30 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
 ### Base de datos
 
-`CuadraFinances` vía Dexie/IndexedDB — versión 2. Cada transacción es un registro individual, no un blob JSON. Sin límite práctico de almacenamiento.
+`CuadraFinances` vía Dexie/IndexedDB — versión 3. Cada transacción es un registro individual, no un blob JSON. Sin límite práctico de almacenamiento.
 
 ```
-transactions   id, fechaContable[idx], categoria[idx], accountId[idx],
-               descripcion, importe, saldo, categoriaManual, esManual, subcategoria,
-               bankRowIndex
+transactions        id, fechaContable[idx], categoria[idx], subcategoria[idx],
+                    accountId[idx], descripcion, importe, saldo, categoriaManual,
+                    esManual, bankRowIndex, transferPairId?, esContrapartida?
 
-categories     id, nombre, palabrasClave[], palabrasExcluidas[],
-               color, esIngreso?, esTransferencia?, _order?
+categories          id, nombre, palabrasClave[], palabrasExcluidas[],
+                    color, esIngreso?, esTransferencia?, cuentaDestinoId?, _order?
 
-subcategories  id, categoriaId[idx], nombre, palabrasClave[], color
+subcategories       id, categoriaId[idx], nombre, palabrasClave[], color,
+                    cuentaDestinoId?
 
-accounts       id, nombre, tipo, color, saldoInicial?, acknowledgedGaps[]
+accounts            id, nombre, tipo, color, saldoInicial?, acknowledgedGaps[]
+
+backups             id, createdAt[idx], reason, data
+
+budgets             id, categoriaId[idx], limite
+
+recurringExpenses   id, nombre, importe, categoriaId?, subcategoriaId?,
+                    periodicidad, mesReferencia?, fechaFin?, activo
 ```
 
-La versión 2 añade `accounts` e índice `accountId`. La migración Dexie es automática y no destructiva.
+La versión 3 añade `backups`, `budgets`, `recurringExpenses` e índice `subcategoria` en transactions. Las migraciones Dexie son automáticas y no destructivas.
 
 ### Saldo sintético (cuentas de efectivo)
 
@@ -111,7 +126,7 @@ saldo[i] = saldoInicial + Σ importe[0..i]
 
 ### Estado (Zustand)
 
-Cuatro stores independientes sin `persist` middleware — la persistencia la gestiona Dexie directamente:
+Seis stores independientes sin `persist` middleware — la persistencia la gestiona Dexie directamente:
 
 | Store | Responsabilidad |
 |---|---|
@@ -119,6 +134,8 @@ Cuatro stores independientes sin `persist` middleware — la persistencia la ges
 | `useCategoryStore` | CRUD + reordenación drag & drop + migración automática de flags |
 | `useSubcategoryStore` | CRUD de subcategorías |
 | `useAccountStore` | CRUD de cuentas bancarias con seed de datos por defecto |
+| `useBudgetStore` | Límites de gasto por categoría |
+| `useRecurringStore` | Gastos/ingresos recurrentes con periodicidad y fecha de fin |
 
 ### Lógica de categorización
 
@@ -171,7 +188,10 @@ Estrategia CSS-first: un único toggle de clase `dark` en `<html>` + sobreescrit
 
 ```bash
 npm install
+npm run dev          # solo frontend en navegador (http://localhost:5173)
 npm run tauri:dev    # app de escritorio con hot-reload (requiere Rust + cargo)
+npm test             # ejecutar tests (Vitest)
+npm run test:watch   # tests en modo watch
 ```
 
 ### Generar instalador
