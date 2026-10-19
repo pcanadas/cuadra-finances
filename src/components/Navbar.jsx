@@ -5,6 +5,7 @@ const links = [
   { to: '/', label: 'Dashboard' },
   { to: '/movimientos', label: 'Movimientos' },
   { to: '/cuentas', label: 'Cuentas' },
+  { to: '/gastos-fijos', label: 'Gastos fijos' },
   { to: '/importar', label: 'Importar' },
   { to: '/categorias', label: 'Categorías' },
   { to: '/subcategorias', label: 'Subcategorías' },

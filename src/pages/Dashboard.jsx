@@ -189,11 +189,7 @@ export default function Dashboard() {
   const categories    = useCategoryStore((s) => s.categories)
   const subcategories = useSubcategoryStore((s) => s.subcategories)
   const budgets       = useBudgetStore((s) => s.budgets)
-  const setBudget     = useBudgetStore((s) => s.setBudget)
   const recurringItems = useRecurringStore((s) => s.items)
-  const addRecurring   = useRecurringStore((s) => s.addItem)
-  const updateRecurring = useRecurringStore((s) => s.updateItem)
-  const deleteRecurring = useRecurringStore((s) => s.deleteItem)
   const { dark } = useTheme()
 
   const [selectedYear,       setSelectedYear]       = useState(new Date().getFullYear())
@@ -268,9 +264,6 @@ export default function Dashboard() {
   }, [gastosTx])
 
   // ── budget progress (current month) ──
-  const [editingBudgetCat, setEditingBudgetCat] = useState(null)
-  const [editingBudgetVal, setEditingBudgetVal] = useState('')
-
   const currentMonth = new Date().getMonth()
   const currentYear  = new Date().getFullYear()
 
@@ -480,38 +473,8 @@ export default function Dashboard() {
     })
   }, [availableYears, transactions, transferCatIds, ingresoCatIds])
 
-  // ── recurring / fixed expenses ──
-  const [showAddRecurring, setShowAddRecurring] = useState(false)
-  const [recForm, setRecForm] = useState({ nombre: '', importe: '', categoriaId: '', periodicidad: 'mensual', fechaFin: '' })
-  const [editingRecId, setEditingRecId] = useState(null)
-
-  // Auto-detect suggestions: expenses appearing in 3+ months not already in the user's list
-  const recurringSuggestions = useMemo(() => {
-    const normalize = (desc) =>
-      (desc || '').toUpperCase().replace(/\d{2}\/\d{2}\/\d{2,4}/g, '').replace(/\d+/g, '').replace(/\s+/g, ' ').trim().slice(0, 30)
-
-    const existingNames = new Set(recurringItems.map((r) => r.nombre.toUpperCase().slice(0, 30)))
-
-    const groups = {}
-    yearTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)).forEach((t) => {
-      const key = normalize(t.descripcion)
-      if (key.length < 4) return
-      if (!groups[key]) groups[key] = { desc: t.descripcion, months: new Set(), total: 0, count: 0, catId: t.categoria }
-      groups[key].months.add(new Date(t.fechaContable).getMonth())
-      groups[key].total += Math.abs(t.importe)
-      groups[key].count += 1
-    })
-
-    return Object.values(groups)
-      .filter((g) => g.months.size >= 3 && !existingNames.has(g.desc.toUpperCase().slice(0, 30)))
-      .map((g) => ({ nombre: g.desc, media: g.total / g.count, catId: g.catId }))
-      .sort((a, b) => b.media - a.media)
-      .slice(0, 8)
-  }, [yearTx, ingresoCatIds, recurringItems])
-
-  // Monthly cost of active recurring items
+  // ── recurring / fixed expenses (compact) ──
   const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
-  const PERIOD_LABELS = { mensual: 'Mensual', bimestral: 'Bimestral', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }
 
   // Filter out expired items (fechaFin in the past)
   const activeRecurring = useMemo(() => {
@@ -519,16 +482,30 @@ export default function Dashboard() {
     return recurringItems.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= today))
   }, [recurringItems])
 
-  const totalFixedMonthly = useMemo(
-    () => activeRecurring.reduce((s, r) => s + r.importe * (PERIOD_FACTOR[r.periodicidad] || 1), 0),
-    [activeRecurring],
+  // Split recurring into income vs expense based on category esIngreso flag
+  const fixedIncomeMonthly = useMemo(
+    () => activeRecurring
+      .filter((r) => r.categoriaId && ingresoCatIds.has(r.categoriaId))
+      .reduce((s, r) => s + r.importe * (PERIOD_FACTOR[r.periodicidad] || 1), 0),
+    [activeRecurring, ingresoCatIds],
+  )
+  const fixedExpenseMonthly = useMemo(
+    () => activeRecurring
+      .filter((r) => !r.categoriaId || !ingresoCatIds.has(r.categoriaId))
+      .reduce((s, r) => s + r.importe * (PERIOD_FACTOR[r.periodicidad] || 1), 0),
+    [activeRecurring, ingresoCatIds],
   )
 
-  // Average monthly income (from the selected year)
-  const avgMonthlyIncome = useMemo(() => {
-    const monthsWithData = new Set(ingresosTx.map((t) => new Date(t.fechaContable).getMonth()))
-    return monthsWithData.size > 0 ? totalIngresos / monthsWithData.size : 0
-  }, [ingresosTx, totalIngresos])
+  // Variable expenses already spent this month
+  const variableSpentThisMonth = useMemo(() => {
+    return transactions.filter((t) => {
+      const d = new Date(t.fechaContable)
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth &&
+        t.importe < 0 && !transferCatIds.has(t.categoria) && !ingresoCatIds.has(t.categoria)
+    }).reduce((s, t) => s + Math.abs(t.importe), 0)
+  }, [transactions, currentYear, currentMonth, transferCatIds, ingresoCatIds])
+
+  const availableEstimate = fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
 
   // Which fixed expenses have already been paid this month?
   const fixedStatus = useMemo(() => {
@@ -591,107 +568,68 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Budget progress ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-200 p-6">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">💰 Presupuestos mensuales</p>
-          <p className="text-xs text-slate-400">{MONTH_NAMES[currentMonth]} {currentYear}</p>
-        </div>
-        <p className="text-slate-400 text-xs mb-4">Define límites de gasto por categoría y controla tu progreso</p>
+      {/* ── Forecast widget (compact) ── */}
+      {(activeRecurring.length > 0 || budgetProgress.length > 0) && (
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-6">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📋 Previsión del mes</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-slate-400">{MONTH_NAMES[currentMonth]} {currentYear}</p>
+              <a href="#/gastos-fijos" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Ver todo →</a>
+            </div>
+          </div>
 
-        {budgetProgress.length > 0 && (
-          <div className="space-y-3 mb-4">
-            {budgetProgress.map((b) => (
-              <div key={b.categoriaId}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: b.cat.color }} />
-                    <span className="text-xs font-medium text-slate-700">{b.cat.nombre}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-semibold ${b.over ? 'text-red-500' : 'text-slate-600'}`}>
+          {/* Forecast metrics */}
+          {activeRecurring.length > 0 && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-3 mb-4">
+              <div className="bg-emerald-50 rounded-xl p-3">
+                <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos</p>
+                <p className="text-lg font-bold text-emerald-700">{formatEur(fixedIncomeMonthly)}</p>
+              </div>
+              <div className="bg-rose-50 rounded-xl p-3">
+                <p className="text-[11px] text-rose-600 uppercase font-semibold">Gastos fijos</p>
+                <p className="text-lg font-bold text-rose-600">{formatEur(fixedExpenseMonthly)}</p>
+              </div>
+              <div className="bg-amber-50 rounded-xl p-3">
+                <p className="text-[11px] text-amber-600 uppercase font-semibold">Pagados / Pendientes</p>
+                <p className="text-lg font-bold text-amber-700">
+                  {fixedStatus.filter((r) => r.paid).length} / {fixedStatus.filter((r) => !r.paid).length}
+                </p>
+              </div>
+              <div className={`rounded-xl p-3 ${availableEstimate >= 0 ? 'bg-indigo-50' : 'bg-red-50'}`}>
+                <p className={`text-[11px] uppercase font-semibold ${availableEstimate >= 0 ? 'text-indigo-600' : 'text-red-600'}`}>Disponible estimado</p>
+                <p className={`text-lg font-bold ${availableEstimate >= 0 ? 'text-indigo-700' : 'text-red-600'}`}>{formatEur(availableEstimate)}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Top budget bars (up to 4) */}
+          {budgetProgress.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[11px] text-slate-400 uppercase font-semibold">Presupuestos</p>
+              {budgetProgress.slice(0, 4).map((b) => (
+                <div key={b.categoriaId}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.cat.color }} />
+                      <span className="text-xs text-slate-600">{b.cat.nombre}</span>
+                    </div>
+                    <span className={`text-xs font-semibold ${b.over ? 'text-red-500' : 'text-slate-500'}`}>
                       {formatEur(b.spent)} / {formatEur(b.limite)}
                     </span>
-                    <button
-                      onClick={() => { setEditingBudgetCat(b.categoriaId); setEditingBudgetVal(String(b.limite)) }}
-                      className="text-[10px] text-slate-400 hover:text-slate-600"
-                    >
-                      editar
-                    </button>
-                    <button
-                      onClick={() => setBudget(b.categoriaId, 0)}
-                      className="text-[10px] text-red-400 hover:text-red-600"
-                    >
-                      quitar
-                    </button>
+                  </div>
+                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full ${b.over ? 'bg-red-400' : b.pct > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                      style={{ width: `${b.pct}%` }}
+                    />
                   </div>
                 </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${b.over ? 'bg-red-400' : b.pct > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                    style={{ width: `${b.pct}%` }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Add / edit budget */}
-        {editingBudgetCat ? (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs text-slate-500">
-              Límite para {categories.find((c) => c.id === editingBudgetCat)?.nombre}:
-            </span>
-            <input
-              type="number" min="0" step="10"
-              value={editingBudgetVal}
-              onChange={(e) => setEditingBudgetVal(e.target.value)}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-amber-300"
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  setBudget(editingBudgetCat, parseFloat(editingBudgetVal) || 0)
-                  setEditingBudgetCat(null)
-                }
-              }}
-            />
-            <button
-              onClick={() => { setBudget(editingBudgetCat, parseFloat(editingBudgetVal) || 0); setEditingBudgetCat(null) }}
-              className="text-xs px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
-            >
-              Guardar
-            </button>
-            <button
-              onClick={() => setEditingBudgetCat(null)}
-              className="text-xs px-2 py-1 text-slate-400 hover:text-slate-600"
-            >
-              Cancelar
-            </button>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 flex-wrap">
-            <select
-              className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-300"
-              value=""
-              onChange={(e) => {
-                if (e.target.value) {
-                  setEditingBudgetCat(e.target.value)
-                  const existing = budgets.find((b) => b.categoriaId === e.target.value)
-                  setEditingBudgetVal(existing ? String(existing.limite) : '')
-                }
-              }}
-            >
-              <option value="">+ Añadir presupuesto…</option>
-              {categories
-                .filter((c) => !c.esTransferencia && !c.esIngreso)
-                .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-                .map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)
-              }
-            </select>
-          </div>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── 2. Monthly bar chart ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -937,176 +875,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── 7. Recurring / fixed expenses ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-6">
-        <div className="flex items-center justify-between mb-1">
-          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">🔄 Gastos fijos</p>
-          <button
-            onClick={() => { setShowAddRecurring((v) => !v); setEditingRecId(null); setRecForm({ nombre: '', importe: '', categoriaId: '', periodicidad: 'mensual', fechaFin: '' }) }}
-            className="text-xs px-2.5 py-1 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
-          >
-            {showAddRecurring ? 'Cerrar' : '+ Añadir'}
-          </button>
-        </div>
-        <p className="text-slate-400 text-xs mb-4">Gastos comprometidos cada mes para planificar tu disponible</p>
-
-        {/* Summary bar */}
-        {activeRecurring.length > 0 && (
-          <div className="flex flex-wrap gap-4 mb-4 p-3 bg-slate-50 rounded-xl">
-            <div>
-              <p className="text-[11px] text-slate-400 uppercase">Gastos fijos / mes</p>
-              <p className="text-sm font-bold text-rose-500">{formatEur(totalFixedMonthly)}</p>
-            </div>
-            {avgMonthlyIncome > 0 && (
-              <>
-                <div>
-                  <p className="text-[11px] text-slate-400 uppercase">Ingreso medio / mes</p>
-                  <p className="text-sm font-bold text-emerald-600">{formatEur(avgMonthlyIncome)}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-400 uppercase">Disponible estimado</p>
-                  <p className={`text-sm font-bold ${avgMonthlyIncome - totalFixedMonthly >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-                    {formatEur(avgMonthlyIncome - totalFixedMonthly)}
-                  </p>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* Fixed expenses list with status */}
-        {fixedStatus.length > 0 && (
-          <div className="space-y-2 mb-4">
-            {fixedStatus.map((r) => {
-              const cat = categories.find((c) => c.id === r.categoriaId)
-              return (
-                <div key={r.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className={`text-sm ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>
-                      {r.paid ? '✓' : '○'}
-                    </span>
-                    <span className="text-sm text-slate-700 truncate">{r.nombre}</span>
-                    {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
-                    <span className="text-[10px] text-slate-400">{PERIOD_LABELS[r.periodicidad] || r.periodicidad}</span>
-                    {r.fechaFin && <span className="text-[10px] text-amber-500">hasta {r.fechaFin}</span>}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {r.paid && r.paidAmount != null && (
-                      <span className="text-[11px] text-emerald-500">{formatEur(r.paidAmount)}</span>
-                    )}
-                    <span className={`text-xs font-semibold ${r.paid ? 'text-slate-400 line-through' : 'text-slate-600'}`}>
-                      {formatEur(r.importe)}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setEditingRecId(r.id)
-                        setRecForm({ nombre: r.nombre, importe: String(r.importe), categoriaId: r.categoriaId || '', periodicidad: r.periodicidad, fechaFin: r.fechaFin || '' })
-                        setShowAddRecurring(true)
-                      }}
-                      className="text-[10px] text-slate-400 hover:text-slate-600"
-                    >editar</button>
-                    <button onClick={() => deleteRecurring(r.id)} className="text-[10px] text-red-400 hover:text-red-600">quitar</button>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
-        {/* Add / edit form */}
-        {showAddRecurring && (
-          <div className="border border-slate-200 rounded-xl p-3 mb-4 space-y-2">
-            <p className="text-xs font-semibold text-slate-600">{editingRecId ? 'Editar gasto fijo' : 'Nuevo gasto fijo'}</p>
-            <div className="flex flex-wrap gap-2">
-              <input
-                placeholder="Nombre (ej. Gimnasio)"
-                value={recForm.nombre}
-                onChange={(e) => setRecForm((f) => ({ ...f, nombre: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-2 py-1 text-xs flex-1 min-w-[120px] focus:outline-none focus:ring-2 focus:ring-cyan-300"
-              />
-              <input
-                type="number" min="0" step="1" placeholder="Importe"
-                value={recForm.importe}
-                onChange={(e) => setRecForm((f) => ({ ...f, importe: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-2 py-1 text-xs w-24 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-              />
-              <select
-                value={recForm.categoriaId}
-                onChange={(e) => setRecForm((f) => ({ ...f, categoriaId: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-300"
-              >
-                <option value="">Categoría…</option>
-                {categories.filter((c) => !c.esTransferencia && !c.esIngreso).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
-                ))}
-              </select>
-              <select
-                value={recForm.periodicidad}
-                onChange={(e) => setRecForm((f) => ({ ...f, periodicidad: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-300"
-              >
-                <option value="mensual">Mensual</option>
-                <option value="bimestral">Bimestral</option>
-                <option value="trimestral">Trimestral</option>
-                <option value="semestral">Semestral</option>
-                <option value="anual">Anual</option>
-              </select>
-              <div className="flex items-center gap-1">
-                <label className="text-[11px] text-slate-400 whitespace-nowrap">Fin:</label>
-                <input
-                  type="date"
-                  value={recForm.fechaFin}
-                  onChange={(e) => setRecForm((f) => ({ ...f, fechaFin: e.target.value }))}
-                  className="border border-slate-200 rounded-lg px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-cyan-300"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                disabled={!recForm.nombre.trim() || !recForm.importe}
-                onClick={async () => {
-                  const data = { nombre: recForm.nombre.trim(), importe: parseFloat(recForm.importe) || 0, categoriaId: recForm.categoriaId || null, periodicidad: recForm.periodicidad, fechaFin: recForm.fechaFin || null }
-                  if (editingRecId) {
-                    await updateRecurring(editingRecId, data)
-                  } else {
-                    await addRecurring(data)
-                  }
-                  setRecForm({ nombre: '', importe: '', categoriaId: '', periodicidad: 'mensual', fechaFin: '' })
-                  setEditingRecId(null)
-                  setShowAddRecurring(false)
-                }}
-                className="text-xs px-3 py-1 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg disabled:opacity-50"
-              >
-                {editingRecId ? 'Guardar' : 'Añadir'}
-              </button>
-              <button onClick={() => { setShowAddRecurring(false); setEditingRecId(null) }} className="text-xs px-2 py-1 text-slate-400 hover:text-slate-600">Cancelar</button>
-            </div>
-          </div>
-        )}
-
-        {/* Auto-detected suggestions */}
-        {recurringSuggestions.length > 0 && (
-          <div className="border-t border-slate-100 pt-3">
-            <p className="text-[11px] text-slate-400 uppercase font-semibold mb-2">Sugerencias detectadas</p>
-            <div className="flex flex-wrap gap-1.5">
-              {recurringSuggestions.map((s, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setRecForm({ nombre: s.nombre, importe: String(Math.round(s.media * 100) / 100), categoriaId: s.catId || '', periodicidad: 'mensual', fechaFin: '' })
-                    setEditingRecId(null)
-                    setShowAddRecurring(true)
-                  }}
-                  className="text-[11px] px-2 py-1 rounded-full border border-cyan-200 text-cyan-700 bg-cyan-50 hover:bg-cyan-100 transition-colors truncate max-w-[200px]"
-                  title={`~${formatEur(s.media)}/mes`}
-                >
-                  + {s.nombre} <span className="text-cyan-400 ml-1">~{formatEur(s.media)}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* ── 8. Desglose por categoría con subcategorías (al final) ── */}
       {categoryBreakdown.length > 0 && (
