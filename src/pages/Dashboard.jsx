@@ -72,7 +72,7 @@ function SummaryCard({ title, value, subtitle, valueClass = 'text-slate-800', ca
 function useTooltipStyle() {
   const { dark } = useTheme()
   return dark
-    ? { backgroundColor: '#233d4c', border: '1px solid #3a6070', color: '#e8f4f8' }
+    ? { backgroundColor: '#262626', border: '1px solid #525252', color: '#f5f5f5' }
     : { backgroundColor: '#fff',    border: '1px solid #e2e8f0', color: '#1e293b' }
 }
 
@@ -682,10 +682,10 @@ export default function Dashboard() {
         <div>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
-            <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+            <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
             <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} scale={logScale ? 'sqrt' : 'auto'} domain={logScale ? [0, 'auto'] : [0, 'auto']} />
-            <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#2d5264' : '#f8fafc' }} />
+            <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
             <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
             <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
             <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
@@ -701,10 +701,10 @@ export default function Dashboard() {
             </div>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={monthCompareData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
-                <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+                <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
                 <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#2d5264' : '#f8fafc' }} />
+                <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
                 <Legend formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} iconType="circle" iconSize={8} />
                 <Bar dataKey={`gastos_${selectedYear}`} name={`${selectedYear}`} fill="#fca5a5" radius={[4, 4, 0, 0]} />
                 <Bar dataKey={`gastos_${prevYear}`} name={`${prevYear}`} fill="#c4b5fd" radius={[4, 4, 0, 0]} />
@@ -774,7 +774,7 @@ export default function Dashboard() {
         {selectedCategories.length > 0 ? (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={multiCategoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
               <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} />
@@ -787,7 +787,7 @@ export default function Dashboard() {
         ) : selectedCategory ? (
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={categoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
               <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomLineTooltip />} />
@@ -845,10 +845,10 @@ export default function Dashboard() {
           <div>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={yearlyComparison} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
-              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#2a4d5c' : '#f1f5f9'} />
+              <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
               <XAxis dataKey="year" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#2d5264' : '#f8fafc' }} />
+              <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
               <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
               <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
               <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />

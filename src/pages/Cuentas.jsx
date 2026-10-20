@@ -24,7 +24,7 @@ function formatEur(v) {
 function useTooltipStyle() {
   const { dark } = useTheme()
   return dark
-    ? { backgroundColor: '#233d4c', border: '1px solid #3a6070', color: '#e8f4f8' }
+    ? { backgroundColor: '#262626', border: '1px solid #525252', color: '#f5f5f5' }
     : { backgroundColor: '#fff',    border: '1px solid #e2e8f0', color: '#1e293b' }
 }
 

@@ -39,7 +39,7 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "both",
+        "installMode": "currentUser",
         "languages": ["Spanish"],
         "displayLanguageSelector": false
       }
@@ -51,7 +51,7 @@
       "endpoints": [
         "https://raw.githubusercontent.com/pcanadas/cuadra-finances/main/releases/latest.json"
       ],
-      "dialog": true
+      "dialog": false
     }
   }
 }

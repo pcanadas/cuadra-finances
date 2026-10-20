@@ -30,8 +30,9 @@ export default function UpdateChecker() {
     try {
       await update.downloadAndInstall()
       setStatus('done')
-      const { relaunch } = await tauriImport('@tauri-apps/plugin-process')
-      await relaunch()
+      // NSIS installer handles relaunch — just exit so it can replace the files
+      const { exit } = await tauriImport('@tauri-apps/plugin-process')
+      await exit(0)
     } catch {
       setStatus('error')
     }
