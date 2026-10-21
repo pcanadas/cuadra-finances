@@ -7,6 +7,9 @@ export default defineConfig({
     tailwindcss(),
     react(),
   ],
+  server: {
+    host: process.env.TAURI_DEV_HOST || 'localhost',
+  },
   test: {
     environment: 'node',
   },
