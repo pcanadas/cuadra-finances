@@ -1,41 +1,58 @@
 /**
- * Tamaño de letra de la app (Ajustes). Se guarda por dispositivo.
+ * Tamaño de letra de la app (Ajustes). Se guarda por dispositivo como porcentaje;
+ * sin valor guardado se usa el del sistema.
  * - Android: zoom de texto del WebView (window.CuadraTextSize, en MainActivity.kt),
  *   igual que hace el sistema: solo cambia la letra, no el resto del diseño.
  * - Escritorio / navegador: tamaño de fuente raíz (escala la página).
  */
 const KEY = 'cuadra.textSize'
 
-export const TEXT_SIZES = [
-  { id: 'sistema', label: 'Como el móvil', percent: 0 },
-  { id: 'pequena', label: 'Pequeña', percent: 90 },
-  { id: 'normal', label: 'Normal', percent: 100 },
-  { id: 'grande', label: 'Grande', percent: 115 },
-]
+export const TEXT_SIZE_MIN = 80
+export const TEXT_SIZE_MAX = 150
+export const TEXT_SIZE_STEP = 5
 
-export function getTextSize() {
+/** Tamaño del sistema en % (Android: escala de fuente del móvil; resto: 100). */
+export function getSystemTextSize() {
   try {
-    const v = localStorage.getItem(KEY)
-    return TEXT_SIZES.some((t) => t.id === v) ? v : 'sistema'
+    return window.CuadraTextSize?.getSystem?.() || 100
   } catch {
-    return 'sistema'
+    return 100
   }
 }
 
-function apply(id) {
-  const { percent } = TEXT_SIZES.find((t) => t.id === id) ?? TEXT_SIZES[0]
+/** Porcentaje guardado, o null si se sigue al sistema. */
+function getStored() {
+  try {
+    const v = parseInt(localStorage.getItem(KEY), 10)
+    return v >= TEXT_SIZE_MIN && v <= TEXT_SIZE_MAX ? v : null
+  } catch {
+    return null
+  }
+}
+
+/** Tamaño efectivo en %. */
+export function getTextSize() {
+  return getStored() ?? getSystemTextSize()
+}
+
+function apply(percent) {
   if (window.CuadraTextSize) {
-    window.CuadraTextSize.set(percent)
+    window.CuadraTextSize.set(percent ?? 0)
   } else {
     document.documentElement.style.fontSize = percent ? `${percent}%` : ''
   }
 }
 
-export function setTextSize(id) {
-  try { localStorage.setItem(KEY, id) } catch { /* sin almacenamiento */ }
-  apply(id)
+/** Guarda y aplica un tamaño; si coincide con el del sistema, vuelve a seguirlo. */
+export function setTextSize(percent) {
+  const follow = percent === getSystemTextSize()
+  try {
+    if (follow) localStorage.removeItem(KEY)
+    else localStorage.setItem(KEY, String(percent))
+  } catch { /* sin almacenamiento */ }
+  apply(follow ? null : percent)
 }
 
 export function initTextSize() {
-  apply(getTextSize())
+  apply(getStored())
 }

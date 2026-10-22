@@ -7,11 +7,13 @@ import { parseFile, mapRows } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
 import { handleTransferPairing } from '../utils/transferPairing'
 import db from '../db/db'
-import { saveFile, describeSavedPath } from '../platform/files'
+import { exportFullBackup, saveBackupJson } from '../utils/exportData'
 import { isMobile } from '../platform'
 import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } from '../utils/backupManager'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
+import SelectSheet from '../components/SelectSheet'
+import { TransactionCardList } from '../components/TransactionList.mobile'
 
 const REQUIRED_FIELDS = ['fechaContable', 'descripcion', 'importe']
 
@@ -41,36 +43,6 @@ export default function Importar() {
 
   async function refreshBackupHistory() {
     setBackupHistory(await listBackups())
-  }
-
-  async function handleExportBackup() {
-    await createBackup('manual: exportación')
-    const [transactions, cats, subcats, accs, budgs, recs] = await Promise.all([
-      db.transactions.toArray(),
-      db.categories.toArray(),
-      db.subcategories.toArray(),
-      db.accounts.toArray(),
-      db.budgets.toArray(),
-      db.recurringExpenses.toArray(),
-    ])
-    const payload = { version: 1, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats, accounts: accs, budgets: budgs, recurringExpenses: recs }
-    const json = JSON.stringify(payload, null, 2)
-    const filename = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
-
-    await saveBackupFile(filename, json)
-  }
-
-  async function saveBackupFile(filename, json) {
-    try {
-      const path = await saveFile({ filename, data: json, filter: { name: 'JSON', extensions: ['json'] }, mime: 'application/json' })
-      if (!path || path === 'download') return
-      const where = describeSavedPath(path)
-      alert(where ? `Backup guardado en:
-${where}` : 'Backup guardado.')
-    } catch (e) {
-      alert(`No se pudo guardar el backup:
-${e?.message ?? e}`)
-    }
   }
 
   async function handleImportBackup(e) {
@@ -163,6 +135,7 @@ ${e?.message ?? e}`)
 
   const handleFileInput = (e) => {
     const file = e.target.files[0]
+    e.target.value = '' // permite volver a elegir el mismo archivo (p. ej. tras un error)
     if (file) handleFile(file)
   }
 
@@ -250,7 +223,7 @@ ${e?.message ?? e}`)
       <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
           <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Importar movimientos</h1>
-          <p className="text-slate-500 text-sm mt-1">Importa un extracto bancario en formato CSV o Excel</p>
+          <p className="text-slate-500 text-sm mt-1">Importa un extracto bancario en PDF, CSV o Excel</p>
         </div>
         {totalTransactions > 0 && (
           <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -282,7 +255,7 @@ ${e?.message ?? e}`)
         <p className="text-xs text-slate-400 mb-4">Exporta todos tus datos (movimientos, categorías y subcategorías) a un fichero JSON para guardarlos o migrarlos a otra instalación.</p>
         <div className="flex flex-wrap gap-3 items-center">
           <button
-            onClick={handleExportBackup}
+            onClick={exportFullBackup}
             className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
           >
             ⬇ Exportar backup
@@ -328,7 +301,7 @@ ${e?.message ?? e}`)
                       <button
                         onClick={async () => {
                           const json = JSON.stringify(backupToJson(b), null, 2)
-                          await saveBackupFile(`cuadra-backup-${b.createdAt.slice(0, 10)}.json`, json)
+                          await saveBackupJson(`cuadra-backup-${b.createdAt.slice(0, 10)}.json`, json)
                         }}
                         className="text-[11px] px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-white transition-colors"
                       >
@@ -414,11 +387,11 @@ ${e?.message ?? e}`)
           <div className="text-4xl mb-3">📂</div>
           <p className="text-slate-700 font-medium">{isMobile ? 'Toca para elegir tu extracto' : 'Arrastra tu archivo aquí'}</p>
           {!isMobile && <p className="text-slate-400 text-sm mt-1">o haz clic para seleccionarlo</p>}
-          <p className="text-slate-400 text-xs mt-3">Formatos soportados: CSV, XLSX, XLS</p>
+          <p className="text-slate-400 text-xs mt-3">Formatos soportados: PDF, CSV, XLSX, XLS</p>
           <input
             ref={fileRef}
             type="file"
-            accept=".csv,.xlsx,.xls"
+            accept=".pdf,.csv,.xlsx,.xls,application/pdf"
             className="hidden"
             onChange={handleFileInput}
           />
@@ -438,16 +411,8 @@ ${e?.message ?? e}`)
                 <label className="text-sm font-medium text-slate-600 block mb-1">
                   {label} {required && <span className="text-red-500">*</span>}
                 </label>
-                <select
-                  className="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                  value={mapping[field]}
-                  onChange={(e) => handleMapping(field, e.target.value)}
-                >
-                  <option value="">— No mapear —</option>
-                  {columns.map((col) => (
-                    <option key={col} value={col}>{col}</option>
-                  ))}
-                </select>
+                <SelectSheet title={`Columna para «${label}»`} value={mapping[field]} onChange={(v) => handleMapping(field, v)} className="w-full py-2"
+                  options={[{ value: '', label: '— No mapear —' }, ...columns.map((col) => ({ value: col, label: col }))]} />
               </div>
             ))}
           </div>
@@ -496,32 +461,30 @@ ${e?.message ?? e}`)
 
       {/* Step: preview */}
       {step === 'preview' && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div className="lg:bg-white lg:rounded-xl lg:border lg:border-slate-200 lg:shadow-sm lg:p-6">
           <h2 className="text-base font-semibold text-slate-700 mb-1">Vista previa</h2>
           <p className="text-sm text-slate-500 mb-5">
             {mappedRows.length} movimientos listos para importar. Se aplicó categorización automática.
-            <span className="block text-xs text-slate-400 mt-1">Selecciona movimientos para cambiar categoría/subcategoría en lote antes de importar.</span>
+            <span className="block text-xs text-slate-400 mt-1">
+              <span className="lg:hidden">Toca los movimientos para seleccionarlos y cambiar su categoría antes de importar.</span>
+              <span className="hidden lg:inline">Selecciona movimientos para cambiar categoría/subcategoría en lote antes de importar.</span>
+            </span>
           </p>
 
           {/* Bulk action bar */}
           {previewSelected.size > 0 && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
+            <div className="fixed lg:static left-2 right-2 z-40 shadow-lg lg:shadow-none bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 lg:mb-4 flex flex-wrap items-center gap-3"
+              style={{ bottom: 'calc(4.5rem + var(--sab))' }}>
               <span className="text-sm font-semibold text-indigo-700">
                 {previewSelected.size} seleccionado{previewSelected.size !== 1 ? 's' : ''}
               </span>
-              <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                value={previewBulkCat} onChange={(e) => { setPreviewBulkCat(e.target.value); setPreviewBulkSub('') }}>
-                <option value="">— Categoría —</option>
-                {[...categories].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
+              <SelectSheet title="Categoría" value={previewBulkCat} onChange={(v) => { setPreviewBulkCat(v); setPreviewBulkSub('') }}
+                options={[{ value: '', label: '— Categoría —' }, ...[...categories].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
               {previewBulkCat && (() => {
                 const subs = subcategories.filter((s) => s.categoriaId === previewBulkCat)
                 return subs.length > 0 ? (
-                  <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                    value={previewBulkSub} onChange={(e) => setPreviewBulkSub(e.target.value)}>
-                    <option value="">— Subcategoría —</option>
-                    {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                  </select>
+                  <SelectSheet title="Subcategoría" value={previewBulkSub} onChange={setPreviewBulkSub}
+                    options={[{ value: '', label: '— Subcategoría —' }, ...subs.map((s) => ({ value: s.id, label: s.nombre }))]} />
                 ) : null
               })()}
               <button onClick={applyPreviewBulk} disabled={!previewBulkCat && !previewBulkSub}
@@ -535,7 +498,23 @@ ${e?.message ?? e}`)
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
+          {/* Móvil: tarjetas (tocar = seleccionar) */}
+          <div className={`lg:hidden ${previewSelected.size > 0 ? 'pb-28' : ''}`}>
+            <button onClick={togglePreviewSelectAll} className="mb-3 text-sm font-medium text-indigo-600">
+              {previewSelected.size === mappedRows.length && mappedRows.length > 0 ? 'Quitar selección' : 'Seleccionar todos'}
+            </button>
+            <TransactionCardList
+              transactions={mappedRows}
+              categories={categories}
+              subcategories={subcategories}
+              accounts={[]}
+              selected={new Set([...previewSelected].map((i) => mappedRows[i]?.id))}
+              onOpen={(t) => togglePreviewSelect(mappedRows.indexOf(t))}
+              onToggleSelect={(id) => togglePreviewSelect(mappedRows.findIndex((r) => r.id === id))}
+            />
+          </div>
+
+          <div className="hidden lg:block overflow-x-auto rounded-lg border border-slate-200 max-h-80 overflow-y-auto">
             <table className="text-sm w-full">
               <thead className="bg-slate-50 sticky top-0">
                 <tr>
@@ -591,7 +570,7 @@ ${e?.message ?? e}`)
               </tbody>
             </table>
           </div>
-          <div className="flex flex-wrap items-center gap-3 mt-6">
+          <div className="flex flex-wrap items-center gap-3 mt-6 pb-2">
             <button
               onClick={() => setStep('mapping')}
               className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100"
@@ -600,19 +579,12 @@ ${e?.message ?? e}`)
             </button>
             <div className="flex items-center gap-2">
               <label className="text-xs font-medium text-slate-500">Importar en cuenta:</label>
-              <select
-                value={importAccountId}
-                onChange={(e) => setImportAccountId(e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              >
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.nombre}</option>
-                ))}
-              </select>
+              <SelectSheet title="Cuenta" value={importAccountId} onChange={setImportAccountId}
+                options={accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))} />
             </div>
             <button
               onClick={handleImport}
-              className="px-4 py-2 text-sm rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+              className="w-full lg:w-auto px-4 py-3 lg:py-2 text-sm rounded-xl lg:rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
             >
               Importar {mappedRows.length} movimientos
             </button>

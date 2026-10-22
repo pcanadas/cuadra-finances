@@ -7,9 +7,9 @@ import useAccountStore from '../store/useAccountStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import { extractKeyword } from '../utils/categorize'
 import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
-import * as XLSX from 'xlsx'
-import { saveFile } from '../platform/files'
+import { exportTransactionsToExcel } from '../utils/exportData'
 import { useBackHandler } from '../platform/back'
+import SelectSheet from '../components/SelectSheet'
 import { TransactionCardList, TransactionSheet } from '../components/TransactionList.mobile'
 
 const PAGE_SIZE = 20
@@ -55,7 +55,7 @@ function ManualTransactionModal({ accounts, categories, defaultAccountId, initia
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" style={{ paddingBottom: 'var(--sab)' }} onClick={onClose}>
       <div
         className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-md mx-4"
         onClick={(e) => e.stopPropagation()}
@@ -85,18 +85,13 @@ function ManualTransactionModal({ accounts, categories, defaultAccountId, initia
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-slate-500 block mb-1">Cuenta</label>
-              <select value={accountId} onChange={(e) => setAccountId(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-              </select>
+              <SelectSheet title="Cuenta" className="w-full" value={accountId} onChange={setAccountId}
+                options={accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))} />
             </div>
             <div>
               <label className="text-xs font-medium text-slate-500 block mb-1">Categoría</label>
-              <select value={categoria} onChange={(e) => setCategoria(e.target.value)}
-                className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <option value="">Sin categoría</option>
-                {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-              </select>
+              <SelectSheet title="Categoría" className="w-full" value={categoria} onChange={setCategoria}
+                options={[{ value: '', label: 'Sin categoría' }, ...sortedCategories.map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
             </div>
           </div>
           {error && <p className="text-xs text-red-600">{error}</p>}
@@ -134,7 +129,7 @@ function AccountsModal({ accounts, onAdd, onUpdate, onDelete, onClose }) {
   const TIPOS = { banco: 'Banco', efectivo: 'Efectivo', otro: 'Otro' }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" style={{ paddingBottom: 'var(--sab)' }} onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-sm mx-4"
         onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold text-slate-800 mb-4">Gestionar cuentas</h2>
@@ -156,12 +151,8 @@ function AccountsModal({ accounts, onAdd, onUpdate, onDelete, onClose }) {
           <input type="text" placeholder="Nombre" value={nombre} onChange={(e) => setNombre(e.target.value)}
             className="w-full border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
           <div className="flex gap-2">
-            <select value={tipo} onChange={(e) => setTipo(e.target.value)}
-              className="flex-1 border border-slate-200 rounded-lg px-3 py-1.5 text-sm">
-              <option value="banco">Banco</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="otro">Otro</option>
-            </select>
+            <SelectSheet title="Tipo de cuenta" className="flex-1" value={tipo} onChange={setTipo}
+              options={Object.entries(TIPOS).map(([value, label]) => ({ value, label }))} />
             <div className="flex gap-1 items-center">
               {ACCOUNT_COLORS.slice(0, 6).map((c) => (
                 <button key={c} type="button" onClick={() => setColor(c)}
@@ -358,31 +349,10 @@ export default function Movimientos() {
   }
 
   async function exportToExcel() {
-    const catMap = Object.fromEntries(categories.map((c) => [c.id, c.nombre]))
-    const subMap = Object.fromEntries(subcategories.map((s) => [s.id, s.nombre]))
-    const accMap = Object.fromEntries(accounts.map((a) => [a.id, a.nombre]))
-    const rows = filtered.map((t) => ({
-      Fecha: t.fechaContable,
-      Descripción: t.descripcion,
-      Importe: t.importe,
-      Categoría: catMap[t.categoria] || '',
-      Subcategoría: subMap[t.subcategoria] || '',
-      Cuenta: accMap[t.accountId] || '',
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, 'Movimientos')
-    const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
     try {
-      await saveFile({
-        filename: `movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`,
-        data: new Uint8Array(data),
-        filter: { name: 'Excel', extensions: ['xlsx'] },
-        mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      })
+      await exportTransactionsToExcel(filtered, { categories, subcategories, accounts })
     } catch (e) {
-      alert(`No se pudo exportar:
-${e?.message ?? e}`)
+      alert(`No se pudo exportar:\n${e?.message ?? e}`)
     }
   }
 
@@ -460,7 +430,7 @@ ${e?.message ?? e}`)
         <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Movimientos</h1>
         <div className="flex gap-2 shrink-0">
           <button onClick={exportToExcel}
-            className="px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
+            className="hidden lg:inline-block px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
             title={`Exportar ${filtered.length} movimientos filtrados a Excel`}>
             <span className="lg:hidden">Excel</span>
             <span className="hidden lg:inline">Exportar Excel</span>
@@ -530,43 +500,27 @@ ${e?.message ?? e}`)
       <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4 flex-wrap gap-3`}>
         <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Mes</label>
-          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={filterMonth} onChange={(e) => { setFilterMonth(e.target.value); setPage(1) }}>
-            <option value="">Todos los meses</option>
-            {monthOptions.map((m) => (
-              <option key={m} value={m}>{format(new Date(m + '-01'), 'MMMM yyyy', { locale: es })}</option>
-            ))}
-          </select>
+          <SelectSheet title="Mes" value={filterMonth} onChange={(v) => { setFilterMonth(v); setPage(1) }}
+            options={[{ value: '', label: 'Todos los meses' }, ...monthOptions.map((m) => ({ value: m, label: format(new Date(m + '-01'), 'MMMM yyyy', { locale: es }) }))]} />
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Categoría</label>
-          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setPage(1) }}>
-            <option value="">Todas las categorías</option>
-            <option value="sin-categoria">Sin categoría</option>
-            {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <SelectSheet title="Categoría" value={filterCategory} onChange={(v) => { setFilterCategory(v); setPage(1) }}
+            options={[{ value: '', label: 'Todas las categorías' }, { value: 'sin-categoria', label: 'Sin categoría' }, ...sortedCategories.map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Subcategoría</label>
-          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={filterSubcategory} onChange={(e) => { setFilterSubcategory(e.target.value); setPage(1) }}>
-            <option value="">Todas</option>
-            <option value="sin-subcategoria">Sin subcategoría</option>
-            {(filterCategory && filterCategory !== 'sin-categoria'
-              ? subcategories.filter((s) => s.categoriaId === filterCategory)
-              : subcategories
-            ).map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-          </select>
+          <SelectSheet title="Subcategoría" value={filterSubcategory} onChange={(v) => { setFilterSubcategory(v); setPage(1) }}
+            options={[{ value: '', label: 'Todas' }, { value: 'sin-subcategoria', label: 'Sin subcategoría' },
+              ...(filterCategory && filterCategory !== 'sin-categoria'
+                ? subcategories.filter((s) => s.categoriaId === filterCategory)
+                : subcategories
+              ).map((s) => ({ value: s.id, label: s.nombre }))]} />
         </div>
         <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Tipo</label>
-          <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={filterType} onChange={(e) => { setFilterType(e.target.value); setPage(1) }}>
-            <option value="">Todos</option>
-            <option value="ingreso">Ingresos</option>
-            <option value="gasto">Gastos</option>
-          </select>
+          <SelectSheet title="Tipo" value={filterType} onChange={(v) => { setFilterType(v); setPage(1) }}
+            options={[{ value: '', label: 'Todos' }, { value: 'ingreso', label: 'Ingresos' }, { value: 'gasto', label: 'Gastos' }]} />
         </div>
         <div className="hidden lg:block">
           <label className="text-xs font-medium text-slate-500 block mb-1">Buscar</label>
@@ -594,19 +548,13 @@ ${e?.message ?? e}`)
           <span className="text-sm font-semibold text-indigo-700">
             {selected.size} movimiento{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
           </span>
-          <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            value={bulkCategory} onChange={(e) => { setBulkCategory(e.target.value); setBulkSubcategory('') }}>
-            <option value="">— Categoría —</option>
-            {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <SelectSheet title="Categoría" value={bulkCategory} onChange={(v) => { setBulkCategory(v); setBulkSubcategory('') }}
+            options={[{ value: '', label: '— Categoría —' }, ...sortedCategories.map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
           {bulkCategory && (() => {
             const subs = subcategories.filter((s) => s.categoriaId === bulkCategory)
             return subs.length > 0 ? (
-              <select className="border border-indigo-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                value={bulkSubcategory} onChange={(e) => setBulkSubcategory(e.target.value)}>
-                <option value="">— Subcategoría —</option>
-                {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-              </select>
+              <SelectSheet title="Subcategoría" value={bulkSubcategory} onChange={setBulkSubcategory}
+                options={[{ value: '', label: '— Subcategoría —' }, ...subs.map((s) => ({ value: s.id, label: s.nombre }))]} />
             ) : null
           })()}
           <button onClick={applyBulkCategory} disabled={!bulkCategory && !bulkSubcategory}

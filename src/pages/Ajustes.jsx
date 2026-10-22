@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import useCategoryStore from '../store/useCategoryStore'
 import { useBackHandler } from '../platform/back'
+import { isMobile } from '../platform'
 import { getCategoryIcon, ICON_GROUPS } from '../utils/categoryIcons'
-import { TEXT_SIZES, getTextSize, setTextSize } from '../platform/textSize'
+import { TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP, getTextSize, getSystemTextSize, setTextSize } from '../platform/textSize'
 
 // ─── Selector de icono (hoja inferior) ──────────────────────────────────────
 
@@ -52,6 +53,12 @@ export default function Ajustes() {
   const updateCategory = useCategoryStore((s) => s.updateCategory)
   const [editingId, setEditingId] = useState(null)
   const [textSize, setTextSizeState] = useState(getTextSize)
+  const systemSize = getSystemTextSize()
+
+  function changeTextSize(v) {
+    setTextSizeState(v)
+    setTextSize(v)
+  }
 
   const sorted = [...categories].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
   const editing = categories.find((c) => c.id === editingId)
@@ -73,14 +80,29 @@ export default function Ajustes() {
       </section>
 
       <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <h2 className="text-sm font-semibold text-slate-700 mb-3">Tamaño de letra</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {TEXT_SIZES.map((t) => (
-            <button key={t.id} onClick={() => { setTextSize(t.id); setTextSizeState(t.id) }}
-              className={`py-2.5 rounded-xl border text-sm ${textSize === t.id ? 'bg-indigo-600 border-indigo-600 text-white font-semibold' : 'bg-white border-slate-200 text-slate-600'}`}>
-              {t.label}
-            </button>
-          ))}
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-slate-700">Tamaño de letra</h2>
+          <span className="text-sm font-semibold text-indigo-600 tabular-nums">{textSize} %</span>
+        </div>
+        <p className="text-sm text-slate-600 my-3">Así se verá el texto en la aplicación.</p>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500">A</span>
+          <input type="range" min={TEXT_SIZE_MIN} max={TEXT_SIZE_MAX} step={TEXT_SIZE_STEP} value={textSize}
+            onChange={(e) => changeTextSize(Number(e.target.value))}
+            className="flex-1 accent-indigo-600" aria-label="Tamaño de letra" />
+          <span className="text-xl text-slate-500">A</span>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-xs">
+          {textSize === systemSize ? (
+            <span className="text-emerald-600">✓ {isMobile ? 'Igual que la letra de tu móvil' : 'Tamaño estándar'}</span>
+          ) : (
+            <>
+              <span className="text-slate-500">{isMobile ? `Tu móvil usa ${systemSize} %` : `Estándar: ${systemSize} %`}</span>
+              <button onClick={() => changeTextSize(systemSize)} className="font-medium text-indigo-600">
+                {isMobile ? 'Volver al del móvil' : 'Volver al estándar'}
+              </button>
+            </>
+          )}
         </div>
       </section>
 

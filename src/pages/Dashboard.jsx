@@ -1,4 +1,8 @@
 import { useMemo, useState } from 'react'
+import PeriodPicker from '../components/PeriodPicker'
+import SelectSheet from '../components/SelectSheet'
+import { periodLabel } from '../utils/period'
+import { isMobile } from '../platform'
 import { useTheme } from '../context/ThemeContext'
 import {
   BarChart,
@@ -59,12 +63,12 @@ function toPastel(hex, amount = 0.55) {
 
 // ─── sub-components ─────────────────────────────────────────────────────────
 
-function SummaryCard({ title, value, subtitle, valueClass = 'text-slate-800', cardClass = '', borderClass = '' }) {
+function SummaryCard({ title, value, subtitle, subtitleClass = '', valueClass = 'text-slate-800', cardClass = '', borderClass = '' }) {
   return (
     <div className={`min-w-0 rounded-2xl p-3 lg:p-5 flex flex-col gap-0.5 lg:gap-1 border ${cardClass} ${borderClass} bg-white/70 backdrop-blur-sm`}>
       <p className="text-[10px] lg:text-xs font-semibold uppercase tracking-wide text-slate-400 leading-tight">{title}</p>
       <p className={`text-base sm:text-xl lg:text-2xl font-bold leading-tight tabular-nums break-words ${valueClass}`}>{value}</p>
-      {subtitle && <p className="text-[11px] lg:text-xs text-slate-400 leading-tight">{subtitle}</p>}
+      {subtitle && <p className={`text-[11px] lg:text-xs text-slate-400 leading-tight ${subtitleClass}`}>{subtitle}</p>}
     </div>
   )
 }
@@ -201,6 +205,8 @@ export default function Dashboard() {
   const { dark } = useTheme()
 
   const [selectedYear,       setSelectedYear]       = useState(new Date().getFullYear())
+  // null = año completo; en móvil se abre en el mes actual
+  const [selectedMonth,      setSelectedMonth]      = useState(() => (isMobile ? new Date().getMonth() : null))
   const [selectedCategory,   setSelectedCategory]   = useState('')
   const [selectedCategories, setSelectedCategories] = useState([]) // multi-category comparison
   const [expandedCategories, setExpandedCategories] = useState(new Set())
@@ -257,10 +263,24 @@ export default function Dashboard() {
     [yearTx]
   )
 
+  // Movimientos del periodo elegido (mes o año completo)
+  const inPeriod = (t) => selectedMonth == null || new Date(t.fechaContable).getMonth() === selectedMonth
+  const periodGastosTx   = useMemo(() => gastosTx.filter(inPeriod), [gastosTx, selectedMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+  const periodIngresosTx = useMemo(() => ingresosTx.filter(inPeriod), [ingresosTx, selectedMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // ── summary ──
-  const totalGastos   = useMemo(() => gastosTx.reduce((s, t) => s + Math.abs(t.importe), 0), [gastosTx])
-  const totalIngresos = useMemo(() => ingresosTx.reduce((s, t) => s + t.importe, 0), [ingresosTx])
+  const totalGastos   = useMemo(() => periodGastosTx.reduce((s, t) => s + Math.abs(t.importe), 0), [periodGastosTx])
+  const totalIngresos = useMemo(() => periodIngresosTx.reduce((s, t) => s + t.importe, 0), [periodIngresosTx])
   const balance = totalIngresos - totalGastos
+
+  // Gasto diario medio del mes (si es el mes en curso, sobre los días transcurridos)
+  const gastoDiario = useMemo(() => {
+    if (selectedMonth == null) return null
+    const now = new Date()
+    const isCurrent = now.getFullYear() === selectedYear && now.getMonth() === selectedMonth
+    const days = isCurrent ? now.getDate() : new Date(selectedYear, selectedMonth + 1, 0).getDate()
+    return totalGastos / days
+  }, [selectedYear, selectedMonth, totalGastos])
 
   const mesMaxGasto = useMemo(() => {
     const byMonth = Array.from({ length: 12 }, (_, i) => ({ month: i, total: 0 }))
@@ -315,22 +335,40 @@ export default function Dashboard() {
         nombre: id === '__sin__' ? 'Sin categoría' : (categoryMap[id]?.nombre ?? 'Desconocida'),
         color:  id === '__sin__' ? '#94a3b8'        : (categoryMap[id]?.color  ?? '#94a3b8'),
         total,
+      }))
+      .filter((c) => c.total > 0)
+      .sort((a, b) => b.total - a.total)
+  }, [gastosTx, categoryMap])
+
+  // Lo mismo, solo para el periodo elegido (donut y desglose)
+  const periodBreakdown = useMemo(() => {
+    const spend = {}
+    periodGastosTx.forEach((t) => {
+      const key = t.categoria || '__sin__'
+      spend[key] = (spend[key] || 0) + Math.abs(t.importe)
+    })
+    return Object.entries(spend)
+      .map(([id, total]) => ({
+        id,
+        nombre: id === '__sin__' ? 'Sin categoría' : (categoryMap[id]?.nombre ?? 'Desconocida'),
+        color:  id === '__sin__' ? '#94a3b8'        : (categoryMap[id]?.color  ?? '#94a3b8'),
+        total,
         pct: totalGastos > 0 ? (total / totalGastos) * 100 : 0,
       }))
       .filter((c) => c.total > 0)
       .sort((a, b) => b.total - a.total)
-  }, [gastosTx, categoryMap, totalGastos])
+  }, [periodGastosTx, categoryMap, totalGastos])
 
   // subcategory spend per category (for nested rows in breakdown)
   const subcatSpendByCat = useMemo(() => {
     const result = {}
-    gastosTx.filter((t) => t.subcategoria).forEach((t) => {
+    periodGastosTx.filter((t) => t.subcategoria).forEach((t) => {
       const catId = t.categoria || '__sin__'
       if (!result[catId]) result[catId] = {}
       result[catId][t.subcategoria] = (result[catId][t.subcategoria] || 0) + Math.abs(t.importe)
     })
     return result
-  }, [gastosTx])
+  }, [periodGastosTx])
 
   // ── line chart for selected category ──
   const categoryLineData = useMemo(() => {
@@ -342,11 +380,11 @@ export default function Dashboard() {
           (t.categoria === selectedCategory || (selectedCategory === '__sin__' && !t.categoria))
         )
         .reduce((s, t) => s + Math.abs(t.importe), 0)
-      return { mes: i + 1, total }
+      return { mes: MONTH_LABELS[i], total }
     })
   }, [gastosTx, selectedCategory])
 
-  const top8 = categoryBreakdown.slice(0, 8)
+  const top8 = periodBreakdown.slice(0, 8)
 
   // ── gastos monthly summary table (top 6 expense categories) ──
   const top6gastoCats = categoryBreakdown.slice(0, 6)
@@ -459,7 +497,7 @@ export default function Dashboard() {
   const multiCategoryLineData = useMemo(() => {
     if (selectedCategories.length === 0) return []
     return Array.from({ length: 12 }, (_, i) => {
-      const row = { mes: i + 1 }
+      const row = { mes: MONTH_LABELS[i] }
       selectedCategories.forEach((catId) => {
         row[catId] = gastosTx
           .filter((t) => new Date(t.fechaContable).getMonth() === i && (t.categoria === catId || (catId === '__sin__' && !t.categoria)))
@@ -574,19 +612,19 @@ export default function Dashboard() {
             <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
             <p className="text-slate-400 text-sm mt-0.5">Resumen financiero anual</p>
           </div>
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
-            className="bg-white border border-slate-200 rounded-full px-4 py-1.5 text-sm font-semibold text-slate-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-300"
-          >
-            {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
-          </select>
+<PeriodPicker
+            value={{ year: selectedYear, month: selectedMonth }}
+            years={availableYears}
+            onChange={({ year, month }) => { setSelectedYear(year); setSelectedMonth(month) }}
+          />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
-          <SummaryCard title="Gastos del año" value={formatEur(totalGastos)} subtitle={`${gastosTx.length} movimientos`} valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20" />
-          <SummaryCard title="Ingresos del año" value={formatEur(totalIngresos)} subtitle={`${ingresosTx.length} movimientos`} valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
-          <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20" />
-          <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
+          <SummaryCard title="Gastos" value={formatEur(totalGastos)} subtitle={`${periodGastosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20" />
+          <SummaryCard title="Ingresos" value={formatEur(totalIngresos)} subtitle={`${periodIngresosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
+          <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20" />
+          {selectedMonth == null
+            ? <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
+            : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle="Media por día" subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
         </div>
       </div>
 
@@ -672,7 +710,7 @@ export default function Dashboard() {
             )}
             <button
               onClick={() => setLogScale((v) => !v)}
-              className={`text-xs px-2.5 py-1 rounded-lg border transition-colors ${logScale ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
+              className={`hidden lg:inline-block text-xs px-2.5 py-1 rounded-lg border transition-colors ${logScale ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}`}
             >
               {logScale ? 'Escala √' : 'Escala lineal'}
             </button>
@@ -726,14 +764,16 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <select
+<SelectSheet
+              title="Ver evolución de una categoría"
               value={selectedCategory}
-              onChange={(e) => { setSelectedCategory(e.target.value); setSelectedCategories([]) }}
-              className="border border-slate-200 rounded-lg px-2 py-1 text-xs font-medium text-slate-600 bg-white focus:outline-none focus:ring-2 focus:ring-violet-300 max-w-[200px]"
-            >
-              <option value="">— Ver distribución —</option>
-              {categoryBreakdown.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-            </select>
+              onChange={(v) => { setSelectedCategory(v); setSelectedCategories([]) }}
+              options={[
+                { value: '', label: 'Distribución de gastos' },
+                ...categoryBreakdown.map((c) => ({ value: c.id, label: c.nombre, color: c.color })),
+              ]}
+              className="text-xs"
+            />
             {categoryBreakdown.length > 1 && (
               <button
                 onClick={() => {
@@ -775,7 +815,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={multiCategoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
-              <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} />
               {selectedCategories.map((catId, i) => {
@@ -788,7 +828,7 @@ export default function Dashboard() {
           <ResponsiveContainer width="100%" height={220}>
             <LineChart data={categoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
-              <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
+              <XAxis dataKey="mes" tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomLineTooltip />} />
               <Line type="monotone" dataKey="total" stroke="#c4b5fd" strokeWidth={2} dot={{ r: 3, fill: '#c4b5fd' }} activeDot={{ r: 5 }} />
@@ -799,15 +839,24 @@ export default function Dashboard() {
             <p className="text-slate-400 text-sm">Sin datos</p>
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={top8} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={80} innerRadius={40} paddingAngle={2} stroke="none">
-                {top8.map((entry) => <Cell key={entry.id} fill={toPastel(entry.color)} />)}
-              </Pie>
-              <Tooltip content={<CustomPieTooltip />} />
-              <Legend formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} iconType="circle" iconSize={8} />
-            </PieChart>
-          </ResponsiveContainer>
+          <>
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie data={top8} dataKey="total" nameKey="nombre" cx="50%" cy="50%" outerRadius={85} innerRadius={45} paddingAngle={2} stroke="none">
+                  {top8.map((entry) => <Cell key={entry.id} fill={toPastel(entry.color)} />)}
+                </Pie>
+                <Tooltip content={<CustomPieTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="flex flex-wrap justify-center gap-x-3 gap-y-1.5 mt-3">
+              {top8.map((c) => (
+                <span key={c.id} className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: toPastel(c.color) }} />
+                  {c.nombre}
+                </span>
+              ))}
+            </div>
+          </>
         )}
       </div>
 
@@ -903,10 +952,10 @@ export default function Dashboard() {
 
 
       {/* ── 8. Desglose por categoría con subcategorías (al final) ── */}
-      {categoryBreakdown.length > 0 && (
+      {periodBreakdown.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-violet-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">🏷️ Desglose por categoría</p>
-          <p className="text-slate-400 text-xs mb-4">Distribución de gastos con subcategorías · {selectedYear}</p>
+          <p className="text-slate-400 text-xs mb-4">Distribución de gastos con subcategorías · {periodLabel({ year: selectedYear, month: selectedMonth })}</p>
           <div className="overflow-x-auto">
             {/* Header */}
             <table className="w-full text-sm table-fixed">
@@ -935,7 +984,7 @@ export default function Dashboard() {
                   <col />
                 </colgroup>
                 <tbody>
-                  {categoryBreakdown.map((cat) => {
+                  {periodBreakdown.map((cat) => {
                     const catSubcats = subcategories.filter((s) => s.categoriaId === cat.id)
                     const subcatSpend = subcatSpendByCat[cat.id] || {}
                     const hasSubcatData = catSubcats.some((s) => subcatSpend[s.id] > 0)
@@ -956,10 +1005,10 @@ export default function Dashboard() {
                                 <span className="w-3 flex-shrink-0" />
                               )}
                               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                              <span className="text-slate-700 font-semibold truncate">{cat.nombre}</span>
+                              <span className="text-slate-700 truncate">{cat.nombre}</span>
                             </button>
                           </td>
-                          <td className="py-2.5 text-right font-bold text-slate-800 pr-2 sm:pr-4 whitespace-nowrap">{formatEur(cat.total)}</td>
+                          <td className="py-2.5 text-right text-slate-700 tabular-nums pr-2 sm:pr-4 whitespace-nowrap">{formatEur(cat.total)}</td>
                           <td className="py-2.5 text-right text-slate-500 whitespace-nowrap">{cat.pct.toFixed(1)}%</td>
                           <td className="hidden sm:table-cell py-2.5 pl-4">
                             <div className="bg-slate-100 rounded-full h-1.5">

@@ -5,6 +5,7 @@ import useAccountStore from '../store/useAccountStore'
 import { categorizeTransaction } from '../utils/categorize'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
+import SelectSheet from '../components/SelectSheet'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -229,16 +230,8 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
             {esTransferencia && accounts.length > 0 && (
               <div className="ml-5">
                 <label className="text-xs text-slate-500 block mb-1">Cuenta destino de la transferencia</label>
-                <select
-                  value={cuentaDestinoId}
-                  onChange={(e) => setCuentaDestinoId(e.target.value)}
-                  className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                >
-                  <option value="">— Sin especificar —</option>
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>{a.nombre}</option>
-                  ))}
-                </select>
+                <SelectSheet title="Cuenta destino" value={cuentaDestinoId} onChange={setCuentaDestinoId} className="text-xs"
+                  options={[{ value: '', label: '— Sin especificar —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))]} />
                 <p className="text-xs text-slate-400 mt-1">Los gastos de esta categoría se reflejarán como ingresos en la cuenta destino.</p>
               </div>
             )}

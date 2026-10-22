@@ -26,6 +26,7 @@ const MOBILE_RIGHT = [
 ]
 const MOBILE_MORE = [
   { to: '/importar', label: 'Importar extracto', icon: '📥' },
+  { to: '/exportar', label: 'Exportar datos', icon: '📤' },
   { to: '/gastos-fijos', label: 'Gastos fijos', icon: '📆' },
   { to: '/categorias', label: 'Categorías', icon: '🏷️' },
   { to: '/subcategorias', label: 'Subcategorías', icon: '🗂️' },
@@ -114,8 +115,15 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* Móvil: solo el hueco de la barra de estado */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-slate-50" style={{ height: 'var(--sat)' }} />
+      {/* Móvil: cabecera compacta (los extremos quedan para búsqueda / menú) */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200"
+        style={{ paddingTop: 'var(--sat)' }}>
+        <div className="h-12 flex items-center justify-between px-2">
+          <div className="w-10" />
+          <span className="text-lg font-bold text-indigo-600">Cuadra</span>
+          <div className="w-10" />
+        </div>
+      </header>
 
       {/* Hoja "Más" (móvil) */}
       {moreOpen && (

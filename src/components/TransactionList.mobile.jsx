@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBackHandler } from '../platform/back'
 import { getCategoryIcon } from '../utils/categoryIcons'
+import SelectSheet from './SelectSheet'
 
 function formatEur(amount) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -157,7 +158,6 @@ export function TransactionSheet({ transaction: t, categories, subcategories, ac
 
   const acc = accounts.find((a) => a.id === t.accountId)
   const subs = t.categoria ? subcategories.filter((s) => s.categoriaId === t.categoria) : []
-  const selectClass = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300'
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-end" onClick={onClose}>
@@ -182,20 +182,17 @@ export function TransactionSheet({ transaction: t, categories, subcategories, ac
 
         <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Categoría</label>
-          <select className={selectClass} value={t.categoria || ''} onChange={(e) => onChangeCategory(t, e.target.value)}>
-            <option value="">Sin categoría</option>
-            {categories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+          <SelectSheet title="Categoría" className="w-full py-2.5 text-base rounded-xl"
+            value={t.categoria || ''} onChange={(v) => onChangeCategory(t, v)}
+            options={[{ value: '', label: 'Sin categoría' }, ...categories.map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
         </div>
 
         {t.categoria && (
           <div>
             <label className="text-xs font-medium text-slate-500 block mb-1">Subcategoría</label>
-            <select className={selectClass} value={t.subcategoria || ''} onChange={(e) => onChangeSubcategory(t, e.target.value)}>
-              <option value="">—</option>
-              {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-              <option value="__new__">＋ Nueva...</option>
-            </select>
+            <SelectSheet title="Subcategoría" className="w-full py-2.5 text-base rounded-xl"
+              value={t.subcategoria || ''} onChange={(v) => onChangeSubcategory(t, v)}
+              options={[{ value: '', label: '—' }, ...subs.map((s) => ({ value: s.id, label: s.nombre })), { value: '__new__', label: '＋ Nueva…' }]} />
           </div>
         )}
 

@@ -12,6 +12,7 @@ import Subcategorias from './pages/Subcategorias'
 import Cuentas from './pages/Cuentas'
 import Acerca from './pages/Acerca'
 import Ajustes from './pages/Ajustes'
+import Exportar from './pages/Exportar'
 import GastosFijos from './pages/GastosFijos'
 import useTransactionStore from './store/useTransactionStore'
 import useCategoryStore from './store/useCategoryStore'
@@ -74,6 +75,7 @@ export default function App() {
           <Route path="gastos-fijos" element={<GastosFijos />} />
           <Route path="acerca" element={<Acerca />} />
           <Route path="ajustes" element={<Ajustes />} />
+          <Route path="exportar" element={<Exportar />} />
         </Route>
       </Routes>
     </BrowserRouter>

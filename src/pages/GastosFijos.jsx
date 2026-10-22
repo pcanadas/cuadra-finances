@@ -4,6 +4,7 @@ import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
+import SelectSheet from '../components/SelectSheet'
 
 const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
@@ -229,30 +230,21 @@ export default function GastosFijos() {
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm flex-1 min-w-[140px] focus:outline-none focus:ring-2 focus:ring-indigo-300" autoFocus />
             <input type="number" min="0" step="1" placeholder="Importe" value={form.importe} onChange={(e) => setForm((f) => ({ ...f, importe: e.target.value }))}
               className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-28 focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-            <select value={form.categoriaId} onChange={(e) => setForm((f) => ({ ...f, categoriaId: e.target.value, subcategoriaId: '' }))}
-              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              <option value="">Categoría…</option>
-              {sortedCats.map((c) => <option key={c.id} value={c.id}>{c.nombre}{c.esIngreso ? ' (ingreso)' : ''}</option>)}
-            </select>
+            <SelectSheet title="Categoría" value={form.categoriaId}
+              onChange={(v) => setForm((f) => ({ ...f, categoriaId: v, subcategoriaId: '' }))}
+              options={[{ value: '', label: 'Categoría…' }, ...sortedCats.map((c) => ({ value: c.id, label: c.nombre + (c.esIngreso ? ' (ingreso)' : ''), color: c.color }))]} />
             {form.categoriaId && subcategories.filter((s) => s.categoriaId === form.categoriaId).length > 0 && (
-              <select value={form.subcategoriaId} onChange={(e) => setForm((f) => ({ ...f, subcategoriaId: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <option value="">Subcategoría…</option>
-                {subcategories.filter((s) => s.categoriaId === form.categoriaId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre}</option>
-                ))}
-              </select>
+              <SelectSheet title="Subcategoría" value={form.subcategoriaId}
+                onChange={(v) => setForm((f) => ({ ...f, subcategoriaId: v }))}
+                options={[{ value: '', label: 'Subcategoría…' }, ...subcategories.filter((s) => s.categoriaId === form.categoriaId).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')).map((s) => ({ value: s.id, label: s.nombre }))]} />
             )}
-            <select value={form.periodicidad} onChange={(e) => setForm((f) => ({ ...f, periodicidad: e.target.value, mesReferencia: e.target.value === 'mensual' ? '' : f.mesReferencia }))}
-              className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-              {Object.entries(PERIOD_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-            </select>
+            <SelectSheet title="Periodicidad" value={form.periodicidad}
+              onChange={(v) => setForm((f) => ({ ...f, periodicidad: v, mesReferencia: v === 'mensual' ? '' : f.mesReferencia }))}
+              options={Object.entries(PERIOD_LABELS).map(([k, v]) => ({ value: k, label: v }))} />
             {form.periodicidad !== 'mensual' && (
-              <select value={form.mesReferencia} onChange={(e) => setForm((f) => ({ ...f, mesReferencia: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300">
-                <option value="">Mes de cobro…</option>
-                {MONTH_SHORT.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
+              <SelectSheet title="Mes de cobro" value={String(form.mesReferencia)}
+                onChange={(v) => setForm((f) => ({ ...f, mesReferencia: v }))}
+                options={[{ value: '', label: 'Mes de cobro…' }, ...MONTH_SHORT.map((m, i) => ({ value: String(i), label: m }))]} />
             )}
             <div className="flex items-center gap-1">
               <label className="text-xs text-slate-400 whitespace-nowrap">Fin:</label>
@@ -351,17 +343,15 @@ export default function GastosFijos() {
             <button onClick={() => setEditBudgetCat(null)} className="text-xs px-2 py-1 text-slate-400 hover:text-slate-600">Cancelar</button>
           </div>
         ) : (
-          <select className="border border-slate-200 rounded-lg px-2 py-1 text-xs text-slate-600 focus:outline-none focus:ring-2 focus:ring-amber-300"
-            value="" onChange={(e) => {
-              if (e.target.value) {
-                setEditBudgetCat(e.target.value)
-                const existing = budgets.find((b) => b.categoriaId === e.target.value)
+          <SelectSheet title="Añadir presupuesto" value="" className="text-xs"
+            onChange={(v) => {
+              if (v) {
+                setEditBudgetCat(v)
+                const existing = budgets.find((b) => b.categoriaId === v)
                 setEditBudgetVal(existing ? String(existing.limite) : '')
               }
-            }}>
-            <option value="">+ Añadir presupuesto…</option>
-            {sortedCats.filter((c) => !c.esIngreso).map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
+            }}
+            options={[{ value: '', label: '+ Añadir presupuesto…' }, ...sortedCats.filter((c) => !c.esIngreso).map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
         )}
       </div>
 

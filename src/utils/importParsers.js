@@ -129,8 +129,16 @@ export async function parseFile(file) {
     return parseCSV(file)
   } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
     return parseExcel(file)
+  } else if (name.endsWith('.pdf') || file.type === 'application/pdf') {
+    // pdf.js es grande: solo se carga si hace falta
+    const { parsePdfStatement } = await import('./pdfStatement')
+    return parsePdfStatement(file, {
+      askPassword: (retry) => window.prompt(retry
+        ? 'Contraseña incorrecta. Vuelve a escribir la contraseña del PDF:'
+        : 'Este PDF está protegido. Escribe la contraseña (suele indicarla el banco):'),
+    })
   }
-  throw new Error('Formato no soportado. Usa CSV o Excel (.xlsx/.xls)')
+  throw new Error('Formato no soportado. Usa PDF, CSV o Excel (.xlsx/.xls)')
 }
 
 /**

@@ -5,6 +5,7 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import useTransactionStore from '../store/useTransactionStore'
 import useAccountStore from '../store/useAccountStore'
 import { categorizeSubcategory, extractKeyword } from '../utils/categorize'
+import SelectSheet from '../components/SelectSheet'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -135,14 +136,8 @@ function SubcatRow({ sub, onSave, onDelete, isTransferCategory, accounts }) {
           {isTransferCategory && accounts.length > 0 && (
             <div>
               <label className="text-xs text-slate-500 block mb-1">Cuenta destino</label>
-              <select
-                value={cuentaDestinoId}
-                onChange={(e) => setCuentaDestinoId(e.target.value)}
-                className="border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              >
-                <option value="">— Sin especificar —</option>
-                {accounts.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-              </select>
+              <SelectSheet title="Cuenta destino" value={cuentaDestinoId} onChange={setCuentaDestinoId} className="text-xs"
+                options={[{ value: '', label: '— Sin especificar —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))]} />
             </div>
           )}
           {/* Actions */}
@@ -529,14 +524,8 @@ export default function Subcategorias() {
                   {selectedCategory?.esTransferencia && accounts.length > 0 && (
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-slate-500">Cuenta destino:</label>
-                      <select
-                        value={newCuentaDestinoId}
-                        onChange={(e) => setNewCuentaDestinoId(e.target.value)}
-                        className="border border-slate-200 rounded px-2 py-1 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-                      >
-                        <option value="">— Sin especificar —</option>
-                        {accounts.map((a) => <option key={a.id} value={a.id}>{a.nombre}</option>)}
-                      </select>
+                      <SelectSheet title="Cuenta destino" value={newCuentaDestinoId} onChange={setNewCuentaDestinoId} className="text-xs"
+                        options={[{ value: '', label: '— Sin especificar —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))]} />
                     </div>
                   )}
                   <button
@@ -592,33 +581,12 @@ export default function Subcategorias() {
                   <span className="text-sm font-semibold text-slate-600 mr-2">
                     Movimientos ({filteredTransactions.length}{filteredTransactions.length !== catTransactions.length ? ` de ${catTransactions.length}` : ''})
                   </span>
-                  <select
-                    value={filterYear}
-                    onChange={(e) => { setFilterYear(e.target.value); setPage(1) }}
-                    className="border border-slate-200 rounded px-2 py-1 text-xs bg-white"
-                  >
-                    <option value="">Todos los años</option>
-                    {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <select
-                    value={filterMonth}
-                    onChange={(e) => { setFilterMonth(e.target.value); setPage(1) }}
-                    className="border border-slate-200 rounded px-2 py-1 text-xs bg-white"
-                  >
-                    <option value="">Todos los meses</option>
-                    {['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, i) => (
-                      <option key={i+1} value={i+1}>{m}</option>
-                    ))}
-                  </select>
-                  <select
-                    value={filterSubcat}
-                    onChange={(e) => { setFilterSubcat(e.target.value); setPage(1) }}
-                    className="border border-slate-200 rounded px-2 py-1 text-xs bg-white"
-                  >
-                    <option value="">Todas las subcategorías</option>
-                    <option value="__none__">Sin subcategoría</option>
-                    {catSubcats.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                  </select>
+                  <SelectSheet title="Año" value={String(filterYear)} onChange={(v) => { setFilterYear(v); setPage(1) }} className="text-xs"
+                    options={[{ value: '', label: 'Todos los años' }, ...availableYears.map((y) => ({ value: String(y), label: String(y) }))]} />
+                  <SelectSheet title="Mes" value={String(filterMonth)} onChange={(v) => { setFilterMonth(v); setPage(1) }} className="text-xs"
+                    options={[{ value: '', label: 'Todos los meses' }, ...['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'].map((m, i) => ({ value: String(i + 1), label: m }))]} />
+                  <SelectSheet title="Subcategoría" value={filterSubcat} onChange={(v) => { setFilterSubcat(v); setPage(1) }} className="text-xs"
+                    options={[{ value: '', label: 'Todas las subcategorías' }, { value: '__none__', label: 'Sin subcategoría' }, ...catSubcats.map((s) => ({ value: s.id, label: s.nombre }))]} />
                   <input
                     type="text"
                     placeholder="Buscar descripción..."
@@ -668,11 +636,8 @@ export default function Subcategorias() {
                                 {formatAmount(t.importe)}
                               </td>
                               <td className="px-4 py-2">
-                                <select
-                                  className="border border-slate-200 rounded px-2 py-1 text-xs bg-white text-slate-700 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                                  value={t.subcategoria || ''}
-                                  onChange={(e) => {
-                                    const val = e.target.value
+                                <SelectSheet title="Subcategoría" value={t.subcategoria || ''} className="text-xs"
+                                  onChange={(val) => {
                                     updateTransaction(t.id, {
                                       subcategoria: val || null,
                                       subcategoriaManual: val ? true : false,
@@ -693,12 +658,7 @@ export default function Subcategorias() {
                                       }
                                     }
                                   }}
-                                >
-                                  <option value="">— Sin subcategoría —</option>
-                                  {catSubcats.map((sub) => (
-                                    <option key={sub.id} value={sub.id}>{sub.nombre}</option>
-                                  ))}
-                                </select>
+                                  options={[{ value: '', label: '— Sin subcategoría —' }, ...catSubcats.map((sub) => ({ value: sub.id, label: sub.nombre }))]} />
                                 {t.subcategoria && !t.subcategoriaManual && (
                                   <span className="ml-1 text-xs text-slate-400 italic">auto</span>
                                 )}

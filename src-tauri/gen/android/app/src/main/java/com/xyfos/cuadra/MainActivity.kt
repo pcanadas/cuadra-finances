@@ -28,6 +28,9 @@ class MainActivity : TauriActivity() {
     val systemTextZoom = webView.settings.textZoom
     webView.addJavascriptInterface(object {
       @JavascriptInterface
+      fun getSystem(): Int = systemTextZoom
+
+      @JavascriptInterface
       fun set(percent: Int) {
         webView.post { webView.settings.textZoom = if (percent > 0) percent else systemTextZoom }
       }
