@@ -1,6 +1,27 @@
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.xyfos.cuadra'
 export const SUPPORT_EMAIL = 'cuadra@xyfos.com'
 export const DEVELOPER = 'Patricia Cañadas (Xyfos Code)'
+// Script del servidor: repo xyfos-code → public/cuadra/api/comentarios.php
+export const FEEDBACK_URL = 'https://www.xyfos.com/cuadra/api/comentarios.php'
+
+/**
+ * Envía un comentario al servidor de xyfos.com, que lo reenvía por correo.
+ * @returns {Promise<'ok' | 'rate' | 'error'>}
+ */
+export async function sendFeedback({ message, email, version, platform }) {
+  try {
+    const res = await fetch(FEEDBACK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, email, version, platform, website: '' }),
+    })
+    if (res.status === 429) return 'rate'
+    const data = await res.json().catch(() => ({}))
+    return res.ok && data.ok ? 'ok' : 'error'
+  } catch {
+    return 'error'
+  }
+}
 
 /**
  * Abre el menú de compartir del sistema.

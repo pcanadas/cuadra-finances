@@ -17,16 +17,16 @@ export default function Privacidad() {
         <p>Los movimientos, cuentas, categorías, presupuestos y ajustes que introduces o importas. Se guardan <strong>únicamente en tu dispositivo</strong> y nunca se envían al responsable ni a terceros.</p>
       </InfoSection>
       <InfoSection title="Datos que recogemos">
-        <p><strong>Ninguno a través de la app.</strong> Cuadra no tiene servidores ni cuentas de usuario y no incluye publicidad ni herramientas de analítica.</p>
+        <p><strong>Solo los comentarios que decidas enviarnos</strong> (ver más abajo). Cuadra no tiene cuentas de usuario, no incluye publicidad ni herramientas de analítica y nunca envía tus movimientos ni tus datos financieros.</p>
       </InfoSection>
       <InfoSection title="Archivos que importas o exportas">
         <p>Los extractos bancarios que importas se leen en tu dispositivo y no se envían a ningún sitio. Las copias de seguridad y exportaciones se guardan donde tú elijas; a partir de ahí, su custodia depende de ti.</p>
       </InfoSection>
       <InfoSection title="Comentarios y consultas">
-        <p>Si nos escribes (desde Comentarios o por correo), lo haces con tu propia app de correo. Recibiremos tu dirección de correo y el contenido del mensaje.</p>
-        <p><strong>Finalidad:</strong> responderte y mejorar la app. <strong>Base legal:</strong> tu consentimiento, que das al enviarnos el mensaje.</p>
-        <p><strong>Conservación:</strong> el tiempo necesario para atender tu consulta y, como máximo, 12 meses desde el último contacto.</p>
-        <p><strong>Destinatarios:</strong> no se ceden a terceros. El correo se almacena en el proveedor de correo del responsable, que actúa como encargado del tratamiento.</p>
+        <p>Si nos envías un comentario desde la app (Más → Comentarios), recibimos el texto que escribes, tu email solo si decides indicarlo, y la versión de la app y de Android para entender el problema. Se envía cifrado a nuestro servidor (xyfos.com), que nos lo reenvía por correo y <strong>no lo guarda</strong>. Para evitar abusos, el servidor usa tu dirección IP durante una hora, de forma cifrada, para limitar el número de envíos. Si nos escribes directamente por correo, recibimos tu dirección y el contenido del mensaje.</p>
+        <p><strong>Finalidad:</strong> leer tus sugerencias, responderte si nos has dejado tu email y mejorar la app. <strong>Base legal:</strong> tu consentimiento, que das al enviarnos el mensaje.</p>
+        <p><strong>Conservación:</strong> el tiempo necesario para atender tu comentario y, como máximo, 12 meses desde el último contacto.</p>
+        <p><strong>Destinatarios:</strong> no se ceden a terceros. Los mensajes pasan por el proveedor de alojamiento y de correo del responsable, que actúa como encargado del tratamiento.</p>
       </InfoSection>
       <InfoSection title="Tus derechos">
         <p>Puedes pedir el acceso, la rectificación o la supresión de tus datos, oponerte a su tratamiento, solicitar su limitación o portabilidad y retirar tu consentimiento en cualquier momento, escribiendo a {email}.</p>

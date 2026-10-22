@@ -1,46 +1,79 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useBackHandler } from '../platform/back'
 import { isTauri } from '../platform'
-import { composeEmail } from '../platform/share'
+import { composeEmail, sendFeedback } from '../platform/share'
 
-// Ventana "Comentarios": el texto se envía con la app de correo del usuario
+// Ventana "Comentarios": se envía al servidor de xyfos.com; si falla, se ofrece el correo
 export default function FeedbackSheet({ onClose, onSent }) {
   useBackHandler(true, onClose)
   const [text, setText] = useState('')
+  const [email, setEmail] = useState('')
   const [version, setVersion] = useState('')
+  const [status, setStatus] = useState('idle') // idle | sending | error | rate
 
   useEffect(() => {
     if (!isTauri) return
     import('@tauri-apps/api/app').then(({ getVersion }) => getVersion()).then(setVersion).catch(() => {})
   }, [])
 
-  function send() {
-    const body = `${text.trim()}\n\n—\nCuadra ${version || ''} · ${navigator.userAgent.match(/Android [\d.]+/)?.[0] ?? 'escritorio'}`
-    composeEmail({ subject: 'Comentarios sobre Cuadra', body })
-    onSent?.()
+  const platform = navigator.userAgent.match(/Android [\d.]+/)?.[0] ?? 'escritorio'
+  const emailValid = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+
+  async function send() {
+    setStatus('sending')
+    const result = await sendFeedback({ message: text.trim(), email: email.trim(), version, platform })
+    if (result === 'ok') return onSent?.()
+    setStatus(result)
   }
+
+  function sendByEmail() {
+    composeEmail({ subject: 'Comentarios sobre Cuadra', body: `${text.trim()}\n\n—\nCuadra ${version} · ${platform}` })
+    onClose()
+  }
+
+  const input = 'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-base text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300'
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-end sm:items-center justify-center"
       style={{ paddingBottom: 'var(--sab)' }} onClick={onClose}>
-      <div className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-4"
+      <div className="w-full sm:max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-5 space-y-3 max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}>
         <div className="text-center">
           <div className="text-3xl mb-1">💬</div>
           <h2 className="text-base font-semibold text-slate-800">¡Danos algunas sugerencias para mejorar nuestra aplicación!</h2>
         </div>
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} autoFocus
+        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={5} autoFocus maxLength={3000}
           placeholder="¿Qué te gustaría mejorar o qué echas en falta?"
-          className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-base text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300" />
-        <p className="text-xs text-slate-400 -mt-2">Se abrirá tu app de correo con el mensaje preparado.</p>
-        <div className="grid grid-cols-2 gap-2">
+          className={`${input} resize-none`} />
+        <div>
+          <input type="email" inputMode="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="Tu email (opcional, si quieres respuesta)" className={input} />
+          {!emailValid && <p className="text-xs text-red-600 mt-1">Revisa el email</p>}
+        </div>
+        <p className="text-xs text-slate-400">
+          Solo usaremos estos datos para leer tu comentario y, si dejas tu email, responderte.{' '}
+          <Link to="/privacidad" onClick={onClose} className="text-indigo-600">Más información</Link>
+        </p>
+
+        {status === 'error' && (
+          <div className="text-sm bg-red-50 text-red-700 rounded-xl px-3 py-2">
+            No se ha podido enviar (¿sin conexión?).{' '}
+            <button onClick={sendByEmail} className="font-semibold underline">Enviar por correo</button>
+          </div>
+        )}
+        {status === 'rate' && (
+          <p className="text-sm bg-amber-50 text-amber-700 rounded-xl px-3 py-2">Has enviado varios comentarios seguidos. Inténtalo dentro de un rato.</p>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 pt-1">
           <button onClick={onClose}
             className="py-3 rounded-xl border border-slate-200 text-sm font-medium text-slate-600 active:bg-slate-50">
             No, gracias
           </button>
-          <button onClick={send} disabled={!text.trim()}
+          <button onClick={send} disabled={!text.trim() || !emailValid || status === 'sending'}
             className="py-3 rounded-xl bg-indigo-600 text-white text-sm font-semibold active:bg-indigo-700 disabled:opacity-40">
-            Enviar
+            {status === 'sending' ? 'Enviando…' : 'Enviar'}
           </button>
         </div>
       </div>
