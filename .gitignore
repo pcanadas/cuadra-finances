@@ -30,3 +30,7 @@ src-tauri/signing/
 # Documentación
 DISTRIBUCION.md
 IDEAS.md
+# Firma Android (nunca a git)
+*.jks
+*.keystore
+keystore.properties
