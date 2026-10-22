@@ -15,16 +15,18 @@
 const DATE = String.raw`\d{1,2}[\/\-.]\d{1,2}[\/\-.](?:\d{4}|\d{2})`
 const AMOUNT = String.raw`[-+]?\d{1,3}(?:\.\d{3})*,\d{2}(?:\s?-)?(?:\s?(?:€|EUR))?`
 
-const LEADING_DATES_RE = new RegExp(String.raw`^\s*(${DATE})(?:\s+(${DATE}))?\s+`)
+// Admite basura antes de la fecha y un nº de referencia entre fecha y fecha valor (Bankinter: Fecha | Ref | F. Valor)
+const LEADING_DATES_RE = new RegExp(String.raw`^[^\p{L}\p{N}]*(${DATE})(?:(?:\s+\d{1,6})?\s+(${DATE}))?\s+`, 'u')
 const TRAILING_AMOUNTS_RE = new RegExp(String.raw`(?:^|\s)(${AMOUNT})(?:\s+(${AMOUNT}))?\s*$`)
 const ANY_AMOUNT_RE = new RegExp(AMOUNT)
 
 // Líneas de pie/cabecera que no deben pegarse a una descripción
 const NOISE_RE = /p[aá]gina\s+\d+|^\s*\d+\s*\/\s*\d+\s*$|saldo\s+(anterior|inicial|final)|^\s*total|suma\s+y\s+sigue/i
 
-const DEBIT_HEADER_RE = /^(cargos?|debe|reintegros?|pagos?|salidas?|gastos?)$/i
-const CREDIT_HEADER_RE = /^(abonos?|haber|ingresos?|entradas?)$/i
-const BALANCE_HEADER_RE = /^saldo$/i
+// Cabeceras de columna: "Cargos", "Cargos (-)", "Debe"…
+const DEBIT_HEADER_RE = /^(cargos?|debe|reintegros?|pagos?|salidas?|gastos?)\b/i
+const CREDIT_HEADER_RE = /^(abonos?|haber|ingresos?|entradas?)\b/i
+const BALANCE_HEADER_RE = /^saldo\b/i
 
 export function normalizeDate(s) {
   const m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/)
@@ -251,10 +253,11 @@ export async function parsePdfStatement(file, { askPassword } = {}) {
     await task.destroy()
   }
 
-  if (!lines.length) {
-    throw new Error('El PDF no tiene texto (parece una imagen escaneada). Descarga el extracto en PDF desde la app o la web del banco.')
-  }
+  const textLength = lines.reduce((n, l) => n + l.items.reduce((m, i) => m + i.str.trim().length, 0), 0)
   const rows = parseStatementLines(lines)
+  if (!rows.length && textLength < 80 * doc.numPages) {
+    throw new Error('Este PDF no tiene texto que se pueda leer (está hecho de imágenes). Prueba a descargar los movimientos en CSV o Excel desde la app o la web del banco.')
+  }
   if (!rows.length) {
     throw new Error('No se han encontrado movimientos en el PDF. Si es un extracto de tu banco, envíanos un ejemplo para darle soporte.')
   }

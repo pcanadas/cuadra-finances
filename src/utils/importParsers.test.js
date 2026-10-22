@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { mapRows } from './importParsers'
+import { mapRows, rowsFromCsvMatrix } from './importParsers'
 
 const MAPPING = {
   fechaContable: 'Fecha contable',
@@ -81,5 +81,28 @@ describe('mapRows', () => {
     const result = mapRows(rows, MAPPING)
     expect(result[0].bankRowIndex).toBe(0)
     expect(result[1].bankRowIndex).toBe(1)
+  })
+})
+
+describe('rowsFromCsvMatrix', () => {
+  it('skips metadata lines before the real header (CaixaBank style)', () => {
+    const matrix = [
+      ['\uFEFFTitular', 'IBAN', 'Periodo', 'Saldo disponible'],
+      ['NOMBRE APELLIDO', 'ES0000000000000000000000', '01/01/2026-22/10/2026', '1000.00'],
+      ['Concepto', 'Fecha', 'Importe', 'Saldo'],
+      ['PAGO TRASPASOS', '05/10/2026', '-196.0', '1.000,00EUR'],
+      ['NOMINA', '02/10/2026', '400.0', '1.196,00EUR'],
+    ]
+    const rows = rowsFromCsvMatrix(matrix)
+    expect(rows).toHaveLength(2)
+    const [t] = mapRows(rows, { fechaContable: 'Fecha', descripcion: 'Concepto', importe: 'Importe', saldo: 'Saldo' })
+    expect(t.fechaContable).toBe('2026-10-05')
+    expect(t.importe).toBeCloseTo(-196)
+    expect(t.saldo).toBeCloseTo(1000)
+  })
+
+  it('keeps the first row as header when there is no metadata', () => {
+    const rows = rowsFromCsvMatrix([['Fecha', 'Concepto', 'Importe'], ['01/10/2026', 'X', '-1,00']])
+    expect(rows).toEqual([{ Fecha: '01/10/2026', Concepto: 'X', Importe: '-1,00' }])
   })
 })

@@ -2,14 +2,33 @@ import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
 
 /**
+ * Turn raw CSV rows (arrays) into objects. Some banks (e.g. CaixaBank) put
+ * titular/IBAN lines before the real header, so the header is the first row
+ * that mentions a date and an amount column; falls back to the first row.
+ */
+export function rowsFromCsvMatrix(matrix) {
+  const norm = (c) => String(c ?? '').toLowerCase().trim()
+  const isHeader = (row) => {
+    const cells = row.map(norm)
+    return cells.some((c) => c.includes('fecha') || c === 'date') &&
+      cells.some((c) => /importe|cantidad|amount|cargo|abono/.test(c))
+  }
+  const headerIdx = Math.max(0, matrix.findIndex(isHeader))
+  const headers = matrix[headerIdx].map((h) => String(h ?? '').replace(/^﻿/, '').trim())
+  return matrix.slice(headerIdx + 1)
+    .filter((row) => row.some((c) => String(c ?? '').trim() !== ''))
+    .map((row) => Object.fromEntries(headers.map((h, i) => [h, row[i] ?? ''])))
+}
+
+/**
  * Parse a CSV file and return rows as array of objects.
  */
 export function parseCSV(file) {
   return new Promise((resolve, reject) => {
     Papa.parse(file, {
-      header: true,
+      header: false,
       skipEmptyLines: true,
-      complete: (results) => resolve(results.data),
+      complete: (results) => resolve(rowsFromCsvMatrix(results.data)),
       error: (err) => reject(err),
     })
   })

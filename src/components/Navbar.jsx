@@ -4,6 +4,8 @@ import { useTheme } from '../context/ThemeContext'
 import { useBackHandler } from '../platform/back'
 import useTransactionStore from '../store/useTransactionStore'
 import QuickAdd from './QuickAdd.mobile'
+import { recommendApp } from '../platform/share'
+import FeedbackSheet from './FeedbackSheet'
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -24,6 +26,7 @@ const MOBILE_LEFT = [
 const MOBILE_RIGHT = [
   { to: '/cuentas', label: 'Cuentas', icon: '🏦' },
 ]
+// "Más": gestión de la app · (línea) · información y contacto
 const MOBILE_MORE = [
   { to: '/importar', label: 'Importar extracto', icon: '📥' },
   { to: '/exportar', label: 'Exportar datos', icon: '📤' },
@@ -31,10 +34,36 @@ const MOBILE_MORE = [
   { to: '/categorias', label: 'Categorías', icon: '🏷️' },
   { to: '/subcategorias', label: 'Subcategorías', icon: '🗂️' },
   { to: '/ajustes', label: 'Ajustes', icon: '⚙️' },
-  { to: '/acerca', label: 'Acerca de', icon: 'ℹ️' },
+]
+const MOBILE_INFO = [
+  { to: '/ayuda', label: 'Ayuda', icon: '❓' },
+  { to: '/terminos', label: 'Términos de uso', icon: '📄' },
+  { to: '/privacidad', label: 'Política de privacidad', icon: '🔒' },
+  { to: '/acerca', label: 'Sobre nosotros', icon: 'ℹ️' },
 ]
 
 const SAVED_LABEL = { gasto: 'Gasto guardado', ingreso: 'Ingreso guardado', transferencia: 'Transferencia guardada' }
+
+const moreRowClass = 'w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-base font-medium text-left'
+
+function MoreLink({ to, label, icon, onClick }) {
+  return (
+    <NavLink to={to} onClick={onClick}
+      className={({ isActive }) => `${moreRowClass} ${isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'}`}>
+      <span className="text-xl w-7 text-center">{icon}</span>
+      {label}
+    </NavLink>
+  )
+}
+
+function MoreButton({ label, icon, onClick }) {
+  return (
+    <button onClick={onClick} className={`${moreRowClass} text-slate-700 active:bg-slate-50`}>
+      <span className="text-xl w-7 text-center">{icon}</span>
+      {label}
+    </button>
+  )
+}
 
 function BottomLink({ to, label, icon, onClick }) {
   return (
@@ -61,7 +90,8 @@ export default function Navbar() {
   const [toast, setToast] = useState(null) // { text, ids }
   const deleteTransaction = useTransactionStore((s) => s.deleteTransaction)
   const { pathname } = useLocation()
-  const moreActive = MOBILE_MORE.some(l => l.to === pathname)
+  const [feedbackOpen, setFeedbackOpen] = useState(false)
+  const moreActive = [...MOBILE_MORE, ...MOBILE_INFO].some(l => l.to === pathname)
   useBackHandler(moreOpen, () => setMoreOpen(false))
 
   useEffect(() => {
@@ -129,25 +159,18 @@ export default function Navbar() {
       {moreOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/30" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute left-0 right-0 bg-white rounded-t-2xl shadow-lg p-2"
-            style={{ bottom: 'calc(4rem + var(--sab))' }}
+            className="absolute left-0 right-0 bg-white rounded-t-2xl shadow-lg p-2 overflow-y-auto"
+            style={{ bottom: 'calc(4rem + var(--sab))', maxHeight: 'calc(100vh - 4rem - var(--sab) - var(--sat) - 1rem)' }}
             onClick={e => e.stopPropagation()}
           >
-            {MOBILE_MORE.map(({ to, label, icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                onClick={() => setMoreOpen(false)}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium ${
-                    isActive ? 'bg-indigo-50 text-indigo-700' : 'text-slate-700'
-                  }`
-                }
-              >
-                <span className="text-xl w-7 text-center">{icon}</span>
-                {label}
-              </NavLink>
-            ))}
+            {MOBILE_MORE.map((l) => <MoreLink key={l.to} {...l} onClick={() => setMoreOpen(false)} />)}
+            <div className="my-1 border-t border-slate-200" />
+            {MOBILE_INFO.map((l) => <MoreLink key={l.to} {...l} onClick={() => setMoreOpen(false)} />)}
+            <MoreButton icon="💬" label="Comentarios" onClick={() => { setMoreOpen(false); setFeedbackOpen(true) }} />
+            <MoreButton icon="💌" label="Recomendar a amigos" onClick={async () => {
+              setMoreOpen(false)
+              if ((await recommendApp()) === 'copied') setToast({ text: 'Enlace copiado al portapapeles', ids: [] })
+            }} />
           </div>
         </div>
       )}
@@ -157,7 +180,7 @@ export default function Navbar() {
         <div className="lg:hidden fixed left-3 right-3 z-50 flex items-center gap-3 bg-slate-800 text-white rounded-xl px-4 py-3 shadow-lg"
           style={{ bottom: 'calc(4.75rem + var(--sab))' }}>
           <span className="flex-1 text-sm">{toast.text}</span>
-          <button onClick={undo} className="text-sm font-semibold text-indigo-300">Deshacer</button>
+          {toast.ids.length > 0 && <button onClick={undo} className="text-sm font-semibold text-indigo-300">Deshacer</button>}
         </div>
       )}
 
@@ -189,6 +212,13 @@ export default function Navbar() {
           </button>
         </div>
       </nav>
+
+      {feedbackOpen && (
+        <FeedbackSheet
+          onClose={() => setFeedbackOpen(false)}
+          onSent={() => { setFeedbackOpen(false); setToast({ text: '¡Gracias por tu comentario!', ids: [] }) }}
+        />
+      )}
 
       {quickAddOpen && (
         <QuickAdd

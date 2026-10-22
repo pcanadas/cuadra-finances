@@ -1,5 +1,6 @@
 package com.xyfos.cuadra
 
+import android.content.Intent
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -23,6 +24,35 @@ class MainActivity : TauriActivity() {
       @JavascriptInterface
       fun get(): String = insetsJson
     }, "CuadraInsets")
+
+    // Menú "Compartir" de Android (el WebView no implementa navigator.share)
+    webView.addJavascriptInterface(object {
+      @JavascriptInterface
+      fun text(title: String, text: String) {
+        val send = Intent(Intent.ACTION_SEND).apply {
+          type = "text/plain"
+          putExtra(Intent.EXTRA_TEXT, text)
+        }
+        runOnUiThread { startActivity(Intent.createChooser(send, title)) }
+      }
+
+      // Abre la app de correo con destinatario, asunto y cuerpo ya rellenos
+      @JavascriptInterface
+      fun email(to: String, subject: String, body: String): Boolean {
+        val mail = Intent(Intent.ACTION_SENDTO).apply {
+          data = android.net.Uri.parse("mailto:")
+          putExtra(Intent.EXTRA_EMAIL, arrayOf(to))
+          putExtra(Intent.EXTRA_SUBJECT, subject)
+          putExtra(Intent.EXTRA_TEXT, body)
+        }
+        return try {
+          runOnUiThread { startActivity(Intent.createChooser(mail, subject)) }
+          true
+        } catch (e: Exception) {
+          false
+        }
+      }
+    }, "CuadraShare")
 
     // Tamaño de letra propio de la app (Ajustes). 0 = el del sistema.
     val systemTextZoom = webView.settings.textZoom

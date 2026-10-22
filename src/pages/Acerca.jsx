@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
 import { version as APP_VERSION } from '../../package.json'
+import { Link } from 'react-router-dom'
 import { isTauri as IS_TAURI, isMobile } from '../platform'
+import { SUPPORT_EMAIL, DEVELOPER } from '../platform/share'
 
 export default function Acerca() {
   // Escritorio y Android llevan versiones distintas (tauri.android.conf.json):
@@ -56,7 +58,7 @@ export default function Acerca() {
   }
 
   return (
-    <div className="max-w-lg mx-auto py-16 px-4 flex flex-col items-center gap-8">
+    <div className="max-w-lg mx-auto py-6 lg:py-16 lg:px-4 flex flex-col items-center gap-6 lg:gap-8">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-indigo-600 mb-1">Cuadra</h1>
         <p className="text-slate-500 text-sm">Finanzas del hogar</p>
@@ -116,8 +118,24 @@ export default function Acerca() {
         )}
       </div>
 
-      <p className="text-xs text-slate-400 text-center">
+      {isMobile && (
+        <div className="w-full bg-white border border-slate-200 rounded-2xl p-5 space-y-3 text-sm text-slate-600 leading-relaxed">
+          <p>
+            Cuadra es una app de <strong className="text-slate-800">{DEVELOPER}</strong> para llevar las finanzas de casa:
+            gratuita, sin anuncios, sin cuentas y con tus datos solo en tu móvil.
+          </p>
+          <p>Contacto: <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span></p>
+          <div className="flex gap-4 pt-1">
+            <Link to="/terminos" className="text-indigo-600 font-medium">Términos de uso</Link>
+            <Link to="/privacidad" className="text-indigo-600 font-medium">Privacidad</Link>
+            <Link to="/licencias" className="text-indigo-600 font-medium">Licencias</Link>
+          </div>
+        </div>
+      )}
+
+      <p className="hidden lg:block text-xs text-slate-400 text-center">
         MIT License · <a href="https://github.com/pcanadas/cuadra-finances" className="underline hover:text-slate-600" target="_blank" rel="noreferrer">github.com/pcanadas/cuadra-finances</a>
+       · <Link to="/licencias" className="underline hover:text-slate-600">Licencias de terceros</Link>
       </p>
     </div>
   )

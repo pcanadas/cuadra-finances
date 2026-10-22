@@ -81,4 +81,17 @@ describe('parseStatementLines', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].Saldo).toBe('')
   })
+
+  it('reads Bankinter layout: Fecha | Ref | Fecha Valor | Descripción | Cargos (-) | Abonos (+) | Saldo', () => {
+    const rows = parseStatementLines([
+      line(402, [['Fecha', 55], ['Ref', 96], ['Fecha Valor', 122], ['Descripción', 231], ['Cargos (-)', 354, 40], ['Abonos (+)', 430, 40], ['Saldo', 520, 20]]),
+      line(385, [['SALDO ANTERIOR EN EUR', 175], ['1.000,00', 530, 30]]),
+      line(375, [['01-09-26', 49], ['586', 94], ['31-08-26', 128], ['RECIBO /GIMNASIO', 175], ['35,60', 388, 20], ['964,40', 527, 25]]),
+      line(366, [['«!¬', 37], ['02-09-26', 49], ['49', 96], ['02-09-26', 128], ['TRANSF /EMPRESA SL', 175], ['60,10', 468, 20], ['1.024,50', 527, 30]]),
+    ])
+    expect(rows).toHaveLength(2)
+    expect(rows[0]).toMatchObject({ 'Fecha contable': '01/09/2026', 'Fecha valor': '31/08/2026', 'Descripción': 'RECIBO /GIMNASIO', 'Importe': -35.6, 'Saldo': 964.4 })
+    expect(rows[1]).toMatchObject({ 'Fecha contable': '02/09/2026', 'Descripción': 'TRANSF /EMPRESA SL', 'Saldo': 1024.5 })
+    expect(rows[1].Importe).toBeCloseTo(60.1)
+  })
 })

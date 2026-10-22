@@ -16,7 +16,8 @@
     "android:init": "tauri android init",
     "android:dev": "tauri android dev",
     "android:build": "tauri android build --aab",
-    "android:apk": "tauri android build --apk"
+    "android:apk": "tauri android build --apk",
+    "licenses": "node scripts/gen-licenses.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.1",
