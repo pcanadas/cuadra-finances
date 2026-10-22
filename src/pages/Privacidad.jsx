@@ -1,7 +1,7 @@
 import InfoPage, { InfoSection } from '../components/InfoPage'
 import { SUPPORT_EMAIL, DEVELOPER } from '../platform/share'
 
-// Mismo texto que se publicará en https://www.xyfos.com/cuadra/privacidad
+// Mismo texto que https://www.xyfos.com/cuadra/privacidad (repo xyfos-code: src/pages/cuadra/privacidad.astro)
 export default function Privacidad() {
   const email = <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span>
 
@@ -33,7 +33,7 @@ export default function Privacidad() {
         <p>Si consideras que no hemos atendido bien tu solicitud, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
       </InfoSection>
       <InfoSection title="Permisos">
-        <p>La app solo accede a los archivos que eliges expresamente para importar o exportar.</p>
+        <p>La app solo accede a los archivos que eliges expresamente para importar o exportar, y a internet únicamente para enviar los comentarios.</p>
       </InfoSection>
       <InfoSection title="Menores">
         <p>Cuadra no está dirigida a menores de 14 años.</p>
