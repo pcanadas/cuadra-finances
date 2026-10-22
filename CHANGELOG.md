@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.1] — 2026-10-22
+
+### Corregido
+- **Error "No se ha podido cerrar Cuadra" al actualizar** — el ejecutable pasa de llamarse `app.exe` (nombre genérico heredado del paquete Cargo) a `Cuadra.exe` mediante `mainBinaryName`; un hook del instalador NSIS (`src-tauri/windows/hooks.nsh`) elimina el `app.exe` antiguo al instalar y al desinstalar
+
+### Eliminado
+- **Instalador MSI** — solo se genera el instalador NSIS (por usuario, el que usa el actualizador); el MSI instalaba para todo el equipo en `Program Files` y podía acabar conviviendo con la instalación por usuario
+
+---
+
 ## [0.6.0] — 2026-10-19
 
 ### Añadido

@@ -9,6 +9,8 @@ import { extractKeyword } from '../utils/categorize'
 import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
 import * as XLSX from 'xlsx'
 import { saveFile } from '../platform/files'
+import { useBackHandler } from '../platform/back'
+import { TransactionCardList, TransactionSheet } from '../components/TransactionList.mobile'
 
 const PAGE_SIZE = 20
 
@@ -34,6 +36,7 @@ function ManualTransactionModal({ accounts, categories, defaultAccountId, initia
   const [error,       setError]       = useState('')
 
   const sortedCategories = [...categories].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  useBackHandler(true, onClose)
 
   function handleSubmit(e) {
     e.preventDefault()
@@ -52,7 +55,7 @@ function ManualTransactionModal({ accounts, categories, defaultAccountId, initia
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
       <div
         className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-md mx-4"
         onClick={(e) => e.stopPropagation()}
@@ -119,6 +122,7 @@ function AccountsModal({ accounts, onAdd, onUpdate, onDelete, onClose }) {
   const [nombre, setNombre] = useState('')
   const [tipo,   setTipo]   = useState('banco')
   const [color,  setColor]  = useState(ACCOUNT_COLORS[0])
+  useBackHandler(true, onClose)
 
   function handleAdd(e) {
     e.preventDefault()
@@ -130,7 +134,7 @@ function AccountsModal({ accounts, onAdd, onUpdate, onDelete, onClose }) {
   const TIPOS = { banco: 'Banco', efectivo: 'Efectivo', otro: 'Otro' }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-sm mx-4"
         onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold text-slate-800 mb-4">Gestionar cuentas</h2>
@@ -205,6 +209,8 @@ export default function Movimientos() {
   const [showManual,      setShowManual]      = useState(false)
   const [editingTx,       setEditingTx]       = useState(null)
   const [showAccounts,    setShowAccounts]    = useState(false)
+  const [showFilters,     setShowFilters]     = useState(false)
+  const [openTxId,        setOpenTxId]        = useState(null)
   const [undoStack,       setUndoStack]       = useState([]) // [{id, prev}, ...]
 
   const MAX_UNDO = 30
@@ -407,6 +413,32 @@ ${e?.message ?? e}`)
     setBulkSubcategory('')
   }
 
+  function changeCategory(t, value) {
+    return trackAndUpdate(t.id, { categoria: value || null, categoriaManual: true, subcategoria: null })
+  }
+
+  async function changeSubcategory(t, value) {
+    if (value === '__new__') {
+      const nombre = window.prompt('Nombre de la nueva subcategoría:')
+      if (!nombre?.trim()) return
+      const kw = extractKeyword(t.descripcion)
+      const cat = categories.find((c) => c.id === t.categoria)
+      await addSubcategory({
+        categoriaId: t.categoria,
+        nombre: nombre.trim(),
+        palabrasClave: kw ? [kw] : [],
+        color: cat?.color || '#94a3b8',
+      })
+      const created = useSubcategoryStore.getState().subcategories.slice(-1)[0]
+      if (created) await trackAndUpdate(t.id, { subcategoria: created.id, subcategoriaManual: true })
+    } else {
+      await trackAndUpdate(t.id, { subcategoria: value || null, subcategoriaManual: true })
+    }
+  }
+
+  const activeFilterCount = [filterMonth, filterCategory, filterSubcategory, filterType].filter(Boolean).length
+  const openTx = openTxId ? transactions.find((t) => t.id === openTxId) : null
+
   const formatDate = (iso) => {
     if (!iso) return '—'
     try { return format(new Date(iso), 'dd/MM/yyyy') } catch { return iso }
@@ -422,13 +454,14 @@ ${e?.message ?? e}`)
   return (
     <div>
       {/* Header */}
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-800">Movimientos</h1>
-        <div className="flex gap-2">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Movimientos</h1>
+        <div className="flex gap-2 shrink-0">
           <button onClick={exportToExcel}
             className="px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"
             title={`Exportar ${filtered.length} movimientos filtrados a Excel`}>
-            Exportar Excel
+            <span className="lg:hidden">Excel</span>
+            <span className="hidden lg:inline">Exportar Excel</span>
           </button>
           <button onClick={() => setShowAccounts(true)}
             className="px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
@@ -438,11 +471,11 @@ ${e?.message ?? e}`)
             <button onClick={handleUndo}
               className="px-3 py-1.5 text-sm border border-amber-300 text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
               title="Deshacer último cambio">
-              ↩ Deshacer ({undoStack.length})
+              ↩<span className="hidden lg:inline"> Deshacer</span> ({undoStack.length})
             </button>
           )}
           <button onClick={() => setShowManual(true)}
-            className="px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
+            className="hidden lg:inline-block px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
             + Añadir manual
           </button>
         </div>
@@ -481,7 +514,18 @@ ${e?.message ?? e}`)
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4 flex flex-wrap gap-3">
+      <div className="lg:hidden flex gap-2 mb-3">
+        <input type="search" placeholder="Buscar..." value={filterText}
+          onChange={(e) => { setFilterText(e.target.value); setPage(1) }}
+          className="flex-1 min-w-0 border border-slate-200 rounded-lg px-3 py-2 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+        <button onClick={() => setShowFilters((v) => !v)}
+          className={`px-3 py-2 text-sm rounded-lg border whitespace-nowrap ${
+            showFilters || activeFilterCount ? 'border-indigo-300 text-indigo-700 bg-indigo-50' : 'border-slate-200 text-slate-600 bg-white'
+          }`}>
+          Filtros{activeFilterCount ? ` (${activeFilterCount})` : ''}
+        </button>
+      </div>
+      <div className={`${showFilters ? 'flex' : 'hidden'} lg:flex bg-white rounded-xl border border-slate-200 shadow-sm p-4 mb-4 flex-wrap gap-3`}>
         <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Mes</label>
           <select className="border border-slate-200 rounded-lg px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -522,7 +566,7 @@ ${e?.message ?? e}`)
             <option value="gasto">Gastos</option>
           </select>
         </div>
-        <div>
+        <div className="hidden lg:block">
           <label className="text-xs font-medium text-slate-500 block mb-1">Buscar</label>
           <input type="text" placeholder="Buscar en descripción..." value={filterText}
             onChange={(e) => { setFilterText(e.target.value); setPage(1) }}
@@ -530,7 +574,7 @@ ${e?.message ?? e}`)
         </div>
         <div className="flex items-end gap-3">
           <span className="text-sm text-slate-400 pb-1">{filtered.length} registros</span>
-          {(filterMonth || filterCategory || filterText) && (
+          {(activeFilterCount > 0 || filterText) && (
             <button onClick={() => { setFilterMonth(''); setFilterCategory(''); setFilterSubcategory(''); setFilterType(''); setFilterText(''); setPage(1) }}
               className="text-xs text-indigo-600 hover:text-indigo-800 underline pb-1">
               Limpiar filtros
@@ -571,8 +615,27 @@ ${e?.message ?? e}`)
         </div>
       )}
 
+      {/* Mobile: tarjetas por día (pb: hueco para el botón flotante) */}
+      <div className="lg:hidden pb-16">
+        {paginated.length === 0 ? (
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
+            {transactions.length === 0
+              ? 'No hay movimientos. Importa un extracto bancario o añade uno manualmente.'
+              : 'No hay movimientos con los filtros actuales.'}
+          </div>
+        ) : (
+          <TransactionCardList
+            transactions={paginated}
+            categories={categories}
+            subcategories={subcategories}
+            accounts={accounts}
+            onOpen={(t) => setOpenTxId(t.id)}
+          />
+        )}
+      </div>
+
       {/* Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="hidden lg:block bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {paginated.length === 0 ? (
           <div className="p-12 text-center text-slate-400">
             {transactions.length === 0
@@ -645,7 +708,7 @@ ${e?.message ?? e}`)
                         <select
                           className="border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[140px]"
                           value={t.categoria || ''}
-                          onChange={(e) => trackAndUpdate(t.id, { categoria: e.target.value || null, categoriaManual: true, subcategoria: null })}
+                          onChange={(e) => changeCategory(t, e.target.value)}
                         >
                           <option value="">Sin categoría</option>
                           {sortedCategories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -658,24 +721,7 @@ ${e?.message ?? e}`)
                             <select
                               className="border border-slate-200 rounded-md px-2 py-1 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-300 max-w-[130px]"
                               value={t.subcategoria || ''}
-                              onChange={async (e) => {
-                                if (e.target.value === '__new__') {
-                                  const nombre = window.prompt('Nombre de la nueva subcategoría:')
-                                  if (!nombre?.trim()) return
-                                  const kw = extractKeyword(t.descripcion)
-                                  const cat = categories.find((c) => c.id === t.categoria)
-                                  await addSubcategory({
-                                    categoriaId: t.categoria,
-                                    nombre: nombre.trim(),
-                                    palabrasClave: kw ? [kw] : [],
-                                    color: cat?.color || '#94a3b8',
-                                  })
-                                  const created = useSubcategoryStore.getState().subcategories.slice(-1)[0]
-                                  if (created) await trackAndUpdate(t.id, { subcategoria: created.id, subcategoriaManual: true })
-                                } else {
-                                  trackAndUpdate(t.id, { subcategoria: e.target.value || null, subcategoriaManual: true })
-                                }
-                              }}
+                              onChange={(e) => changeSubcategory(t, e.target.value)}
                             >
                               <option value="">—</option>
                               {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
@@ -719,7 +765,7 @@ ${e?.message ?? e}`)
       {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between mt-4">
-          <p className="text-sm text-slate-500">Página {page} de {totalPages}</p>
+          <p className="text-sm text-slate-500">{page} / {totalPages}</p>
           <div className="flex gap-2">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
               className="px-3 py-1.5 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -731,6 +777,32 @@ ${e?.message ?? e}`)
             </button>
           </div>
         </div>
+      )}
+
+      {/* Mobile: botón flotante de alta */}
+      <button
+        onClick={() => setShowManual(true)}
+        className="lg:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-indigo-600 active:bg-indigo-700 text-white text-3xl leading-none shadow-lg"
+        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
+        aria-label="Añadir movimiento"
+      >
+        +
+      </button>
+
+      {openTx && (
+        <TransactionSheet
+          transaction={openTx}
+          categories={sortedCategories}
+          subcategories={subcategories}
+          accounts={accounts}
+          onChangeCategory={changeCategory}
+          onChangeSubcategory={changeSubcategory}
+          onEdit={(t) => { setOpenTxId(null); setEditingTx(t) }}
+          onDelete={async (t) => {
+            if (window.confirm('¿Eliminar este movimiento?')) { await deleteTransaction(t.id); setOpenTxId(null) }
+          }}
+          onClose={() => setOpenTxId(null)}
+        />
       )}
 
       {/* Modals */}

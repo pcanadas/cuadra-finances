@@ -1,0 +1,158 @@
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
+import { useBackHandler } from '../platform/back'
+
+function formatEur(amount) {
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
+}
+
+function dayLabel(iso) {
+  try {
+    const s = format(new Date(iso), "EEEE d 'de' MMMM yyyy", { locale: es })
+    return s.charAt(0).toUpperCase() + s.slice(1)
+  } catch {
+    return iso
+  }
+}
+
+// Agrupa movimientos consecutivos con la misma fecha (respeta el orden actual)
+function groupByDay(transactions) {
+  const groups = []
+  for (const t of transactions) {
+    const last = groups[groups.length - 1]
+    if (last && last.fecha === t.fechaContable) last.items.push(t)
+    else groups.push({ fecha: t.fechaContable, items: [t] })
+  }
+  return groups
+}
+
+// ─── Lista de tarjetas agrupadas por día ─────────────────────────────────────
+
+export function TransactionCardList({ transactions, categories, subcategories, accounts, onOpen }) {
+  const catMap = Object.fromEntries(categories.map((c) => [c.id, c]))
+  const subMap = Object.fromEntries(subcategories.map((s) => [s.id, s]))
+  const accMap = Object.fromEntries(accounts.map((a) => [a.id, a]))
+  const showAccount = accounts.length > 1
+
+  return (
+    <div className="space-y-4">
+      {groupByDay(transactions).map(({ fecha, items }) => {
+        const total = items.reduce((sum, t) => sum + t.importe, 0)
+        return (
+          <section key={fecha + items[0].id}>
+            <div className="flex items-baseline justify-between px-1 mb-1.5">
+              <h3 className="text-xs font-semibold text-slate-500">{dayLabel(fecha)}</h3>
+              <span className={`text-xs font-medium ${total >= 0 ? 'text-green-600' : 'text-slate-500'}`}>
+                {formatEur(total)}
+              </span>
+            </div>
+            <ul className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+              {items.map((t) => {
+                const cat = catMap[t.categoria]
+                const sub = subMap[t.subcategoria]
+                const acc = accMap[t.accountId]
+                return (
+                  <li key={t.id}>
+                    <button
+                      onClick={() => onOpen(t)}
+                      className="w-full flex items-center gap-3 px-4 py-3 min-h-14 text-left active:bg-slate-50"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: cat?.color || '#cbd5e1' }}
+                      />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm text-slate-800 truncate">{t.descripcion || '—'}</span>
+                        <span className="block text-xs text-slate-400 truncate">
+                          {cat ? cat.nombre : 'Sin categoría'}
+                          {sub && ` · ${sub.nombre}`}
+                          {showAccount && acc && ` · ${acc.nombre}`}
+                          {t.esManual && ' · manual'}
+                        </span>
+                      </span>
+                      <span className={`text-sm font-semibold whitespace-nowrap ${t.importe >= 0 ? 'text-green-600' : 'text-slate-800'}`}>
+                        {formatEur(t.importe)}
+                      </span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </section>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Bottom sheet de detalle / edición ──────────────────────────────────────
+
+export function TransactionSheet({ transaction: t, categories, subcategories, accounts, onChangeCategory, onChangeSubcategory, onEdit, onDelete, onClose }) {
+  useBackHandler(true, onClose)
+
+  const acc = accounts.find((a) => a.id === t.accountId)
+  const subs = t.categoria ? subcategories.filter((s) => s.categoriaId === t.categoria) : []
+  const selectClass = 'w-full border border-slate-200 rounded-lg px-3 py-2.5 text-base text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300'
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/40 flex items-end" onClick={onClose}>
+      <div
+        className="w-full bg-white rounded-t-2xl shadow-xl p-5 space-y-4"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto w-10 h-1 rounded-full bg-slate-200" />
+
+        <div>
+          <p className={`text-2xl font-bold ${t.importe >= 0 ? 'text-green-600' : 'text-slate-800'}`}>
+            {formatEur(t.importe)}
+          </p>
+          <p className="text-sm text-slate-700 mt-1 break-words">{t.descripcion || '—'}</p>
+          <p className="text-xs text-slate-400 mt-1">
+            {dayLabel(t.fechaContable)}
+            {acc && ` · ${acc.nombre}`}
+            {t.saldo != null && t.saldo !== 0 && ` · Saldo ${formatEur(t.saldo)}`}
+          </p>
+        </div>
+
+        <div>
+          <label className="text-xs font-medium text-slate-500 block mb-1">Categoría</label>
+          <select className={selectClass} value={t.categoria || ''} onChange={(e) => onChangeCategory(t, e.target.value)}>
+            <option value="">Sin categoría</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select>
+        </div>
+
+        {t.categoria && (
+          <div>
+            <label className="text-xs font-medium text-slate-500 block mb-1">Subcategoría</label>
+            <select className={selectClass} value={t.subcategoria || ''} onChange={(e) => onChangeSubcategory(t, e.target.value)}>
+              <option value="">—</option>
+              {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+              <option value="__new__">＋ Nueva...</option>
+            </select>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          {t.esManual && (
+            <>
+              <button onClick={() => onEdit(t)}
+                className="flex-1 py-3 text-sm font-medium rounded-xl border border-slate-200 text-slate-700 active:bg-slate-50">
+                Editar
+              </button>
+              <button onClick={() => onDelete(t)}
+                className="flex-1 py-3 text-sm font-medium rounded-xl border border-red-200 text-red-600 active:bg-red-50">
+                Eliminar
+              </button>
+            </>
+          )}
+          <button onClick={onClose}
+            className="flex-1 py-3 text-sm font-medium rounded-xl bg-indigo-600 text-white active:bg-indigo-700">
+            Listo
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
