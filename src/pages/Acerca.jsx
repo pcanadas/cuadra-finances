@@ -61,7 +61,7 @@ export default function Acerca() {
     <div className="max-w-lg mx-auto py-6 lg:py-16 lg:px-4 flex flex-col items-center gap-6 lg:gap-8">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-indigo-600 mb-1">Cuadra</h1>
-        <p className="text-slate-500 text-sm">Finanzas del hogar</p>
+        <p className="text-slate-500 text-sm">Finanzas personales</p>
         <p className="mt-3 text-xs text-slate-400 font-mono">v{version}</p>
       </div>
 
@@ -121,7 +121,7 @@ export default function Acerca() {
       {isMobile && (
         <div className="w-full bg-white border border-slate-200 rounded-2xl p-5 space-y-3 text-sm text-slate-600 leading-relaxed">
           <p>
-            Cuadra es una app de <strong className="text-slate-800">{DEVELOPER}</strong> para llevar las finanzas de casa:
+            Cuadra es una app de <strong className="text-slate-800">{DEVELOPER}</strong> para llevar tus finanzas personales:
             gratuita, sin anuncios, sin cuentas y con tus datos solo en tu móvil.
           </p>
           <p>Contacto: <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span></p>

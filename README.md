@@ -1,4 +1,4 @@
-# Cuadra — Finanzas del hogar
+# Cuadra — Finanzas personales
 
 App de escritorio para gestión de finanzas personales, construida con React + Tauri. Importa extractos bancarios, categoriza movimientos automáticamente y visualiza la evolución de tus gastos e ingresos.
 

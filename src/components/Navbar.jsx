@@ -114,7 +114,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-indigo-600">Cuadra</span>
-              <span className="text-xs text-slate-400 font-medium">Finanzas del hogar</span>
+              <span className="text-xs text-slate-400 font-medium">Finanzas personales</span>
             </div>
             <div className="flex items-center gap-1">
               {links.map(({ to, label }) => (

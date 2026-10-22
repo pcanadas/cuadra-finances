@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "Cuadra — Finanzas del hogar",
+        "title": "Cuadra — Finanzas personales",
         "width": 1280,
         "height": 800,
         "minWidth": 900,

@@ -49,7 +49,7 @@ export async function shareText({ title, text }) {
 export function recommendApp() {
   return shareText({
     title: 'Recomendar Cuadra',
-    text: `Te recomiendo Cuadra, una app gratuita para llevar las finanzas de casa: gastos, ingresos y presupuestos, sin anuncios y con tus datos solo en tu móvil.\n${PLAY_STORE_URL}`,
+    text: `Te recomiendo Cuadra, una app gratuita para llevar tus finanzas personales: gastos, ingresos y presupuestos, sin anuncios y con tus datos solo en tu móvil.\n${PLAY_STORE_URL}`,
   })
 }
 
