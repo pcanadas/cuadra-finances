@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
+import { useBackHandler } from '../platform/back'
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -27,6 +28,7 @@ export default function Navbar() {
   const [moreOpen, setMoreOpen] = useState(false)
   const { pathname } = useLocation()
   const moreActive = MOBILE_MORE.some(l => l.to === pathname)
+  useBackHandler(moreOpen, () => setMoreOpen(false))
 
   const themeButton = (
     <button

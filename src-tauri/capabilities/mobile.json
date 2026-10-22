@@ -8,9 +8,11 @@
   ],
   "permissions": [
     "core:default",
+    "core:app:allow-exit",
     "dialog:default",
     "fs:default",
     "fs:allow-write-text-file",
+    "fs:allow-write-file",
     "fs:allow-read-file"
   ]
 }

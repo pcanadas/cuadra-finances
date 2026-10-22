@@ -7,7 +7,7 @@ import { parseFile, mapRows } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
 import { handleTransferPairing } from '../utils/transferPairing'
 import db from '../db/db'
-import { tauriImport } from '../utils/tauriImport'
+import { saveFile, describeSavedPath } from '../platform/files'
 import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } from '../utils/backupManager'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
@@ -56,30 +56,20 @@ export default function Importar() {
     const json = JSON.stringify(payload, null, 2)
     const filename = `cuadra-backup-${new Date().toISOString().slice(0, 10)}.json`
 
-    // Tauri: show save dialog so the user picks where to save
-    try {
-      const { save } = await tauriImport('@tauri-apps/plugin-dialog')
-      const { writeTextFile } = await tauriImport('@tauri-apps/plugin-fs')
-      const filePath = await save({
-        defaultPath: filename,
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-      })
-      if (!filePath) return   // user cancelled
-      await writeTextFile(filePath, json)
-      alert(`Backup guardado en:\n${filePath}`)
-      return
-    } catch {
-      // Not in Tauri — fall through to browser download
-    }
+    await saveBackupFile(filename, json)
+  }
 
-    // Browser fallback
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    a.click()
-    URL.revokeObjectURL(url)
+  async function saveBackupFile(filename, json) {
+    try {
+      const path = await saveFile({ filename, data: json, filter: { name: 'JSON', extensions: ['json'] }, mime: 'application/json' })
+      if (!path || path === 'download') return
+      const where = describeSavedPath(path)
+      alert(where ? `Backup guardado en:
+${where}` : 'Backup guardado.')
+    } catch (e) {
+      alert(`No se pudo guardar el backup:
+${e?.message ?? e}`)
+    }
   }
 
   async function handleImportBackup(e) {
@@ -337,13 +327,7 @@ export default function Importar() {
                       <button
                         onClick={async () => {
                           const json = JSON.stringify(backupToJson(b), null, 2)
-                          const blob = new Blob([json], { type: 'application/json' })
-                          const url = URL.createObjectURL(blob)
-                          const a = document.createElement('a')
-                          a.href = url
-                          a.download = `cuadra-backup-${b.createdAt.slice(0, 10)}.json`
-                          a.click()
-                          URL.revokeObjectURL(url)
+                          await saveBackupFile(`cuadra-backup-${b.createdAt.slice(0, 10)}.json`, json)
                         }}
                         className="text-[11px] px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-white transition-colors"
                       >

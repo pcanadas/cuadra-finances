@@ -8,6 +8,7 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import { extractKeyword } from '../utils/categorize'
 import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
 import * as XLSX from 'xlsx'
+import { saveFile } from '../platform/files'
 
 const PAGE_SIZE = 20
 
@@ -350,7 +351,7 @@ export default function Movimientos() {
     setBulkCategory('')
   }
 
-  function exportToExcel() {
+  async function exportToExcel() {
     const catMap = Object.fromEntries(categories.map((c) => [c.id, c.nombre]))
     const subMap = Object.fromEntries(subcategories.map((s) => [s.id, s.nombre]))
     const accMap = Object.fromEntries(accounts.map((a) => [a.id, a.nombre]))
@@ -365,7 +366,18 @@ export default function Movimientos() {
     const ws = XLSX.utils.json_to_sheet(rows)
     const wb = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(wb, ws, 'Movimientos')
-    XLSX.writeFile(wb, `movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`)
+    const data = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+    try {
+      await saveFile({
+        filename: `movimientos-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        data: new Uint8Array(data),
+        filter: { name: 'Excel', extensions: ['xlsx'] },
+        mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+    } catch (e) {
+      alert(`No se pudo exportar:
+${e?.message ?? e}`)
+    }
   }
 
   function toggleSelect(id) {
