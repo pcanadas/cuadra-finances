@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
+import { useBackHandler } from '../platform/back'
 import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useTransactionStore from '../store/useTransactionStore'
@@ -241,6 +242,8 @@ export default function Subcategorias() {
   }
 
   const selectedCategory = categories.find((c) => c.id === selectedCatId)
+  // Móvil: atrás vuelve de la ficha a la lista de categorías
+  useBackHandler(!!selectedCatId, () => setSelectedCatId(null))
 
   const catSubcats = useMemo(
     () => subcategories.filter((s) => s.categoriaId === selectedCatId),
@@ -391,18 +394,18 @@ export default function Subcategorias() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-800">Subcategorías</h1>
+    <div>
+      <div className={`mb-6 ${selectedCategory ? 'hidden lg:block' : ''}`}>
+        <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Subcategorías</h1>
         <p className="text-slate-500 text-sm mt-1">
           Organiza cada categoría en subcategorías más detalladas. Usa palabras clave para
           asignarlas automáticamente a tus movimientos.
         </p>
       </div>
 
-      <div className="flex gap-6">
-        {/* Left panel: category list */}
-        <div className="w-1/3 flex-shrink-0">
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Left panel: category list (en móvil se oculta al abrir una categoría) */}
+        <div className={`w-full lg:w-1/3 flex-shrink-0 ${selectedCategory ? 'hidden lg:block' : ''}`}>
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
               <span className="text-sm font-semibold text-slate-600">Categorías</span>
@@ -438,14 +441,18 @@ export default function Subcategorias() {
           </div>
         </div>
 
-        {/* Right panel */}
-        <div className="flex-1 min-w-0">
+        {/* Right panel (en móvil solo con una categoría elegida) */}
+        <div className={`flex-1 min-w-0 ${selectedCategory ? '' : 'hidden lg:block'}`}>
           {!selectedCategory ? (
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex items-center justify-center h-48">
               <p className="text-slate-400 text-sm">Selecciona una categoría para gestionar sus subcategorías</p>
             </div>
           ) : (
             <div className="space-y-6">
+              <button onClick={() => setSelectedCatId(null)}
+                className="lg:hidden text-sm text-indigo-600 font-medium -mb-2">
+                ← Categorías
+              </button>
               {/* Category header */}
               <div
                 className="rounded-xl px-5 py-4 flex items-center gap-3"

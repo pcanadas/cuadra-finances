@@ -472,16 +472,16 @@ export default function Categorias() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Categorías</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Categorías</h1>
           <p className="text-slate-500 text-sm mt-1">
             Las palabras clave se usan para categorizar automáticamente los movimientos al importar.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {transactions.length > 0 && (
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {recatResult !== null && (
                 <span className="text-sm text-green-600">{recatResult} movimientos actualizados</span>
               )}

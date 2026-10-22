@@ -520,7 +520,8 @@ export default function Cuentas() {
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 11, fill: '#94a3b8' }}
-                  interval={Math.max(0, Math.floor(chartData.length / 8) - 1)}
+                  interval="preserveStartEnd"
+                  minTickGap={24}
                   tickLine={false}
                 />
                 <YAxis
@@ -529,7 +530,7 @@ export default function Cuentas() {
                   tick={{ fontSize: 11, fill: '#94a3b8' }}
                   tickLine={false}
                   axisLine={false}
-                  width={72}
+                  width={60}
                 />
                 <Tooltip
                   content={(props) => <BalanceTooltip {...props} tooltipStyle={tooltipStyle} />}

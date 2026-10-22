@@ -8,6 +8,7 @@ import { autoCategorize } from '../utils/categorize'
 import { handleTransferPairing } from '../utils/transferPairing'
 import db from '../db/db'
 import { saveFile, describeSavedPath } from '../platform/files'
+import { isMobile } from '../platform'
 import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } from '../utils/backupManager'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
@@ -246,13 +247,13 @@ ${e?.message ?? e}`)
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between">
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Importar movimientos</h1>
+          <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Importar movimientos</h1>
           <p className="text-slate-500 text-sm mt-1">Importa un extracto bancario en formato CSV o Excel</p>
         </div>
         {totalTransactions > 0 && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             {confirmClear ? (
               <>
                 <span className="text-sm text-red-600">¿Eliminar {totalTransactions} movimientos?</span>
@@ -386,7 +387,7 @@ ${e?.message ?? e}`)
               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                 isActive ? 'bg-indigo-600 text-white' : isDone ? 'bg-green-500 text-white' : 'bg-slate-200 text-slate-500'
               }`}>{isDone && !isActive ? '✓' : i + 1}</span>
-              <span className={isActive ? 'text-indigo-600 font-medium' : 'text-slate-400'}>{labels[i]}</span>
+              <span className={`whitespace-nowrap ${isActive ? 'text-indigo-600 font-medium' : 'hidden sm:inline text-slate-400'}`}>{labels[i]}</span>
               {i < 3 && <span className="text-slate-300">›</span>}
             </span>
           )
@@ -402,7 +403,7 @@ ${e?.message ?? e}`)
       {/* Step: upload */}
       {step === 'upload' && (
         <div
-          className={`border-2 border-dashed rounded-xl p-12 text-center transition-colors cursor-pointer ${
+          className={`border-2 border-dashed rounded-xl p-8 sm:p-12 text-center transition-colors cursor-pointer ${
             isDragging ? 'border-indigo-400 bg-indigo-50' : 'border-slate-300 bg-white hover:border-indigo-300 hover:bg-indigo-50'
           }`}
           onDrop={onDrop}
@@ -411,8 +412,8 @@ ${e?.message ?? e}`)
           onClick={() => fileRef.current?.click()}
         >
           <div className="text-4xl mb-3">📂</div>
-          <p className="text-slate-700 font-medium">Arrastra tu archivo aquí</p>
-          <p className="text-slate-400 text-sm mt-1">o haz clic para seleccionarlo</p>
+          <p className="text-slate-700 font-medium">{isMobile ? 'Toca para elegir tu extracto' : 'Arrastra tu archivo aquí'}</p>
+          {!isMobile && <p className="text-slate-400 text-sm mt-1">o haz clic para seleccionarlo</p>}
           <p className="text-slate-400 text-xs mt-3">Formatos soportados: CSV, XLSX, XLS</p>
           <input
             ref={fileRef}
