@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
 import { version as APP_VERSION } from '../../package.json'
-const IS_TAURI = '__TAURI_INTERNALS__' in window
+import { isTauri as IS_TAURI, isMobile } from '../platform'
 
 export default function Acerca() {
   const [checking, setChecking] = useState(false)
@@ -64,6 +64,9 @@ export default function Acerca() {
 
         <div className="border-t border-slate-100" />
 
+        {isMobile ? (
+          <p className="text-center text-sm text-slate-500">Las actualizaciones llegan a través de Google Play.</p>
+        ) : (
         <div className="flex flex-col gap-2">
           <button
             onClick={checkUpdates}
@@ -103,6 +106,7 @@ export default function Acerca() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       <p className="text-xs text-slate-400 text-center">
