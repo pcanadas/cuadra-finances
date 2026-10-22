@@ -1,7 +1,8 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
-  "identifier": "default",
-  "description": "enables the default permissions",
+  "identifier": "desktop",
+  "description": "Permisos de escritorio (incluye updater y process)",
+  "platforms": ["windows", "macOS", "linux"],
   "windows": [
     "main"
   ],
