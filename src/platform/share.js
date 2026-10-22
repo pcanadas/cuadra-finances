@@ -6,7 +6,7 @@ export const FEEDBACK_URL = 'https://www.xyfos.com/cuadra/api/comentarios.php'
 
 /**
  * Envía un comentario al servidor de xyfos.com, que lo reenvía por correo.
- * @returns {Promise<'ok' | 'rate' | 'error'>}
+ * @returns {Promise<'ok' | 'rate' | 'server' | 'offline'>}
  */
 export async function sendFeedback({ message, email, version, platform }) {
   try {
@@ -17,9 +17,9 @@ export async function sendFeedback({ message, email, version, platform }) {
     })
     if (res.status === 429) return 'rate'
     const data = await res.json().catch(() => ({}))
-    return res.ok && data.ok ? 'ok' : 'error'
+    return res.ok && data.ok ? 'ok' : 'server'
   } catch {
-    return 'error'
+    return 'offline'
   }
 }
 

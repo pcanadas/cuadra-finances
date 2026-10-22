@@ -10,7 +10,7 @@ export default function FeedbackSheet({ onClose, onSent }) {
   const [text, setText] = useState('')
   const [email, setEmail] = useState('')
   const [version, setVersion] = useState('')
-  const [status, setStatus] = useState('idle') // idle | sending | error | rate
+  const [status, setStatus] = useState('idle') // idle | sending | offline | server | rate
 
   useEffect(() => {
     if (!isTauri) return
@@ -56,9 +56,9 @@ export default function FeedbackSheet({ onClose, onSent }) {
           <Link to="/privacidad" onClick={onClose} className="text-indigo-600">Más información</Link>
         </p>
 
-        {status === 'error' && (
+        {(status === 'offline' || status === 'server') && (
           <div className="text-sm bg-red-50 text-red-700 rounded-xl px-3 py-2">
-            No se ha podido enviar (¿sin conexión?).{' '}
+            {status === 'offline' ? 'No se ha podido enviar: revisa tu conexión.' : 'No se ha podido enviar ahora mismo.'}{' '}
             <button onClick={sendByEmail} className="font-semibold underline">Enviar por correo</button>
           </div>
         )}
