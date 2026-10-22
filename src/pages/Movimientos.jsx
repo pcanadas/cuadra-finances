@@ -436,6 +436,8 @@ ${e?.message ?? e}`)
     }
   }
 
+  useBackHandler(selected.size > 0, () => { setSelected(new Set()); setBulkCategory(''); setBulkSubcategory('') })
+
   const activeFilterCount = [filterMonth, filterCategory, filterSubcategory, filterType].filter(Boolean).length
   const openTx = openTxId ? transactions.find((t) => t.id === openTxId) : null
 
@@ -585,7 +587,10 @@ ${e?.message ?? e}`)
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 mb-4 flex flex-wrap items-center gap-3">
+        <div
+          className="fixed lg:static left-2 right-2 z-40 shadow-lg lg:shadow-none bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 lg:mb-4 flex flex-wrap items-center gap-3"
+          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+        >
           <span className="text-sm font-semibold text-indigo-700">
             {selected.size} movimiento{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
           </span>
@@ -610,13 +615,13 @@ ${e?.message ?? e}`)
           </button>
           <button onClick={() => { setSelected(new Set()); setBulkCategory(''); setBulkSubcategory('') }}
             className="text-xs text-indigo-500 hover:text-indigo-700 ml-auto">
-            ✕ Cancelar selección
+            ✕ Cancelar<span className="hidden lg:inline"> selección</span>
           </button>
         </div>
       )}
 
       {/* Mobile: tarjetas por día (pb: hueco para el botón flotante) */}
-      <div className="lg:hidden pb-16">
+      <div className={`lg:hidden ${selected.size > 0 ? 'pb-32' : 'pb-16'}`}>
         {paginated.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
             {transactions.length === 0
@@ -629,7 +634,9 @@ ${e?.message ?? e}`)
             categories={categories}
             subcategories={subcategories}
             accounts={accounts}
+            selected={selected}
             onOpen={(t) => setOpenTxId(t.id)}
+            onToggleSelect={toggleSelect}
           />
         )}
       </div>
@@ -780,14 +787,14 @@ ${e?.message ?? e}`)
       )}
 
       {/* Mobile: botón flotante de alta */}
-      <button
+      {selected.size === 0 && <button
         onClick={() => setShowManual(true)}
         className="lg:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-indigo-600 active:bg-indigo-700 text-white text-3xl leading-none shadow-lg"
         style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
         aria-label="Añadir movimiento"
       >
         +
-      </button>
+      </button>}
 
       {openTx && (
         <TransactionSheet

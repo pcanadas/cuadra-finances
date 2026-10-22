@@ -135,7 +135,7 @@ function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-slate-100">
-            <th className="text-left pb-2.5 text-slate-400 font-semibold uppercase tracking-wider pr-3 whitespace-nowrap">Mes</th>
+            <th className="sticky left-0 z-10 bg-white text-left pb-2.5 text-slate-400 font-semibold uppercase tracking-wider pr-3 whitespace-nowrap">Mes</th>
             {cols.map((c) => (
               <th key={c.id} className="text-right pb-2.5 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">
                 <span className="flex items-center justify-end gap-1">
@@ -151,7 +151,7 @@ function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
         <tbody>
           {rows.map((row) => (
             <tr key={row.month} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-              <td className="py-2 pr-3 font-medium text-slate-600 whitespace-nowrap">{row.month.slice(0, 3)}</td>
+              <td className="sticky left-0 z-10 bg-white py-2 pr-3 font-medium text-slate-600 whitespace-nowrap">{row.month.slice(0, 3)}</td>
               {row.cats.map((val, ci) => (
                 <td
                   key={ci}
@@ -565,10 +565,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="dashboard-bg space-y-6 p-1">
+    <div className="dashboard-bg space-y-4 lg:space-y-6 lg:p-1">
 
       {/* ── 1. Gradient header ── */}
-      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-6">
+      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-4 lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
           <div>
             <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
@@ -582,7 +582,7 @@ export default function Dashboard() {
             {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           <SummaryCard title="Gastos del año" value={formatEur(totalGastos)} subtitle={`${gastosTx.length} movimientos`} valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20" />
           <SummaryCard title="Ingresos del año" value={formatEur(totalIngresos)} subtitle={`${ingresosTx.length} movimientos`} valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
           <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20" />
@@ -592,7 +592,7 @@ export default function Dashboard() {
 
       {/* ── Forecast widget (compact) ── */}
       {(activeRecurring.length > 0 || budgetProgress.length > 0) && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-4 lg:p-6">
           <div className="flex items-center justify-between mb-1">
             <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📋 Previsión del mes</p>
             <div className="flex items-center gap-2">
@@ -658,7 +658,7 @@ export default function Dashboard() {
       )}
 
       {/* ── 2. Monthly bar chart ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 lg:p-6">
         <div className="flex items-center justify-between mb-1">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📊 Evolución mensual</p>
           <div className="flex items-center gap-2">
@@ -684,7 +684,7 @@ export default function Dashboard() {
           <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
             <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
             <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} scale={logScale ? 'sqrt' : 'auto'} domain={logScale ? [0, 'auto'] : [0, 'auto']} />
+            <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} scale={logScale ? 'sqrt' : 'auto'} domain={logScale ? [0, 'auto'] : [0, 'auto']} />
             <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
             <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
             <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
@@ -703,7 +703,7 @@ export default function Dashboard() {
               <BarChart data={monthCompareData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
                 <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
                 <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
+                <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
                 <Legend formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} iconType="circle" iconSize={8} />
                 <Bar dataKey={`gastos_${selectedYear}`} name={`${selectedYear}`} fill="#fca5a5" radius={[4, 4, 0, 0]} />
@@ -715,9 +715,9 @@ export default function Dashboard() {
       </div>
 
       {/* ── 3. Pie / line chart (standalone) ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-6">
-        <div className="flex flex-wrap items-start gap-4 mb-4">
-          <div className="flex-1 min-w-0">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-4 lg:p-6">
+        <div className="flex flex-wrap items-start gap-3 lg:gap-4 mb-4">
+          <div className="w-full sm:w-auto sm:flex-1 min-w-0">
             <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">
               🥧 {selectedCategories.length > 0 ? 'Comparación de categorías' : selectedCategory ? 'Evolución mensual de categoría' : 'Distribución de gastos'}
             </p>
@@ -725,7 +725,7 @@ export default function Dashboard() {
               {selectedCategories.length > 0 ? 'Gasto mensual de las categorías seleccionadas' : selectedCategory ? 'Gasto mensual de la categoría seleccionada' : 'Top 8 categorías de gasto'}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={selectedCategory}
               onChange={(e) => { setSelectedCategory(e.target.value); setSelectedCategories([]) }}
@@ -776,7 +776,7 @@ export default function Dashboard() {
             <LineChart data={multiCategoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
               <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
+              <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} />
               {selectedCategories.map((catId, i) => {
                 const cat = categoryBreakdown.find((c) => c.id === catId)
@@ -789,7 +789,7 @@ export default function Dashboard() {
             <LineChart data={categoryLineData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
               <XAxis dataKey="mes" tickFormatter={(v) => MONTH_LABELS[v - 1]} tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
+              <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomLineTooltip />} />
               <Line type="monotone" dataKey="total" stroke="#c4b5fd" strokeWidth={2} dot={{ r: 3, fill: '#c4b5fd' }} activeDot={{ r: 5 }} />
             </LineChart>
@@ -813,7 +813,7 @@ export default function Dashboard() {
 
       {/* ── 4. Gastos mensuales por categoría ── */}
       {top6gastoCats.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-rose-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-rose-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">📅 Gastos mensuales por categoría</p>
           <p className="text-slate-400 text-xs mb-4">Top {top6gastoCats.length} categorías de gasto por mes · {selectedYear}</p>
           <MonthlyTable rows={gastosMonthlySummary} cols={top6gastoCats} colMaxima={gastosColMaxima} isIncome={false} />
@@ -822,7 +822,7 @@ export default function Dashboard() {
 
       {/* ── 5. Ingresos mensuales (categoría Ingresos + subcategorías) ── */}
       {hasIngresoData && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">📅 Ingresos mensuales por subcategoría</p>
           <p className="text-slate-400 text-xs mb-4">
             {ingresoSubcatCols.length > 0
@@ -835,7 +835,7 @@ export default function Dashboard() {
 
       {/* ── 6. Comparativa anual ── */}
       {yearlyComparison.length > 1 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-indigo-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-indigo-200 p-4 lg:p-6">
           <div className="flex items-center justify-between mb-0.5">
             <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📅 Comparativa anual</p>
           </div>
@@ -847,7 +847,7 @@ export default function Dashboard() {
             <BarChart data={yearlyComparison} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="30%">
               <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
               <XAxis dataKey="year" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
+              <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
               <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
               <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
@@ -904,24 +904,24 @@ export default function Dashboard() {
 
       {/* ── 8. Desglose por categoría con subcategorías (al final) ── */}
       {categoryBreakdown.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-violet-200 p-6">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-violet-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">🏷️ Desglose por categoría</p>
           <p className="text-slate-400 text-xs mb-4">Distribución de gastos con subcategorías · {selectedYear}</p>
           <div className="overflow-x-auto">
             {/* Header */}
             <table className="w-full text-sm table-fixed">
               <colgroup>
-                <col style={{ width: '42%' }} />
-                <col style={{ width: '17%' }} />
-                <col style={{ width: '13%' }} />
+                <col className="w-[46%] sm:w-[42%]" />
+                <col className="w-[32%] sm:w-[17%]" />
+                <col className="w-[22%] sm:w-[13%]" />
                 <col />
               </colgroup>
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className="text-left pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Categoría / Subcategoría</th>
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider pr-4">Importe</th>
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">% gastos</th>
-                  <th className="pb-2 pl-4"></th>
+                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider pr-2 sm:pr-4">Importe</th>
+                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">%<span className="hidden sm:inline"> gastos</span></th>
+                  <th className="hidden sm:table-cell pb-2 pl-4"></th>
                 </tr>
               </thead>
             </table>
@@ -929,9 +929,9 @@ export default function Dashboard() {
             <div className="overflow-y-auto" style={{ maxHeight: '352px' }}>
               <table className="w-full text-sm table-fixed">
                 <colgroup>
-                  <col style={{ width: '42%' }} />
-                  <col style={{ width: '17%' }} />
-                  <col style={{ width: '13%' }} />
+                  <col className="w-[46%] sm:w-[42%]" />
+                  <col className="w-[32%] sm:w-[17%]" />
+                  <col className="w-[22%] sm:w-[13%]" />
                   <col />
                 </colgroup>
                 <tbody>
@@ -959,9 +959,9 @@ export default function Dashboard() {
                               <span className="text-slate-700 font-semibold truncate">{cat.nombre}</span>
                             </button>
                           </td>
-                          <td className="py-2.5 text-right font-bold text-slate-800 pr-4 whitespace-nowrap">{formatEur(cat.total)}</td>
+                          <td className="py-2.5 text-right font-bold text-slate-800 pr-2 sm:pr-4 whitespace-nowrap">{formatEur(cat.total)}</td>
                           <td className="py-2.5 text-right text-slate-500 whitespace-nowrap">{cat.pct.toFixed(1)}%</td>
-                          <td className="py-2.5 pl-4">
+                          <td className="hidden sm:table-cell py-2.5 pl-4">
                             <div className="bg-slate-100 rounded-full h-1.5">
                               <div className="h-1.5 rounded-full transition-all" style={{ width: `${cat.pct}%`, backgroundColor: cat.color }} />
                             </div>
@@ -973,15 +973,15 @@ export default function Dashboard() {
                           const scPct = cat.total > 0 ? (scTotal / cat.total) * 100 : 0
                           return (
                             <tr key={sc.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                              <td className="py-2 pl-8">
+                              <td className="py-2 pl-5 sm:pl-8">
                                 <div className="flex items-center gap-2 text-slate-500">
                                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: sc.color ?? cat.color }} />
                                   <span className="truncate">{sc.nombre}</span>
                                 </div>
                               </td>
-                              <td className="py-2 text-right text-slate-600 pr-4 whitespace-nowrap">{formatEur(scTotal)}</td>
+                              <td className="py-2 text-right text-slate-600 pr-2 sm:pr-4 whitespace-nowrap">{formatEur(scTotal)}</td>
                               <td className="py-2 text-right text-slate-400 text-xs whitespace-nowrap">{scPct.toFixed(1)}%</td>
-                              <td className="py-2 pl-4">
+                              <td className="hidden sm:table-cell py-2 pl-4">
                                 <div className="bg-slate-100 rounded-full h-1">
                                   <div className="h-1 rounded-full" style={{ width: `${scPct}%`, backgroundColor: sc.color ?? cat.color }} />
                                 </div>
@@ -991,10 +991,10 @@ export default function Dashboard() {
                         })}
                         {isExpanded && hasSubcatData && sinSubcatTotal > 0.01 && (
                           <tr key={`${cat.id}-sin`} className="border-b border-slate-50">
-                            <td className="py-2 pl-8 text-slate-400 italic">Sin subcategoría</td>
-                            <td className="py-2 text-right text-slate-400 pr-4 whitespace-nowrap">{formatEur(sinSubcatTotal)}</td>
+                            <td className="py-2 pl-5 sm:pl-8 text-slate-400 italic truncate">Sin subcategoría</td>
+                            <td className="py-2 text-right text-slate-400 pr-2 sm:pr-4 whitespace-nowrap">{formatEur(sinSubcatTotal)}</td>
                             <td className="py-2 text-right text-slate-300 text-xs whitespace-nowrap">{(cat.total > 0 ? sinSubcatTotal / cat.total * 100 : 0).toFixed(1)}%</td>
-                            <td />
+                            <td className="hidden sm:table-cell" />
                           </tr>
                         )}
                       </>

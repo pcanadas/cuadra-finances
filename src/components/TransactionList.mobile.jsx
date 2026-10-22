@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBackHandler } from '../platform/back'
@@ -26,9 +27,85 @@ function groupByDay(transactions) {
   return groups
 }
 
+const LONG_PRESS_MS = 450
+
+// Pulsación larga → onLongPress; toque normal → onTap. Se cancela si el dedo se mueve (scroll).
+function useLongPress(onLongPress, onTap) {
+  const timer = useRef(null)
+  const fired = useRef(false)
+  const start = useRef(null)
+
+  const clear = () => { clearTimeout(timer.current); timer.current = null }
+
+  return {
+    onPointerDown(e) {
+      fired.current = false
+      start.current = { x: e.clientX, y: e.clientY }
+      clear()
+      timer.current = setTimeout(() => {
+        fired.current = true
+        navigator.vibrate?.(15)
+        onLongPress()
+      }, LONG_PRESS_MS)
+    },
+    onPointerMove(e) {
+      if (!start.current) return
+      if (Math.abs(e.clientX - start.current.x) > 10 || Math.abs(e.clientY - start.current.y) > 10) clear()
+    },
+    onPointerUp: clear,
+    onPointerCancel: clear,
+    onContextMenu: (e) => e.preventDefault(),
+    onClick() {
+      if (fired.current) { fired.current = false; return }
+      onTap()
+    },
+  }
+}
+
+function TransactionCard({ t, cat, sub, acc, showAccount, selected, selectionMode, onOpen, onToggleSelect }) {
+  const press = useLongPress(
+    () => onToggleSelect(t.id),
+    () => (selectionMode ? onToggleSelect(t.id) : onOpen(t)),
+  )
+
+  return (
+    <li>
+      <button
+        {...press}
+        className={`w-full flex items-center gap-3 px-4 py-3 min-h-14 text-left select-none ${
+          selected ? 'bg-indigo-50' : 'active:bg-slate-50'
+        }`}
+      >
+        {selectionMode ? (
+          <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center text-[11px] text-white ${
+            selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'
+          }`}>
+            {selected && '✓'}
+          </span>
+        ) : (
+          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat?.color || '#cbd5e1' }} />
+        )}
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm text-slate-800 truncate">{t.descripcion || '—'}</span>
+          <span className="block text-xs text-slate-400 truncate">
+            {cat ? cat.nombre : 'Sin categoría'}
+            {sub && ` · ${sub.nombre}`}
+            {showAccount && acc && ` · ${acc.nombre}`}
+            {t.esManual && ' · manual'}
+          </span>
+        </span>
+        <span className={`text-sm font-semibold whitespace-nowrap ${t.importe >= 0 ? 'text-green-600' : 'text-slate-800'}`}>
+          {formatEur(t.importe)}
+        </span>
+      </button>
+    </li>
+  )
+}
+
 // ─── Lista de tarjetas agrupadas por día ─────────────────────────────────────
 
-export function TransactionCardList({ transactions, categories, subcategories, accounts, onOpen }) {
+export function TransactionCardList({ transactions, categories, subcategories, accounts, selected, onOpen, onToggleSelect }) {
+  const selectionMode = selected.size > 0
   const catMap = Object.fromEntries(categories.map((c) => [c.id, c]))
   const subMap = Object.fromEntries(subcategories.map((s) => [s.id, s]))
   const accMap = Object.fromEntries(accounts.map((a) => [a.id, a]))
@@ -47,36 +124,20 @@ export function TransactionCardList({ transactions, categories, subcategories, a
               </span>
             </div>
             <ul className="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
-              {items.map((t) => {
-                const cat = catMap[t.categoria]
-                const sub = subMap[t.subcategoria]
-                const acc = accMap[t.accountId]
-                return (
-                  <li key={t.id}>
-                    <button
-                      onClick={() => onOpen(t)}
-                      className="w-full flex items-center gap-3 px-4 py-3 min-h-14 text-left active:bg-slate-50"
-                    >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: cat?.color || '#cbd5e1' }}
-                      />
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm text-slate-800 truncate">{t.descripcion || '—'}</span>
-                        <span className="block text-xs text-slate-400 truncate">
-                          {cat ? cat.nombre : 'Sin categoría'}
-                          {sub && ` · ${sub.nombre}`}
-                          {showAccount && acc && ` · ${acc.nombre}`}
-                          {t.esManual && ' · manual'}
-                        </span>
-                      </span>
-                      <span className={`text-sm font-semibold whitespace-nowrap ${t.importe >= 0 ? 'text-green-600' : 'text-slate-800'}`}>
-                        {formatEur(t.importe)}
-                      </span>
-                    </button>
-                  </li>
-                )
-              })}
+              {items.map((t) => (
+                <TransactionCard
+                  key={t.id}
+                  t={t}
+                  cat={catMap[t.categoria]}
+                  sub={subMap[t.subcategoria]}
+                  acc={accMap[t.accountId]}
+                  showAccount={showAccount}
+                  selected={selected.has(t.id)}
+                  selectionMode={selectionMode}
+                  onOpen={onOpen}
+                  onToggleSelect={onToggleSelect}
+                />
+              ))}
             </ul>
           </section>
         )
