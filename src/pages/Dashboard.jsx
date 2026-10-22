@@ -291,9 +291,12 @@ export default function Dashboard() {
     return best.total > 0 ? { nombre: MONTH_NAMES[best.month], importe: best.total } : null
   }, [gastosTx])
 
-  // ── budget progress (current month) ──
-  const currentMonth = new Date().getMonth()
-  const currentYear  = new Date().getFullYear()
+  // ── previsión: mes elegido (o el actual en la vista anual del año en curso) ──
+  const today = new Date()
+  const forecastMonth = selectedMonth ?? (selectedYear === today.getFullYear() ? today.getMonth() : null)
+  const currentMonth = forecastMonth ?? today.getMonth()
+  const currentYear  = selectedYear
+  const forecastWhen = currentYear * 12 + currentMonth - (today.getFullYear() * 12 + today.getMonth()) // <0 pasado, 0 actual, >0 futuro
 
   const budgetProgress = useMemo(() => {
     if (budgets.length === 0) return []
@@ -522,11 +525,11 @@ export default function Dashboard() {
   // ── recurring / fixed expenses (compact) ──
   const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 
-  // Filter out expired items (fechaFin in the past)
+  // Fixed items still in force during the forecast month
   const activeRecurring = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    return recurringItems.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= today))
-  }, [recurringItems])
+    const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`
+    return recurringItems.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= monthStart))
+  }, [recurringItems, currentYear, currentMonth])
 
   // Only items due this month
   const dueThisMonth = useMemo(
@@ -629,12 +632,14 @@ export default function Dashboard() {
       </div>
 
       {/* ── Forecast widget (compact) ── */}
-      {(activeRecurring.length > 0 || budgetProgress.length > 0) && (
+      {forecastMonth != null && (activeRecurring.length > 0 || budgetProgress.length > 0) && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-4 lg:p-6">
           <div className="flex items-center justify-between mb-1">
-            <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📋 Previsión del mes</p>
+            <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">
+              📋 {forecastWhen < 0 ? 'Cierre del mes' : 'Previsión del mes'}
+            </p>
             <div className="flex items-center gap-2">
-              <p className="text-xs text-slate-400">{MONTH_NAMES[currentMonth]} {currentYear}</p>
+              <p className="hidden lg:block text-xs text-slate-400">{MONTH_NAMES[currentMonth]} {currentYear}</p>
               <a href="#/gastos-fijos" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Ver todo →</a>
             </div>
           </div>
@@ -655,13 +660,13 @@ export default function Dashboard() {
                 <p className="text-lg font-bold text-amber-600">{formatEur(variableSpentThisMonth)}</p>
               </div>
               <div className="bg-sky-500/10 rounded-xl p-3">
-                <p className="text-[11px] text-sky-600 uppercase font-semibold">Pagados / Pendientes</p>
+                <p className="text-[11px] text-sky-600 uppercase font-semibold">{forecastWhen < 0 ? 'Pagados / No pagados' : 'Pagados / Pendientes'}</p>
                 <p className="text-lg font-bold text-sky-600">
                   {fixedStatus.filter((r) => r.paid).length} / {fixedStatus.filter((r) => !r.paid).length}
                 </p>
               </div>
               <div className={`rounded-xl p-3 ${availableEstimate >= 0 ? 'bg-violet-500/10' : 'bg-red-500/10'}`}>
-                <p className={`text-[11px] uppercase font-semibold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>Disponible estimado</p>
+                <p className={`text-[11px] uppercase font-semibold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{forecastWhen < 0 ? 'Sobrante del mes' : 'Disponible estimado'}</p>
                 <p className={`text-lg font-bold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{formatEur(availableEstimate)}</p>
               </div>
             </div>
