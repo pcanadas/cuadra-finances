@@ -61,10 +61,10 @@ function toPastel(hex, amount = 0.55) {
 
 function SummaryCard({ title, value, subtitle, valueClass = 'text-slate-800', cardClass = '', borderClass = '' }) {
   return (
-    <div className={`rounded-2xl p-5 flex flex-col gap-1 border ${cardClass} ${borderClass} bg-white/70 backdrop-blur-sm`}>
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">{title}</p>
-      <p className={`text-2xl font-bold leading-tight ${valueClass}`}>{value}</p>
-      {subtitle && <p className="text-xs text-slate-400">{subtitle}</p>}
+    <div className={`min-w-0 rounded-2xl p-3 lg:p-5 flex flex-col gap-0.5 lg:gap-1 border ${cardClass} ${borderClass} bg-white/70 backdrop-blur-sm`}>
+      <p className="text-[10px] lg:text-xs font-semibold uppercase tracking-wide text-slate-400 leading-tight">{title}</p>
+      <p className={`text-base sm:text-xl lg:text-2xl font-bold leading-tight tabular-nums break-words ${valueClass}`}>{value}</p>
+      {subtitle && <p className="text-[11px] lg:text-xs text-slate-400 leading-tight">{subtitle}</p>}
     </div>
   )
 }
@@ -568,9 +568,9 @@ export default function Dashboard() {
     <div className="dashboard-bg space-y-4 lg:space-y-6 lg:p-1">
 
       {/* ── 1. Gradient header ── */}
-      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-4 lg:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
-          <div>
+      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-3 lg:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-3 lg:mb-5">
+          <div className="hidden lg:block">
             <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
             <p className="text-slate-400 text-sm mt-0.5">Resumen financiero anual</p>
           </div>
@@ -582,7 +582,7 @@ export default function Dashboard() {
             {availableYears.map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
           <SummaryCard title="Gastos del año" value={formatEur(totalGastos)} subtitle={`${gastosTx.length} movimientos`} valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20" />
           <SummaryCard title="Ingresos del año" value={formatEur(totalIngresos)} subtitle={`${ingresosTx.length} movimientos`} valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
           <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20" />

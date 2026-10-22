@@ -589,7 +589,7 @@ ${e?.message ?? e}`)
       {selected.size > 0 && (
         <div
           className="fixed lg:static left-2 right-2 z-40 shadow-lg lg:shadow-none bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 lg:mb-4 flex flex-wrap items-center gap-3"
-          style={{ bottom: 'calc(4.5rem + env(safe-area-inset-bottom))' }}
+          style={{ bottom: 'calc(4.5rem + var(--sab))' }}
         >
           <span className="text-sm font-semibold text-indigo-700">
             {selected.size} movimiento{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}
@@ -620,8 +620,8 @@ ${e?.message ?? e}`)
         </div>
       )}
 
-      {/* Mobile: tarjetas por día (pb: hueco para el botón flotante) */}
-      <div className={`lg:hidden ${selected.size > 0 ? 'pb-32' : 'pb-16'}`}>
+      {/* Mobile: tarjetas por día (pb: hueco para la barra de selección) */}
+      <div className={`lg:hidden ${selected.size > 0 ? 'pb-24' : ''}`}>
         {paginated.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-sm text-slate-400">
             {transactions.length === 0
@@ -786,15 +786,6 @@ ${e?.message ?? e}`)
         </div>
       )}
 
-      {/* Mobile: botón flotante de alta */}
-      {selected.size === 0 && <button
-        onClick={() => setShowManual(true)}
-        className="lg:hidden fixed right-4 z-40 w-14 h-14 rounded-full bg-indigo-600 active:bg-indigo-700 text-white text-3xl leading-none shadow-lg"
-        style={{ bottom: 'calc(5rem + env(safe-area-inset-bottom))' }}
-        aria-label="Añadir movimiento"
-      >
-        +
-      </button>}
 
       {openTx && (
         <TransactionSheet

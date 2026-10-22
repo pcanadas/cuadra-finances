@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBackHandler } from '../platform/back'
+import { getCategoryIcon } from '../utils/categoryIcons'
 
 function formatEur(amount) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -77,13 +78,16 @@ function TransactionCard({ t, cat, sub, acc, showAccount, selected, selectionMod
         }`}
       >
         {selectionMode ? (
-          <span className={`w-5 h-5 rounded-full border-2 shrink-0 flex items-center justify-center text-[11px] text-white ${
+          <span className={`w-9 h-9 rounded-full border-2 shrink-0 flex items-center justify-center text-base text-white ${
             selected ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'
           }`}>
             {selected && '✓'}
           </span>
         ) : (
-          <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat?.color || '#cbd5e1' }} />
+          <span className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-lg"
+            style={{ backgroundColor: (cat?.color || '#cbd5e1') + '26' }}>
+            {cat ? getCategoryIcon(cat) : '❔'}
+          </span>
         )}
         <span className="flex-1 min-w-0">
           <span className="block text-sm text-slate-800 truncate">{t.descripcion || '—'}</span>
@@ -159,7 +163,7 @@ export function TransactionSheet({ transaction: t, categories, subcategories, ac
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-end" onClick={onClose}>
       <div
         className="w-full bg-white rounded-t-2xl shadow-xl p-5 space-y-4"
-        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'calc(1.25rem + var(--sab))' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mx-auto w-10 h-1 rounded-full bg-slate-200" />

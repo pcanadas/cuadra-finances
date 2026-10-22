@@ -1,0 +1,9 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "version": "1.0.0",
+  "bundle": {
+    "android": {
+      "minSdkVersion": 24
+    }
+  }
+}

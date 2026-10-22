@@ -1,9 +1,16 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
 import { version as APP_VERSION } from '../../package.json'
 import { isTauri as IS_TAURI, isMobile } from '../platform'
 
 export default function Acerca() {
+  // Escritorio y Android llevan versiones distintas (tauri.android.conf.json):
+  // dentro de Tauri se lee la de la app instalada.
+  const [version, setVersion] = useState(APP_VERSION)
+  useEffect(() => {
+    if (!IS_TAURI) return
+    import('@tauri-apps/api/app').then(({ getVersion }) => getVersion()).then(setVersion).catch(() => {})
+  }, [])
   const [checking, setChecking] = useState(false)
   const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'error' | 'notauri'
   const [updateInfo, setUpdateInfo] = useState(null)
@@ -53,13 +60,13 @@ export default function Acerca() {
       <div className="text-center">
         <h1 className="text-4xl font-bold text-indigo-600 mb-1">Cuadra</h1>
         <p className="text-slate-500 text-sm">Finanzas del hogar</p>
-        <p className="mt-3 text-xs text-slate-400 font-mono">v{APP_VERSION}</p>
+        <p className="mt-3 text-xs text-slate-400 font-mono">v{version}</p>
       </div>
 
       <div className="w-full bg-white border border-slate-200 rounded-2xl p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <span className="text-sm text-slate-600">Versión instalada</span>
-          <span className="text-sm font-semibold text-slate-800 font-mono">{APP_VERSION}</span>
+          <span className="text-sm font-semibold text-slate-800 font-mono">{version}</span>
         </div>
 
         <div className="border-t border-slate-100" />
