@@ -10,6 +10,8 @@ export function useDarkMode() {
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('cuadra-theme', dark ? 'dark' : 'light')
+    // Android: iconos de la barra de estado y de navegación acordes al tema (MainActivity.kt)
+    window.CuadraTheme?.set(dark)
   }, [dark])
 
   return [dark, setDark]

@@ -62,6 +62,10 @@ android {
             if (keystorePropertiesFile.exists()) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            // Símbolos de la librería nativa (Rust) dentro del .aab: Play los usa en los informes de fallos
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             optimization {
                enable = true
             }

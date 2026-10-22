@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
@@ -41,6 +41,7 @@ export default function GastosFijos() {
 
   // ── form state ──
   const [showForm, setShowForm] = useState(false)
+  const formRef = useRef(null)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState({ nombre: '', importe: '', categoriaId: '', subcategoriaId: '', periodicidad: 'mensual', fechaFin: '', mesReferencia: '' })
 
@@ -165,6 +166,14 @@ export default function GastosFijos() {
       setForm({ nombre: '', importe: '', categoriaId: '', subcategoriaId: '', periodicidad: 'mensual', fechaFin: '', mesReferencia: '' })
     }
     setShowForm(true)
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+  }
+
+  async function handleDelete() {
+    if (!editingId || !window.confirm(`¿Eliminar «${form.nombre}»?`)) return
+    await deleteRecurring(editingId)
+    setShowForm(false)
+    setEditingId(null)
   }
 
   async function handleSave() {
@@ -189,8 +198,8 @@ export default function GastosFijos() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Gastos fijos</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Planifica tus gastos e ingresos recurrentes</p>
+          <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Gastos fijos</h1>
+          <p className="hidden lg:block text-slate-400 text-sm mt-0.5">Planifica tus gastos e ingresos recurrentes</p>
         </div>
         <button onClick={() => openForm(null)} className="px-4 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors">
           + Añadir
@@ -198,7 +207,7 @@ export default function GastosFijos() {
       </div>
 
       {/* ── Summary cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
           <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos / mes</p>
           <p className="text-lg font-bold text-emerald-600">{formatEur(totalFixedIncome)}</p>
@@ -223,7 +232,7 @@ export default function GastosFijos() {
 
       {/* ── Form (inline) ── */}
       {showForm && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div ref={formRef} className="scroll-mt-20 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <p className="text-sm font-semibold text-slate-700 mb-3">{editingId ? 'Editar' : 'Nuevo gasto/ingreso fijo'}</p>
           <div className="flex flex-wrap gap-2 mb-3">
             <input placeholder="Nombre" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
@@ -257,6 +266,9 @@ export default function GastosFijos() {
               className="px-4 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg disabled:opacity-50">{editingId ? 'Guardar' : 'Añadir'}</button>
             <button onClick={() => { setShowForm(false); setEditingId(null) }}
               className="px-3 py-1.5 text-sm text-slate-400 hover:text-slate-600">Cancelar</button>
+            {editingId && (
+              <button onClick={handleDelete} className="lg:hidden ml-auto px-3 py-1.5 text-sm text-red-500">Eliminar</button>
+            )}
           </div>
         </div>
       )}
@@ -273,7 +285,7 @@ export default function GastosFijos() {
           {fixedStatus.filter((r) => r.isIncome).length > 0 && (
             <>
               <p className="text-[11px] text-emerald-500 uppercase font-semibold mb-1">Ingresos fijos</p>
-              <div className="space-y-1 mb-3">
+              <div className="lg:space-y-1 mb-3">
                 {fixedStatus.filter((r) => r.isIncome).map((r) => (
                   <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
                 ))}
@@ -285,7 +297,7 @@ export default function GastosFijos() {
           {fixedStatus.filter((r) => !r.isIncome).length > 0 && (
             <>
               <p className="text-[11px] text-rose-500 uppercase font-semibold mb-1">Gastos fijos</p>
-              <div className="space-y-1">
+              <div className="lg:space-y-1">
                 {fixedStatus.filter((r) => !r.isIncome).map((r) => (
                   <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
                 ))}
@@ -317,9 +329,9 @@ export default function GastosFijos() {
                       {formatEur(b.spent)} / {formatEur(b.limite)}
                     </span>
                     <button onClick={() => { setEditBudgetCat(b.categoriaId); setEditBudgetVal(String(b.limite)) }}
-                      className="text-[10px] text-slate-400 hover:text-slate-600">editar</button>
+                      className="text-xs lg:text-[10px] px-1 py-1 lg:p-0 text-slate-400 hover:text-slate-600">editar</button>
                     <button onClick={() => setBudget(b.categoriaId, 0)}
-                      className="text-[10px] text-red-400 hover:text-red-600">quitar</button>
+                      className="text-xs lg:text-[10px] px-1 py-1 lg:p-0 text-red-400 hover:text-red-600">quitar</button>
                   </div>
                 </div>
                 <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
@@ -383,27 +395,44 @@ export default function GastosFijos() {
 function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
   const cat = categories.find((c) => c.id === r.categoriaId)
   const subcat = subcategories?.find((s) => s.id === r.subcategoriaId)
+  const months = r.periodicidad !== 'mensual' ? getDueMonths(r).map((m) => MONTH_SHORT[m]).join(', ') : null
   return (
-    <div className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
-      <div className="flex items-center gap-2 min-w-0">
-        <span className={`text-sm ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>{r.paid ? '✓' : '○'}</span>
-        <span className="text-sm text-slate-700 truncate">{r.nombre}</span>
-        {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
-        {subcat && <span className="text-[10px] text-slate-500">{subcat.nombre}</span>}
-        <span className="text-[10px] text-slate-400">{PERIOD_LABELS[r.periodicidad] || r.periodicidad}</span>
-        {r.periodicidad !== 'mensual' && (
-          <span className="text-[10px] text-indigo-400" title="Meses de cobro">
-            {getDueMonths(r).map((m) => MONTH_SHORT[m]).join(', ')}
+    <>
+      {/* Móvil: dos líneas, tocar para editar (eliminar desde el formulario) */}
+      <button onClick={onEdit} className="lg:hidden w-full flex items-start gap-3 py-2.5 px-1 text-left border-b border-slate-100 last:border-b-0 active:bg-slate-50">
+        <span className={`mt-0.5 text-base ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>{r.paid ? '✓' : '○'}</span>
+        <span className="flex-1 min-w-0">
+          <span className="flex items-baseline gap-2">
+            <span className="flex-1 min-w-0 text-sm text-slate-800 truncate">{r.nombre}</span>
+            <span className={`text-sm font-semibold tabular-nums whitespace-nowrap ${r.paid ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{formatEur(r.importe)}</span>
           </span>
-        )}
-        {r.fechaFin && <span className="text-[10px] text-amber-500">hasta {r.fechaFin}</span>}
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-slate-400">
+            {cat && <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />{subcat ? subcat.nombre : cat.nombre}</span>}
+            <span>{PERIOD_LABELS[r.periodicidad] || r.periodicidad}{months && ` · ${months}`}</span>
+            {r.fechaFin && <span className="text-amber-500">hasta {r.fechaFin}</span>}
+            {r.paid && r.paidAmount != null && <span className="text-emerald-600">pagado {formatEur(r.paidAmount)}</span>}
+          </span>
+        </span>
+      </button>
+
+      {/* Escritorio */}
+      <div className="hidden lg:flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`text-sm ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>{r.paid ? '✓' : '○'}</span>
+          <span className="text-sm text-slate-700 truncate">{r.nombre}</span>
+          {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
+          {subcat && <span className="text-[10px] text-slate-500">{subcat.nombre}</span>}
+          <span className="text-[10px] text-slate-400">{PERIOD_LABELS[r.periodicidad] || r.periodicidad}</span>
+          {months && <span className="text-[10px] text-indigo-400" title="Meses de cobro">{months}</span>}
+          {r.fechaFin && <span className="text-[10px] text-amber-500">hasta {r.fechaFin}</span>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {r.paid && r.paidAmount != null && <span className="text-[11px] text-emerald-500">{formatEur(r.paidAmount)}</span>}
+          <span className={`text-xs font-semibold ${r.paid ? 'text-slate-400 line-through' : 'text-slate-600'}`}>{formatEur(r.importe)}</span>
+          <button onClick={onEdit} className="text-[10px] text-slate-400 hover:text-slate-600">editar</button>
+          <button onClick={onDelete} className="text-[10px] text-red-400 hover:text-red-600">quitar</button>
+        </div>
       </div>
-      <div className="flex items-center gap-2 shrink-0">
-        {r.paid && r.paidAmount != null && <span className="text-[11px] text-emerald-500">{formatEur(r.paidAmount)}</span>}
-        <span className={`text-xs font-semibold ${r.paid ? 'text-slate-400 line-through' : 'text-slate-600'}`}>{formatEur(r.importe)}</span>
-        <button onClick={onEdit} className="text-[10px] text-slate-400 hover:text-slate-600">editar</button>
-        <button onClick={onDelete} className="text-[10px] text-red-400 hover:text-red-600">quitar</button>
-      </div>
-    </div>
+    </>
   )
 }

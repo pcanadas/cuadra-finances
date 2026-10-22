@@ -159,8 +159,9 @@ export default function Navbar() {
       {moreOpen && (
         <div className="lg:hidden fixed inset-0 z-40 bg-black/30" onClick={() => setMoreOpen(false)}>
           <div
-            className="absolute left-0 right-0 bg-white rounded-t-2xl shadow-lg p-2 overflow-y-auto"
-            style={{ bottom: 'calc(4rem + var(--sab))', maxHeight: 'calc(100vh - 4rem - var(--sab) - var(--sat) - 1rem)' }}
+            className="absolute left-0 right-0 bg-white rounded-t-2xl shadow-lg p-2 overflow-y-auto overscroll-contain"
+            // Entre la cabecera (3rem + barra de estado) y la barra inferior (4rem), con 0.75rem de aire
+            style={{ bottom: 'calc(4rem + var(--sab))', maxHeight: 'calc(100dvh - 7.75rem - var(--sab) - var(--sat))' }}
             onClick={e => e.stopPropagation()}
           >
             {MOBILE_MORE.map((l) => <MoreLink key={l.to} {...l} onClick={() => setMoreOpen(false)} />)}

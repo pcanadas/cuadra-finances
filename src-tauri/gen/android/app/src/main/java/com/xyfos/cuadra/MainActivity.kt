@@ -1,9 +1,12 @@
 package com.xyfos.cuadra
 
 import android.content.Intent
+import android.graphics.Color
+import android.os.Build
 import android.os.Bundle
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
+import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -15,8 +18,20 @@ class MainActivity : TauriActivity() {
   @Volatile private var insetsJson = """{"top":0,"right":0,"bottom":0,"left":0}"""
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    enableEdgeToEdge()
+    applySystemBars(isDark = false)
     super.onCreate(savedInstanceState)
+  }
+
+  // Barras del sistema transparentes (la web pinta detrás) con iconos según el tema
+  // de la app, no el del móvil. Sin el velo que Android pone a la barra de 3 botones.
+  private fun applySystemBars(isDark: Boolean) {
+    val style = if (isDark) SystemBarStyle.dark(Color.TRANSPARENT)
+                else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
+    enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+      window.isNavigationBarContrastEnforced = false
+      window.isStatusBarContrastEnforced = false
+    }
   }
 
   override fun onWebViewCreate(webView: WebView) {
@@ -53,6 +68,14 @@ class MainActivity : TauriActivity() {
         }
       }
     }, "CuadraShare")
+
+    // Tema claro/oscuro de la app → iconos de las barras del sistema
+    webView.addJavascriptInterface(object {
+      @JavascriptInterface
+      fun set(isDark: Boolean) {
+        runOnUiThread { applySystemBars(isDark) }
+      }
+    }, "CuadraTheme")
 
     // Tamaño de letra propio de la app (Ajustes). 0 = el del sistema.
     val systemTextZoom = webView.settings.textZoom

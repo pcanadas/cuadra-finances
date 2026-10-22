@@ -7,6 +7,28 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
+## [1.1.1] — 2026-10-22
+
+### Corregido
+- **Barras del sistema según el tema de la app** — los iconos de la barra de estado y de navegación se ven en claro y en oscuro (antes salían blancos sobre fondo claro u oscuros sobre fondo oscuro), y la barra de 3 botones ya no muestra una franja blanca en modo oscuro
+- **Icono recortado** — en los móviles con icono redondo o «squircle» se cortaban la línea naranja y la «c»; el dibujo del icono adaptativo tiene ahora margen de seguridad
+
+### Mejorado
+- **Gastos fijos en el móvil** — cada gasto en dos líneas (nombre e importe; categoría, periodicidad y lo pagado), tocar para editar y botón «Eliminar» en el formulario, que se desplaza a la vista al abrirlo
+- **Menú «Más» con desplazamiento** — ya no queda tapado por la cabecera y se puede desplazar si no cabe (letra grande o más opciones)
+- **Símbolos de depuración** incluidos en el paquete para los informes de fallos de Google Play
+
+### Notas para Google Play
+```
+<es-ES>
+• Los iconos de la barra de estado se ven bien en modo claro y oscuro
+• Gastos fijos más cómodos en el móvil: toca un gasto para editarlo o eliminarlo
+• Icono de la app sin recortes
+</es-ES>
+```
+
+---
+
 ## [1.1.0] — 2026-10-22
 
 Primera versión publicada en Google Play.
