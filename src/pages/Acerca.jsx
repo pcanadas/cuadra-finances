@@ -134,7 +134,7 @@ export default function Acerca() {
       )}
 
       <p className="hidden lg:block text-xs text-slate-400 text-center">
-        MIT License · <a href="https://github.com/pcanadas/cuadra-finances" className="underline hover:text-slate-600" target="_blank" rel="noreferrer">github.com/pcanadas/cuadra-finances</a>
+        GNU GPL v3 · <a href="https://github.com/pcanadas/cuadra-finances" className="underline hover:text-slate-600" target="_blank" rel="noreferrer">github.com/pcanadas/cuadra-finances</a>
        · <Link to="/licencias" className="underline hover:text-slate-600">Licencias de terceros</Link>
       </p>
     </div>

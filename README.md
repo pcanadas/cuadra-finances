@@ -213,4 +213,10 @@ Genera `src-tauri/target/release/bundle/nsis/Cuadra_x.x.x_x64-setup.exe` + `.sig
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE)
+Copyright © 2026 Patricia Cañadas (Xyfos Code)
+
+Cuadra es software libre: puedes redistribuirlo y modificarlo bajo los términos de la **GNU General Public License** publicada por la Free Software Foundation, versión 3 o (a tu elección) cualquier versión posterior. Se distribuye con la esperanza de que sea útil, pero **sin ninguna garantía**. Ver [LICENSE](LICENSE).
+
+Las versiones publicadas hasta la 0.6.1 de escritorio y la 1.1.2 de Android se distribuyeron bajo licencia MIT.
+
+**Marca:** el nombre «Cuadra» y su logotipo no están cubiertos por la licencia. Si publicas una versión modificada, usa otro nombre y otro icono.

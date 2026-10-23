@@ -19,7 +19,7 @@ export default function Terminos() {
         <p>En la medida permitida por la ley, el titular no responde de los daños derivados de su uso. Esto no limita la responsabilidad que no pueda excluirse legalmente, como la derivada de dolo o culpa grave, ni los derechos que te correspondan como consumidor.</p>
       </InfoSection>
       <InfoSection title="Código abierto">
-        <p>El código de Cuadra es público bajo licencia MIT, que regula su reutilización.</p>
+        <p>El código de Cuadra es público bajo licencia GNU GPL v3 o posterior, que regula su reutilización. El nombre «Cuadra» y su logotipo no están incluidos en esa licencia.</p>
       </InfoSection>
       <InfoSection title="Ley aplicable">
         <p>Estos términos se rigen por la legislación española. Si actúas como consumidor, podrás acudir a los tribunales de tu domicilio.</p>
