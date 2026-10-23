@@ -2,6 +2,7 @@ import * as XLSX from 'xlsx'
 import db from '../db/db'
 import { createBackup } from './backupManager'
 import { saveFile, describeSavedPath } from '../platform/files'
+import { markBackupDone } from './backupReminder'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -35,7 +36,9 @@ export async function exportTransactionsToExcel(transactions, { categories, subc
 export async function saveBackupJson(filename, json) {
   try {
     const path = await saveFile({ filename, data: json, filter: { name: 'JSON', extensions: ['json'] }, mime: 'application/json' })
-    if (!path || path === 'download') return
+    if (!path) return
+    markBackupDone()
+    if (path === 'download') return
     const where = describeSavedPath(path)
     alert(where ? `Backup guardado en:\n${where}` : 'Backup guardado.')
   } catch (e) {

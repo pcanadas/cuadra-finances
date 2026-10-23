@@ -1,4 +1,7 @@
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import Welcome from '../components/Welcome.mobile'
+import { shouldRemindBackup, snoozeBackupReminder, daysSinceBackup } from '../utils/backupReminder'
 import PeriodPicker from '../components/PeriodPicker'
 import SelectSheet from '../components/SelectSheet'
 import { periodLabel } from '../utils/period'
@@ -207,6 +210,7 @@ export default function Dashboard() {
   const [selectedYear,       setSelectedYear]       = useState(new Date().getFullYear())
   // null = año completo; en móvil se abre en el mes actual
   const [selectedMonth,      setSelectedMonth]      = useState(() => (isMobile ? new Date().getMonth() : null))
+  const [showBackupReminder, setShowBackupReminder] = useState(() => isMobile && shouldRemindBackup(transactions.length > 0))
   const [selectedCategory,   setSelectedCategory]   = useState('')
   const [selectedCategories, setSelectedCategories] = useState([]) // multi-category comparison
   const [expandedCategories, setExpandedCategories] = useState(new Set())
@@ -592,6 +596,7 @@ export default function Dashboard() {
 
   // ── empty state ──
   if (transactions.length === 0) {
+    if (isMobile) return <Welcome />
     return (
       <div className="dashboard-bg min-h-screen p-6">
         <h1 className="text-2xl font-bold text-slate-800 mb-6">Dashboard</h1>
@@ -630,6 +635,23 @@ export default function Dashboard() {
             : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle="Media por día" subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
         </div>
       </div>
+
+      {/* ── Recordatorio de copia de seguridad (móvil) ── */}
+      {showBackupReminder && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <span className="text-2xl leading-none">💾</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">
+              {daysSinceBackup() == null ? 'Aún no has hecho ninguna copia de seguridad' : `Tu última copia es de hace ${daysSinceBackup()} días`}
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5">Tus datos solo están en este móvil: si lo cambias o desinstalas la app, se pierden.</p>
+            <div className="flex gap-4 mt-2">
+              <Link to="/exportar" className="text-sm font-semibold text-amber-900 underline">Hacer copia</Link>
+              <button onClick={() => { snoozeBackupReminder(); setShowBackupReminder(false) }} className="text-sm text-amber-700">Ahora no</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Forecast widget (compact) ── */}
       {forecastMonth != null && (activeRecurring.length > 0 || budgetProgress.length > 0) && (

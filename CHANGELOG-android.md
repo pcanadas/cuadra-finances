@@ -7,6 +7,45 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
+## [1.1.3] — planificada
+
+- **Botones «+ Gasto» / «+ Ingreso» en la barra de notificaciones** (se activa en Ajustes) que abren el alta rápida con el tipo elegido
+- **Accesos directos del icono** (mantener pulsado): «Nuevo gasto» y «Nuevo ingreso»
+
+---
+
+## [1.1.2] — 2026-10-23
+
+Primera versión para la prueba cerrada.
+
+### Añadido
+- **Bienvenida** para quien abre la app por primera vez: «Apunta tu primer gasto» o «Importa un extracto del banco»
+- **Recordatorio de copia de seguridad** en Inicio (la primera vez tras una semana de uso; después, si pasa un mes sin copia)
+- **Nuevas categorías por defecto**: Alimentación, Ocio, Vivienda, Impuestos, Coche, Transportes, SS / Autónomos y Mascotas, entre otras
+- **Cajero**: las retiradas se registran como traspaso a la cuenta Efectivo (no cuentan como gasto)
+
+### Cambiado
+- «Movimientos» pasa a llamarse **«Registros»** en el móvil
+- Los datos de la app **ya no se copian a la nube de Google** (Android Auto Backup); solo están en el móvil, como dice la política de privacidad
+
+### Corregido
+- **Categorización automática**: las palabras clave con espacios ahora exigen la palabra completa (p. ej. un «BIZUM RECIBIDO» ya no cae en Impuestos por contener «IBI»)
+
+### Notas para Google Play
+```
+<es-ES>
+Primera versión de Cuadra para Android:
+• Apunta gastos, ingresos y transferencias en segundos con el botón +
+• Importa los extractos de tu banco en PDF, CSV o Excel
+• Previsión del mes, presupuestos y cierre de meses anteriores
+• Gráficos por categoría, mes y año
+• Exporta tus datos a Excel o haz copia de seguridad
+• Gratis, sin anuncios, sin cuentas y con tus datos solo en tu móvil
+</es-ES>
+```
+
+---
+
 ## [1.1.1] — 2026-10-22
 
 ### Corregido

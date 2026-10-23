@@ -6,6 +6,7 @@ import useTransactionStore from '../store/useTransactionStore'
 import QuickAdd from './QuickAdd.mobile'
 import { recommendApp } from '../platform/share'
 import FeedbackSheet from './FeedbackSheet'
+import { QUICK_ADD_EVENT } from '../platform/quickAdd'
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -18,10 +19,10 @@ const links = [
   { to: '/acerca', label: 'Acerca de' },
 ]
 
-// Móvil: barra inferior = Inicio · Movimientos · ➕ · Cuentas · Más
+// Móvil: barra inferior = Inicio · Registros · ➕ · Cuentas · Más
 const MOBILE_LEFT = [
   { to: '/', label: 'Inicio', icon: '🏠' },
-  { to: '/movimientos', label: 'Movimientos', icon: '📋' },
+  { to: '/movimientos', label: 'Registros', icon: '📋' },
 ]
 const MOBILE_RIGHT = [
   { to: '/cuentas', label: 'Cuentas', icon: '🏦' },
@@ -93,6 +94,12 @@ export default function Navbar() {
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const moreActive = [...MOBILE_MORE, ...MOBILE_INFO].some(l => l.to === pathname)
   useBackHandler(moreOpen, () => setMoreOpen(false))
+
+  useEffect(() => {
+    const open = () => { setMoreOpen(false); setQuickAddOpen(true) }
+    window.addEventListener(QUICK_ADD_EVENT, open)
+    return () => window.removeEventListener(QUICK_ADD_EVENT, open)
+  }, [])
 
   useEffect(() => {
     if (!toast) return

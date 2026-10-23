@@ -427,7 +427,7 @@ export default function Movimientos() {
     <div>
       {/* Header */}
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Movimientos</h1>
+        <h1 className="text-xl lg:text-2xl font-bold text-slate-800"><span className="lg:hidden">Registros</span><span className="hidden lg:inline">Movimientos</span></h1>
         <div className="flex gap-2 shrink-0">
           <button onClick={exportToExcel}
             className="hidden lg:inline-block px-3 py-1.5 text-sm border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 transition-colors"

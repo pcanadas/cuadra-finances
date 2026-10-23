@@ -238,7 +238,7 @@ export default function QuickAdd({ onClose, onSaved }) {
         {tipo === 'transferencia' && (
           <Section title="Hacia">
             {accounts.length < 2
-              ? <p className="text-sm text-slate-400">Necesitas al menos dos cuentas (Movimientos → Cuentas).</p>
+              ? <p className="text-sm text-slate-400">Necesitas al menos dos cuentas (Registros → Cuentas).</p>
               : <AccountChips accounts={accounts} value={destinoId} onChange={setDestinoId} exclude={accountId} />}
           </Section>
         )}

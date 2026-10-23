@@ -1,23 +1,21 @@
+// Normalize for keyword matching. The description is padded with spaces and keywords
+// keep their leading/trailing spaces, so ' IBI ' matches the word "IBI" but not "RECIBIDO".
+const normDesc = (s) => ` ${s.toUpperCase().replace(/\s+/g, ' ').trim()} `
+const normKw = (k) => k.toUpperCase().replace(/\s+/g, ' ')
+const hasKw = (desc, k) => !!k && !!k.trim() && desc.includes(normKw(k))
+
 /**
  * Auto-categorize a transaction based on its descripcion.
  * Returns the category id of the first matching category, or null.
  */
 export function categorizeTransaction(descripcion, categories) {
   if (!descripcion) return null
-  const upper = descripcion.toUpperCase().replace(/\s+/g, ' ').trim()
+  const upper = normDesc(descripcion)
 
   for (const category of categories) {
     // Check exclusions first — if description matches any exclusion keyword, skip this category
-    const excluded = (category.palabrasExcluidas || []).some(
-      (ex) => ex && upper.includes(ex.toUpperCase().replace(/\s+/g, ' ').trim())
-    )
-    if (excluded) continue
-
-    for (const keyword of category.palabrasClave) {
-      if (keyword && upper.includes(keyword.toUpperCase().replace(/\s+/g, ' ').trim())) {
-        return category.id
-      }
-    }
+    if ((category.palabrasExcluidas || []).some((ex) => hasKw(upper, ex))) continue
+    if (category.palabrasClave.some((keyword) => hasKw(upper, keyword))) return category.id
   }
 
   // Fall back to "Otros" if it exists
@@ -30,11 +28,9 @@ export function categorizeTransaction(descripcion, categories) {
  */
 export function categorizeSubcategory(descripcion, subcategories) {
   if (!descripcion) return null
-  const upper = descripcion.toUpperCase().replace(/\s+/g, ' ').trim()
+  const upper = normDesc(descripcion)
   for (const sub of subcategories) {
-    for (const kw of sub.palabrasClave) {
-      if (kw && upper.includes(kw.toUpperCase().replace(/\s+/g, ' ').trim())) return sub.id
-    }
+    if (sub.palabrasClave.some((kw) => hasKw(upper, kw))) return sub.id
   }
   return null
 }

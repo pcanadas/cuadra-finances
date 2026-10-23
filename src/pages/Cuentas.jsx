@@ -14,6 +14,7 @@ import useTransactionStore from '../store/useTransactionStore'
 import useAccountStore from '../store/useAccountStore'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { isMobile } from '../platform'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -465,12 +466,12 @@ export default function Cuentas() {
 
       {accounts.length === 0 ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
-          No hay cuentas configuradas. Ve a Movimientos → Cuentas para añadir una.
+          No hay cuentas configuradas. Ve a {isMobile ? 'Registros' : 'Movimientos'} → Cuentas para añadir una.
         </div>
       ) : !selectedAccount ? null : (accountTxs.length === 0 && allAccountTxs.length === 0) ? (
         <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-400">
           <p className="font-medium">No hay movimientos para "{selectedAccount.nombre}"</p>
-          <p className="text-xs mt-2">Importa un extracto o añade movimientos manuales en la sección Movimientos.</p>
+          <p className="text-xs mt-2">Importa un extracto o añade movimientos manuales en la sección {isMobile ? 'Registros' : 'Movimientos'}.</p>
         </div>
       ) : (
         <div className="space-y-5">

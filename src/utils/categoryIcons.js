@@ -8,12 +8,12 @@ const DEFAULTS = [
   ['mercadona', '🛒'], ['carrefour', '🛒'], ['super', '🛒'], ['compra', '🛒'], ['aliment', '🛒'],
   ['gasolina', '⛽'], ['peaje', '⛽'], ['coche', '🚗'], ['transporte', '🚌'], ['parking', '🅿️'],
   ['luz', '💡'], ['electric', '💡'], ['agua', '💧'], ['gas', '🔥'], ['telefono', '📱'], ['internet', '🌐'],
-  ['alquiler', '🏠'], ['hipoteca', '🏠'], ['hogar', '🏠'], ['comunidad', '🏢'],
+  ['alquiler', '🏠'], ['hipoteca', '🏠'], ['vivienda', '🏠'], ['hogar', '🏠'], ['comunidad', '🏢'],
   ['seguro', '🛡️'], ['educacion', '🎓'], ['colegio', '🎓'], ['restaurante', '🍽️'], ['bar', '🍺'],
   ['amazon', '📦'], ['plataforma', '📺'], ['suscrip', '📺'], ['farmacia', '💊'], ['medico', '🩺'],
   ['salud', '🩺'], ['ropa', '👕'], ['ocio', '🎉'], ['viaje', '✈️'], ['regalo', '🎁'], ['mascota', '🐾'],
   ['deporte', '🏋️'], ['gimnasio', '🏋️'], ['nino', '🧸'], ['impuesto', '🏛️'], ['banco', '🏦'],
-  ['ingreso', '💶'], ['nomina', '💶'], ['transferencia', '🔁'], ['otros', '📌'],
+  ['autonomo', '🧾'], ['seguridad social', '🧾'], ['ingreso', '💶'], ['nomina', '💶'], ['transferencia', '🔁'], ['otros', '📌'],
 ]
 
 export const DEFAULT_ICON = '🏷️'

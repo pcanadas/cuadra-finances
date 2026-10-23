@@ -17,7 +17,7 @@ const FAQ = [
   },
   {
     q: '¿Cómo cambio la categoría de varios movimientos a la vez?',
-    a: 'En Movimientos, mantén pulsado uno para empezar a seleccionar y toca los demás. Abajo aparecerá una barra para elegir la nueva categoría.',
+    a: 'En Registros, mantén pulsado uno para empezar a seleccionar y toca los demás. Abajo aparecerá una barra para elegir la nueva categoría.',
   },
   {
     q: '¿Dónde se guardan mis datos?',

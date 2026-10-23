@@ -121,3 +121,21 @@ describe('autoCategorize', () => {
     expect(result[0].subcategoria).toBeNull()
   })
 })
+
+describe('keywords with spaces (whole word)', () => {
+  const cats = [
+    { id: 'tax', nombre: 'Impuestos', palabrasClave: [' IBI '] },
+    { id: 'ocio', nombre: 'Ocio', palabrasClave: [' BAR '] },
+    { id: 'otros', nombre: 'Otros', palabrasClave: [] },
+  ]
+  it('matches the whole word, also at the start or end', () => {
+    expect(categorizeTransaction('RECIBO IBI AYUNTAMIENTO', cats)).toBe('tax')
+    expect(categorizeTransaction('IBI 2026', cats)).toBe('tax')
+    expect(categorizeTransaction('CAFE BAR', cats)).toBe('ocio')
+  })
+  it('does not match inside another word', () => {
+    expect(categorizeTransaction('BIZUM RECIBIDO DE JUAN', cats)).toBe('otros')
+    expect(categorizeTransaction('VUELO BARCELONA', cats)).toBe('otros')
+  })
+})
+

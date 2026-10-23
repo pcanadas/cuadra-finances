@@ -5,7 +5,12 @@
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
 
+    <!-- allowBackup=false: los datos no se copian a la nube de Google (la política de privacidad
+         dice que solo están en el dispositivo). En Android 12+ la transferencia directa a un móvil
+         nuevo sigue funcionando. -->
     <application
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.app"

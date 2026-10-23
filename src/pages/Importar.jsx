@@ -605,7 +605,7 @@ export default function Importar() {
                 {skippedCount} omitidos por ser duplicados (misma fecha, descripción e importe).
               </span>
             )}
-            Puedes verlos en la sección <strong>Movimientos</strong> o volver al Dashboard.
+            Puedes verlos en la sección <strong>{isMobile ? 'Registros' : 'Movimientos'}</strong> o volver {isMobile ? 'a Inicio' : 'al Dashboard'}.
           </p>
           <button
             onClick={handleReset}
