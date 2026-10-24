@@ -28,6 +28,9 @@ const DEBIT_HEADER_RE = /^(cargos?|debe|reintegros?|pagos?|salidas?|gastos?)\b/i
 const CREDIT_HEADER_RE = /^(abonos?|haber|ingresos?|entradas?)\b/i
 const BALANCE_HEADER_RE = /^saldo\b/i
 
+// Inicio de la sección de una cuenta: "Movimientos de su Cuenta Nº: 0128.0080.10.0100048343"
+const ACCOUNT_RE = /cuenta\s*n[ºo°.]*\s*:?\s*((?:ES\d{2}[\s.-]?)?\d[\d\s.-]{8,}\d)/i
+
 export function normalizeDate(s) {
   const m = s.match(/^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{2,4})$/)
   if (!m) return s
@@ -89,10 +92,14 @@ export function parseStatementLines(lines) {
   const columns = findColumns(lines)
   const movements = []
   let current = null
+  let account = null
 
   for (const line of lines) {
     const { text, xAt } = joinLine(line.items)
     if (!text.trim()) continue
+
+    const acc = text.match(ACCOUNT_RE)
+    if (acc) { account = acc[1].replace(/[\s.-]/g, ''); current = null; continue }
 
     const dates = text.match(LEADING_DATES_RE)
     const amounts = dates ? text.match(TRAILING_AMOUNTS_RE) : null
@@ -111,6 +118,7 @@ export function parseStatementLines(lines) {
         descripcion: text.slice(descStart, descEnd).trim(),
         amountTexts,
         amountXs,
+        account,
       }
       movements.push(current)
       continue
@@ -155,11 +163,18 @@ export function parseStatementLines(lines) {
       'Importe': sign != null ? sign * Math.abs(importe) : importe,
       'Saldo': saldoText != null ? parseSpanishAmount(saldoText) : '',
       _explicitSign: importeText != null && hasExplicitSign(importeText),
+      _account: m.account,
     }
   })
 
-  inferSignsFromBalance(rows, !!columns)
-  return rows.map(({ _explicitSign, ...r }) => r) // eslint-disable-line no-unused-vars
+  // Si el extracto trae varias cuentas, cada fila dice de cuál es (el saldo se encadena por cuenta)
+  const accounts = [...new Set(rows.map((r) => r._account).filter(Boolean))]
+  if (accounts.length > 1) {
+    for (const a of accounts) inferSignsFromBalance(rows.filter((r) => r._account === a), !!columns)
+  } else {
+    inferSignsFromBalance(rows, !!columns)
+  }
+  return rows.map(({ _explicitSign, _account, ...r }) => (accounts.length > 1 ? { ...r, Cuenta: _account ?? '' } : r)) // eslint-disable-line no-unused-vars
 }
 
 /**

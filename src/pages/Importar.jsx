@@ -34,6 +34,7 @@ export default function Importar() {
   const accounts = useAccountStore((s) => s.accounts)
   const [confirmClear, setConfirmClear] = useState(false)
   const [importAccountId, setImportAccountId] = useState('')
+  const [accountByStatement, setAccountByStatement] = useState({}) // nº de cuenta del extracto → id de cuenta
 
   const [backupStatus, setBackupStatus] = useState(null) // null | 'restoring' | 'ok' | 'error'
   const backupRef = useRef()
@@ -150,7 +151,8 @@ export default function Importar() {
       return
     }
     setError('')
-    const rows = mapRows(rawRows, mapping)
+    // Extractos con varias cuentas (PDF): cada fila recuerda de qué cuenta es
+    const rows = mapRows(rawRows, mapping).map((r, i) => (rawRows[i]?.Cuenta ? { ...r, extractoCuenta: rawRows[i].Cuenta } : r))
     const categorized = autoCategorize(rows, categories, subcategories)
     setMappedRows(categorized)
     setStep('preview')
@@ -178,8 +180,11 @@ export default function Importar() {
   }
 
   const handleImport = async () => {
-    const accountId = importAccountId || accounts[0]?.id || null
-    const rows = accountId ? mappedRows.map((t) => ({ ...t, accountId })) : mappedRows
+    const defaultId = importAccountId || accounts[0]?.id || null
+    const rows = mappedRows.map(({ extractoCuenta, ...t }) => {
+      const accountId = (extractoCuenta && accountByStatement[extractoCuenta]) || defaultId
+      return accountId ? { ...t, accountId } : t
+    })
     const added = await addTransactions(rows)
     setImportedCount(added)
     setSkippedCount(mappedRows.length - added)
@@ -205,10 +210,13 @@ export default function Importar() {
     setColumns([])
     setMapping({ fechaContable: '', fechaValor: '', descripcion: '', importe: '', saldo: '' })
     setMappedRows([])
+    setAccountByStatement({})
     setError('')
     setImportedCount(0)
     if (fileRef.current) fileRef.current.value = ''
   }
+
+  const statementAccounts = [...new Set(mappedRows.map((r) => r.extractoCuenta).filter(Boolean))]
 
   const FIELD_LABELS = {
     fechaContable: { label: 'Fecha contable', required: true },
@@ -577,14 +585,31 @@ export default function Importar() {
             >
               Atrás
             </button>
-            <div className="flex items-center gap-2">
-              <label className="text-xs font-medium text-slate-500">Importar en cuenta:</label>
-              <SelectSheet title="Cuenta" value={importAccountId} onChange={setImportAccountId}
-                options={accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))} />
-            </div>
+            {statementAccounts.length > 1 ? (
+              <div className="w-full space-y-2">
+                <p className="text-xs font-medium text-slate-500">El extracto tiene {statementAccounts.length} cuentas. Elige en qué cuenta importar cada una:</p>
+                {statementAccounts.map((n) => (
+                  <div key={n} className="flex items-center gap-2">
+                    <span className="text-xs text-slate-600 w-40 shrink-0">
+                      Cuenta …{n.slice(-4)} <span className="text-slate-400">({mappedRows.filter((r) => r.extractoCuenta === n).length} mov.)</span>
+                    </span>
+                    <SelectSheet title={`Cuenta …${n.slice(-4)}`} value={accountByStatement[n] || ''}
+                      onChange={(v) => setAccountByStatement((m) => ({ ...m, [n]: v }))}
+                      options={[{ value: '', label: '— Elige cuenta —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))]} />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-slate-500">Importar en cuenta:</label>
+                <SelectSheet title="Cuenta" value={importAccountId} onChange={setImportAccountId}
+                  options={accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))} />
+              </div>
+            )}
             <button
               onClick={handleImport}
-              className="w-full lg:w-auto px-4 py-3 lg:py-2 text-sm rounded-xl lg:rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700"
+              disabled={statementAccounts.length > 1 && statementAccounts.some((n) => !accountByStatement[n])}
+              className="w-full lg:w-auto px-4 py-3 lg:py-2 text-sm rounded-xl lg:rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-40"
             >
               Importar {mappedRows.length} movimientos
             </button>
