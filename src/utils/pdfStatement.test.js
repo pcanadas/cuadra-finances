@@ -94,4 +94,33 @@ describe('parseStatementLines', () => {
     expect(rows[1]).toMatchObject({ 'Fecha contable': '02/09/2026', 'Descripción': 'TRANSF /EMPRESA SL', 'Saldo': 1024.5 })
     expect(rows[1].Importe).toBeCloseTo(60.1)
   })
+
+  it('tags each row with its account when the statement has several (Bankinter: one section per account)', () => {
+    const header = (y) => line(y, [['Fecha', 55], ['Ref', 96], ['Fecha Valor', 122], ['Descripción', 231], ['Cargos (-)', 354, 40], ['Abonos (+)', 430, 40], ['Saldo', 520, 20]])
+    const rows = parseStatementLines([
+      // Resumen de posiciones (no son movimientos)
+      line(486, [['Nº: 0128.0000.11.0000000001', 82], ['EUR', 362], ['500,00', 457, 25], ['300,00', 539, 25]]),
+      line(463, [['Nº: 0128.0000.22.0000000002', 82], ['EUR', 362], ['2.000,00', 446, 30], ['2.200,00', 528, 30]]),
+      line(405, [['Movimientos de su Cuenta Nº: 0128.0000.11.0000000001 en EUR', 45, 300]]),
+      header(379),
+      line(362, [['SALDO ANTERIOR EN EUR', 175], ['500,00', 540, 25]]),
+      line(353, [['01-09-26', 49], ['537', 94], ['01-09-26', 128], ['MERCADONA', 175], ['50,00', 388, 20], ['450,00', 540, 25]]),
+      line(343, [['29-09-26', 49], ['875', 94], ['29-09-26', 128], ['TRANSF INTERNA /Cuenta Ahorro', 175], ['150,00', 384, 25], ['300,00', 540, 25]]),
+      line(399, [['Movimientos de su Cuenta Nº: 0128.0000.22.0000000002 en EUR', 45, 300]], 2),
+      header(373),
+      line(347, [['29-09-26', 49], ['104', 94], ['29-09-26', 128], ['TRANS /TITULAR', 175], ['150,00', 460, 25], ['2.200,00', 531, 30]], 2),
+    ].map((l, i) => (i >= 7 ? { ...l, page: 2 } : l)))
+    expect(rows).toHaveLength(3)
+    expect(rows.map((r) => r.Cuenta)).toEqual(['01280000110000000001', '01280000110000000001', '01280000220000000002'])
+    expect(rows[1].Importe).toBeCloseTo(-150) // sale de la principal…
+    expect(rows[2].Importe).toBeCloseTo(150)  // …y entra en la de ahorro, no en la principal
+  })
+
+  it('does not add an account column for single-account statements', () => {
+    const rows = parseStatementLines([
+      line(405, [['Movimientos de su Cuenta Nº: 0128.0000.11.0000000001 en EUR', 45, 300]]),
+      line(353, [['01/09/2026', 49], ['MERCADONA', 175], ['-50,00', 388, 20], ['450,00', 540, 25]]),
+    ])
+    expect(rows[0]).not.toHaveProperty('Cuenta')
+  })
 })

@@ -16,6 +16,7 @@ import SelectSheet from '../components/SelectSheet'
 import { TransactionCardList } from '../components/TransactionList.mobile'
 
 const REQUIRED_FIELDS = ['fechaContable', 'descripcion', 'importe']
+const SKIP_ACCOUNT = '__skip__' // cuenta del extracto que no se importa
 
 function formatEur(amount) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -152,7 +153,7 @@ export default function Importar() {
     }
     setError('')
     // Extractos con varias cuentas (PDF): cada fila recuerda de qué cuenta es
-    const rows = mapRows(rawRows, mapping).map((r, i) => (rawRows[i]?.Cuenta ? { ...r, extractoCuenta: rawRows[i].Cuenta } : r))
+    const rows = mapRows(rawRows, mapping).map((r, i) => (rawRows[i]?.Cuenta ? { ...r, extractoCuenta: rawRows[i].Cuenta, accountId: `extracto:${rawRows[i].Cuenta}` } : r))
     const categorized = autoCategorize(rows, categories, subcategories)
     setMappedRows(categorized)
     setStep('preview')
@@ -181,13 +182,15 @@ export default function Importar() {
 
   const handleImport = async () => {
     const defaultId = importAccountId || accounts[0]?.id || null
-    const rows = mappedRows.map(({ extractoCuenta, ...t }) => {
-      const accountId = (extractoCuenta && accountByStatement[extractoCuenta]) || defaultId
-      return accountId ? { ...t, accountId } : t
-    })
+    const rows = mappedRows
+      .filter((t) => !t.extractoCuenta || accountByStatement[t.extractoCuenta] !== SKIP_ACCOUNT)
+      .map(({ extractoCuenta, ...t }) => {
+        const accountId = (extractoCuenta && accountByStatement[extractoCuenta]) || defaultId
+        return accountId ? { ...t, accountId } : t
+      })
     const added = await addTransactions(rows)
     setImportedCount(added)
-    setSkippedCount(mappedRows.length - added)
+    setSkippedCount(rows.length - added)
 
     // Pair imported transactions that were auto-categorised as internal transfers
     const transferCatIds = new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id))
@@ -217,6 +220,10 @@ export default function Importar() {
   }
 
   const statementAccounts = [...new Set(mappedRows.map((r) => r.extractoCuenta).filter(Boolean))]
+  const statementAccountName = (n) => accountByStatement[n] === SKIP_ACCOUNT ? 'No se importa' : accounts.find((a) => a.id === accountByStatement[n])?.nombre ?? `Cuenta …${n.slice(-4)}`
+  // En la vista previa, cada movimiento muestra a qué cuenta del extracto pertenece
+  const previewAccounts = statementAccounts.map((n) => ({ id: `extracto:${n}`, nombre: statementAccountName(n) }))
+  const importCount = mappedRows.filter((r) => !r.extractoCuenta || accountByStatement[r.extractoCuenta] !== SKIP_ACCOUNT).length
 
   const FIELD_LABELS = {
     fechaContable: { label: 'Fecha contable', required: true },
@@ -515,7 +522,7 @@ export default function Importar() {
               transactions={mappedRows}
               categories={categories}
               subcategories={subcategories}
-              accounts={[]}
+              accounts={previewAccounts}
               selected={new Set([...previewSelected].map((i) => mappedRows[i]?.id))}
               onOpen={(t) => togglePreviewSelect(mappedRows.indexOf(t))}
               onToggleSelect={(id) => togglePreviewSelect(mappedRows.findIndex((r) => r.id === id))}
@@ -548,7 +555,10 @@ export default function Importar() {
                           onChange={() => togglePreviewSelect(i)} className="accent-indigo-600" />
                       </td>
                       <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{row.fechaContable}</td>
-                      <td className="px-4 py-2 text-slate-700 max-w-xs truncate">{row.descripcion}</td>
+                      <td className="px-4 py-2 text-slate-700 max-w-xs truncate">
+                        {row.descripcion}
+                        {statementAccounts.length > 1 && <span className="ml-2 text-xs text-slate-400">{statementAccountName(row.extractoCuenta)}</span>}
+                      </td>
                       <td className={`px-4 py-2 text-right font-medium ${row.importe >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatEur(row.importe)}
                       </td>
@@ -587,7 +597,7 @@ export default function Importar() {
             </button>
             {statementAccounts.length > 1 ? (
               <div className="w-full space-y-2">
-                <p className="text-xs font-medium text-slate-500">El extracto tiene {statementAccounts.length} cuentas. Elige en qué cuenta importar cada una:</p>
+                <p className="text-xs font-medium text-slate-500">El extracto tiene {statementAccounts.length} cuentas. Elige en qué cuenta importar cada una o si no quieres importarla:</p>
                 {statementAccounts.map((n) => (
                   <div key={n} className="flex items-center gap-2">
                     <span className="text-xs text-slate-600 w-40 shrink-0">
@@ -595,7 +605,7 @@ export default function Importar() {
                     </span>
                     <SelectSheet title={`Cuenta …${n.slice(-4)}`} value={accountByStatement[n] || ''}
                       onChange={(v) => setAccountByStatement((m) => ({ ...m, [n]: v }))}
-                      options={[{ value: '', label: '— Elige cuenta —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))]} />
+                      options={[{ value: '', label: '— Elige cuenta —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color })), { value: SKIP_ACCOUNT, label: 'No importar esta cuenta' }]} />
                   </div>
                 ))}
               </div>
@@ -608,10 +618,10 @@ export default function Importar() {
             )}
             <button
               onClick={handleImport}
-              disabled={statementAccounts.length > 1 && statementAccounts.some((n) => !accountByStatement[n])}
+              disabled={importCount === 0 || (statementAccounts.length > 1 && statementAccounts.some((n) => !accountByStatement[n]))}
               className="w-full lg:w-auto px-4 py-3 lg:py-2 text-sm rounded-xl lg:rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-40"
             >
-              Importar {mappedRows.length} movimientos
+              Importar {importCount} movimientos
             </button>
           </div>
         </div>

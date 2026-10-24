@@ -12,6 +12,9 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 - **Botones «+ Gasto» / «+ Ingreso» en la barra de notificaciones** (se activa en Ajustes) que abren el alta rápida con el tipo elegido
 - **Accesos directos del icono** (mantener pulsado): «Nuevo gasto» y «Nuevo ingreso»
 
+### Corregido
+- **Extractos PDF con varias cuentas** (Bankinter «Extracto integral»): los movimientos de cada cuenta ya no se mezclan; antes de importar se elige en qué cuenta va cada una, o se deja sin importar (p. ej. un traspaso a la cuenta de ahorro ya no aparecía como ingreso en la principal)
+
 ---
 
 ## [1.1.2] — 2026-10-23
