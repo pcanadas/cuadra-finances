@@ -6,7 +6,7 @@ import useTransactionStore from '../store/useTransactionStore'
 import QuickAdd from './QuickAdd.mobile'
 import { recommendApp } from '../platform/share'
 import FeedbackSheet from './FeedbackSheet'
-import { QUICK_ADD_EVENT } from '../platform/quickAdd'
+import { QUICK_ADD_EVENT, listenNativeQuickAdd } from '../platform/quickAdd'
 
 const links = [
   { to: '/', label: 'Dashboard' },
@@ -87,7 +87,7 @@ function BottomLink({ to, label, icon, onClick }) {
 export default function Navbar() {
   const { dark, setDark } = useTheme()
   const [moreOpen, setMoreOpen] = useState(false)
-  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAdd, setQuickAdd] = useState(null) // { tipo, key } mientras está abierta
   const [toast, setToast] = useState(null) // { text, ids }
   const deleteTransaction = useTransactionStore((s) => s.deleteTransaction)
   const { pathname } = useLocation()
@@ -96,9 +96,11 @@ export default function Navbar() {
   useBackHandler(moreOpen, () => setMoreOpen(false))
 
   useEffect(() => {
-    const open = () => { setMoreOpen(false); setQuickAddOpen(true) }
+    // key nueva: si ya estaba abierta (p. ej. «+ Ingreso» desde la notificación), empieza de cero con ese tipo
+    const open = (e) => { setMoreOpen(false); setQuickAdd({ tipo: e.detail?.tipo || 'gasto', key: Date.now() }) }
     window.addEventListener(QUICK_ADD_EVENT, open)
-    return () => window.removeEventListener(QUICK_ADD_EVENT, open)
+    const stopNative = listenNativeQuickAdd()
+    return () => { window.removeEventListener(QUICK_ADD_EVENT, open); stopNative() }
   }, [])
 
   useEffect(() => {
@@ -201,7 +203,7 @@ export default function Navbar() {
           {MOBILE_LEFT.map((l) => <BottomLink key={l.to} {...l} onClick={() => setMoreOpen(false)} />)}
           <div className="flex-1 flex items-center justify-center">
             <button
-              onClick={() => { setMoreOpen(false); setQuickAddOpen(true) }}
+              onClick={() => { setMoreOpen(false); setQuickAdd({ tipo: 'gasto', key: Date.now() }) }}
               className="w-14 h-14 -mt-6 rounded-full bg-indigo-600 active:bg-indigo-700 text-white text-3xl leading-none shadow-lg ring-4 ring-white"
               aria-label="Añadir movimiento"
             >
@@ -228,10 +230,12 @@ export default function Navbar() {
         />
       )}
 
-      {quickAddOpen && (
+      {quickAdd && (
         <QuickAdd
-          onClose={() => setQuickAddOpen(false)}
-          onSaved={({ tipo, ids }) => { setQuickAddOpen(false); setToast({ text: SAVED_LABEL[tipo], ids }) }}
+          key={quickAdd.key}
+          initialTipo={quickAdd.tipo}
+          onClose={() => setQuickAdd(null)}
+          onSaved={({ tipo, ids }) => { setQuickAdd(null); setToast({ text: SAVED_LABEL[tipo], ids }) }}
         />
       )}
     </>

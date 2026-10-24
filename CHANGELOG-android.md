@@ -7,13 +7,26 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
-## [1.1.3] — planificada
+## [1.1.3] — 2026-10-24
 
-- **Botones «+ Gasto» / «+ Ingreso» en la barra de notificaciones** (se activa en Ajustes) que abren el alta rápida con el tipo elegido
+### Añadido
+- **Botones «+ Gasto» / «+ Ingreso» en la barra de notificaciones** (Ajustes → «Botones en la barra de notificaciones», desactivado por defecto): abren el alta rápida con el tipo elegido. Pide el permiso de notificaciones al activarlo (Android 13+), se repone al abrir la app si se ha quitado deslizando y tras reiniciar el móvil o actualizar la app
 - **Accesos directos del icono** (mantener pulsado): «Nuevo gasto» y «Nuevo ingreso»
 
 ### Corregido
 - **Extractos PDF con varias cuentas** (Bankinter «Extracto integral»): los movimientos de cada cuenta ya no se mezclan; antes de importar se elige en qué cuenta va cada una, o se deja sin importar (p. ej. un traspaso a la cuenta de ahorro ya no aparecía como ingreso en la principal)
+
+### Cambiado
+- Licencia del código: GNU GPL v3 o posterior (antes MIT)
+
+### Notas para Google Play
+```
+<es-ES>
+• Nuevo: botones «+ Gasto» y «+ Ingreso» en la barra de notificaciones (actívalos en Ajustes)
+• Mantén pulsado el icono de la app para apuntar un gasto o un ingreso al momento
+• Extractos PDF con varias cuentas: elige a qué cuenta va cada una o no la importes
+</es-ES>
+```
 
 ---
 

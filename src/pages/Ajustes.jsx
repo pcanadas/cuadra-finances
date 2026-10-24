@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import useCategoryStore from '../store/useCategoryStore'
 import { useBackHandler } from '../platform/back'
 import { isMobile } from '../platform'
 import { getCategoryIcon, ICON_GROUPS } from '../utils/categoryIcons'
+import { NOTIFY_EVENT, hasQuickAddNotification, getQuickAddNotification, setQuickAddNotification, openNotificationSettings } from '../platform/notifications'
 import { TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP, getTextSize, getSystemTextSize, setTextSize } from '../platform/textSize'
 
 // ─── Selector de icono (hoja inferior) ──────────────────────────────────────
@@ -46,6 +47,48 @@ function IconPicker({ category, onPick, onClose }) {
 }
 
 // ─── Página ─────────────────────────────────────────────────────────────────
+
+// Notificación fija con «+ Gasto» / «+ Ingreso» (solo Android)
+function QuickAddNotificationSetting() {
+  const [state, setState] = useState(getQuickAddNotification)
+  const [tried, setTried] = useState(false)
+
+  useEffect(() => {
+    const refresh = () => setState(getQuickAddNotification())
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh() } // al volver de los ajustes del móvil
+    window.addEventListener(NOTIFY_EVENT, refresh)
+    document.addEventListener('visibilitychange', onVisible)
+    return () => { window.removeEventListener(NOTIFY_EVENT, refresh); document.removeEventListener('visibilitychange', onVisible) }
+  }, [])
+
+  function toggle() {
+    setTried(true)
+    setQuickAddNotification(!state.enabled)
+  }
+
+  const on = state.enabled && state.allowed
+  return (
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">Botones en la barra de notificaciones</h2>
+          <p className="text-xs text-slate-500 mt-1">«+ Gasto» y «+ Ingreso» siempre a mano para apuntar al momento, sin buscar la app.</p>
+        </div>
+        <button role="switch" aria-checked={on} onClick={toggle} aria-label="Botones en la barra de notificaciones"
+          className={`relative w-12 h-7 shrink-0 rounded-full transition-colors ${on ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+          <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
+      {!state.allowed && (tried || state.enabled) && (
+        <p className="text-xs text-amber-700 mt-3">
+          Las notificaciones de la app están desactivadas en tu móvil.{' '}
+          <button onClick={openNotificationSettings} className="font-semibold underline">Activarlas en Ajustes del móvil</button>
+        </p>
+      )}
+      <p className="text-xs text-slate-400 mt-3">También puedes mantener pulsado el icono de la app para «Nuevo gasto» o «Nuevo ingreso».</p>
+    </section>
+  )
+}
 
 export default function Ajustes() {
   const { dark, setDark } = useTheme()
@@ -105,6 +148,8 @@ export default function Ajustes() {
           )}
         </div>
       </section>
+
+      {hasQuickAddNotification() && <QuickAddNotificationSetting />}
 
       <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 className="text-sm font-semibold text-slate-700">Iconos de categorías</h2>

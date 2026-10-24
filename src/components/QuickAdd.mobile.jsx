@@ -60,7 +60,7 @@ function Section({ title, children }) {
 
 // ─── Alta rápida (pantalla completa) ────────────────────────────────────────
 
-export default function QuickAdd({ onClose, onSaved }) {
+export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
   const addManualTransaction = useTransactionStore((s) => s.addManualTransaction)
   const categories = useCategoryStore((s) => s.categories)
   const subcategories = useSubcategoryStore((s) => s.subcategories)
@@ -76,7 +76,7 @@ export default function QuickAdd({ onClose, onSaved }) {
     return accounts.some((a) => a.id === last) ? last : accounts[0]?.id ?? ''
   })()
 
-  const [tipo, setTipo] = useState('gasto')
+  const [tipo, setTipo] = useState(initialTipo)
   const [categoria, setCategoria] = useState(null)
   const [subcategoria, setSubcategoria] = useState(null)
   const [importe, setImporte] = useState('')

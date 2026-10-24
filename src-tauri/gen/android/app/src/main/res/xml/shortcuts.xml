@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Accesos directos al mantener pulsado el icono: abren el alta rápida con el tipo elegido
+     (mismo intent que los botones de la notificación, ver QuickAddNotification.kt) -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="nuevo_gasto"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_gasto"
+        android:shortcutShortLabel="@string/shortcut_gasto"
+        android:shortcutLongLabel="@string/shortcut_gasto">
+        <intent
+            android:action="com.xyfos.cuadra.QUICK_ADD"
+            android:targetPackage="com.xyfos.cuadra"
+            android:targetClass="com.xyfos.cuadra.MainActivity">
+            <extra android:name="tipo" android:value="gasto" />
+        </intent>
+    </shortcut>
+    <shortcut
+        android:shortcutId="nuevo_ingreso"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_ingreso"
+        android:shortcutShortLabel="@string/shortcut_ingreso"
+        android:shortcutLongLabel="@string/shortcut_ingreso">
+        <intent
+            android:action="com.xyfos.cuadra.QUICK_ADD"
+            android:targetPackage="com.xyfos.cuadra"
+            android:targetClass="com.xyfos.cuadra.MainActivity">
+            <extra android:name="tipo" android:value="ingreso" />
+        </intent>
+    </shortcut>
+</shortcuts>

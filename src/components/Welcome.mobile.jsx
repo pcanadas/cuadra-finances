@@ -12,7 +12,7 @@ export default function Welcome() {
       </p>
 
       <div className="w-full max-w-sm mt-7 space-y-3">
-        <button onClick={openQuickAdd}
+        <button onClick={() => openQuickAdd()}
           className="w-full flex items-center gap-4 text-left bg-indigo-600 active:bg-indigo-700 text-white rounded-2xl px-5 py-4 shadow-sm">
           <span className="text-3xl leading-none">＋</span>
           <span>
