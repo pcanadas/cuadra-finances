@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Contenido de la notificación de acceso rápido: los dos botones siempre visibles,
+     también con la notificación plegada (las acciones normales solo se ven al desplegarla). -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="4dp"
+    android:paddingBottom="4dp">
+
+    <TextView
+        android:id="@+id/quick_add_gasto"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_weight="1"
+        android:layout_marginEnd="8dp"
+        android:background="@drawable/notification_button_gasto"
+        android:gravity="center"
+        android:text="+ Gasto"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/quick_add_ingreso"
+        android:layout_width="0dp"
+        android:layout_height="40dp"
+        android:layout_weight="1"
+        android:background="@drawable/notification_button_ingreso"
+        android:gravity="center"
+        android:text="+ Ingreso"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+</LinearLayout>

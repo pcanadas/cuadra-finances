@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -22,7 +23,7 @@ object QuickAddNotification {
   const val ACTION_QUICK_ADD = "com.xyfos.cuadra.QUICK_ADD"
   const val EXTRA_TIPO = "tipo"
 
-  private const val CHANNEL_ID = "quick_add"
+  private const val CHANNEL_ID = "acceso_rapido"
   private const val NOTIFICATION_ID = 1
   private const val PREFS = "cuadra"
   private const val KEY_ENABLED = "quickAddNotification"
@@ -59,33 +60,43 @@ object QuickAddNotification {
     if (!canNotify(context)) return
     val manager = context.getSystemService(NotificationManager::class.java)
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-      val channel = NotificationChannel(CHANNEL_ID, "Acceso rápido", NotificationManager.IMPORTANCE_LOW).apply {
+      // DEFAULT y no LOW: con LOW Android la agrupa en «Silenciosas» al final; el sonido se quita con setSilent
+      val channel = NotificationChannel(CHANNEL_ID, "Acceso rápido", NotificationManager.IMPORTANCE_DEFAULT).apply {
+        setSound(null, null)
+        enableVibration(false)
         description = "Botones para apuntar un gasto o un ingreso desde la barra de notificaciones"
         setShowBadge(false)
       }
       manager.createNotificationChannel(channel)
     }
 
-    val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    val piFlags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
     fun action(tipo: String, requestCode: Int) =
-      PendingIntent.getActivity(context, requestCode, quickAddIntent(context, tipo), flags)
+      PendingIntent.getActivity(context, requestCode, quickAddIntent(context, tipo), piFlags)
     val open = PendingIntent.getActivity(
       context, 0,
       Intent(context, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP },
-      flags,
+      piFlags,
     )
+
+    val buttons = RemoteViews(context.packageName, R.layout.notification_quick_add).apply {
+      setOnClickPendingIntent(R.id.quick_add_gasto, action("gasto", 1))
+      setOnClickPendingIntent(R.id.quick_add_ingreso, action("ingreso", 2))
+    }
 
     val notification = NotificationCompat.Builder(context, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_stat_cuadra)
       .setContentTitle("Apunta un movimiento")
-      .setContentText("Toca «+ Gasto» o «+ Ingreso»")
+      .setContentText("+ Gasto · + Ingreso")
+      .setStyle(NotificationCompat.DecoratedCustomViewStyle())
+      .setCustomContentView(buttons)
+      .setCustomBigContentView(buttons)
       .setContentIntent(open)
-      .addAction(0, "+ Gasto", action("gasto", 1))
-      .addAction(0, "+ Ingreso", action("ingreso", 2))
       .setOngoing(true)
       .setShowWhen(false)
       .setSilent(true)
-      .setPriority(NotificationCompat.PRIORITY_LOW)
+      .setOnlyAlertOnce(true)
+      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
       .setCategory(NotificationCompat.CATEGORY_REMINDER)
       .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
       .build()
