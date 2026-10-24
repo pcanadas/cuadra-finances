@@ -5,7 +5,7 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import useAccountStore from '../store/useAccountStore'
 import { parseFile, mapRows } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
-import { handleTransferPairing } from '../utils/transferPairing'
+import { handleTransferPairing, pairImportedTransfers } from '../utils/transferPairing'
 import db from '../db/db'
 import { exportFullBackup, saveBackupJson } from '../utils/exportData'
 import { isMobile } from '../platform'
@@ -182,22 +182,28 @@ export default function Importar() {
 
   const handleImport = async () => {
     const defaultId = importAccountId || accounts[0]?.id || null
-    const rows = mappedRows
-      .filter((t) => !t.extractoCuenta || accountByStatement[t.extractoCuenta] !== SKIP_ACCOUNT)
-      .map(({ extractoCuenta, ...t }) => {
-        const accountId = (extractoCuenta && accountByStatement[extractoCuenta]) || defaultId
-        return accountId ? { ...t, accountId } : t
-      })
+    const transferCatIds = new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id))
+    // Traspasos entre las cuentas del extracto: la salida y la entrada quedan emparejadas como
+    // transferencia (si no, la entrada contaría como ingreso)
+    const rows = pairImportedTransfers(
+      mappedRows
+        .filter((t) => !t.extractoCuenta || accountByStatement[t.extractoCuenta] !== SKIP_ACCOUNT)
+        .map(({ extractoCuenta, ...t }) => {
+          const accountId = (extractoCuenta && accountByStatement[extractoCuenta]) || defaultId
+          return accountId ? { ...t, accountId } : t
+        }),
+      transferCatIds,
+      categories.find((c) => c.esTransferencia)?.id ?? null,
+    )
     const added = await addTransactions(rows)
     setImportedCount(added)
     setSkippedCount(rows.length - added)
 
     // Pair imported transactions that were auto-categorised as internal transfers
-    const transferCatIds = new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id))
     const freshTx = useTransactionStore.getState().transactions
     const storeActions = { updateTransaction, addManualTransaction, deleteTransaction }
     for (const row of rows) {
-      if (!transferCatIds.has(row.categoria)) continue
+      if (!transferCatIds.has(row.categoria) || row.transferPairId) continue // ya emparejado dentro del extracto
       const imported = freshTx.find((t) => t.id === row.id)
       if (imported) {
         await handleTransferPairing(imported, freshTx, categories, subcategories, accounts, storeActions)

@@ -15,8 +15,10 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ### Corregido
 - **Extractos PDF con varias cuentas** (Bankinter «Extracto integral»): los movimientos de cada cuenta ya no se mezclan; antes de importar se elige en qué cuenta va cada una, o se deja sin importar (p. ej. un traspaso a la cuenta de ahorro ya no aparecía como ingreso en la principal)
+- **Traspasos entre cuentas propias**: al importar, la salida de una cuenta y la entrada del mismo importe en otra (±3 días) se emparejan como traspaso, y un movimiento emparejado nunca cuenta como ingreso ni gasto (Inicio, previsión y Gastos fijos), aunque se le cambie la categoría
 
 ### Cambiado
+- **Icono** sin la raya naranja superior
 - Licencia del código: GNU GPL v3 o posterior (antes MIT)
 
 ### Notas para Google Play
@@ -25,6 +27,8 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 • Nuevo: botones «+ Gasto» y «+ Ingreso» en la barra de notificaciones (actívalos en Ajustes)
 • Mantén pulsado el icono de la app para apuntar un gasto o un ingreso al momento
 • Extractos PDF con varias cuentas: elige a qué cuenta va cada una o no la importes
+• Los traspasos entre tus cuentas ya no cuentan como ingreso ni como gasto
+• Icono renovado
 </es-ES>
 ```
 

@@ -8,6 +8,59 @@ const DAY_MS = 86_400_000
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
+/**
+ * Un traspaso entre cuentas propias no es ni ingreso ni gasto: lo es si su categoría es de
+ * transferencia o si ya está emparejado con su contrapartida (aunque luego se recategorice).
+ */
+export function isTransferTx(t, transferCatIds) {
+  return transferCatIds.has(t.categoria) || !!t.transferPairId
+}
+
+/**
+ * Al importar (p. ej. un extracto con varias cuentas), empareja la salida de una cuenta con la
+ * entrada del mismo importe en otra cuenta (±3 días) si al menos un lado parece un traspaso:
+ * ya tiene categoría de transferencia o el concepto lo dice. Ambos lados quedan como
+ * transferencia y con el mismo transferPairId. Devuelve las filas nuevas (no muta las de entrada).
+ *
+ * @param {object[]} rows filas a importar, ya con accountId
+ * @param {Set<string>} transferCatIds
+ * @param {string} defaultTransferCatId categoría para el lado que no la tenía
+ */
+export function pairImportedTransfers(rows, transferCatIds, defaultTransferCatId) {
+  const looksLikeTransfer = (t) =>
+    transferCatIds.has(t.categoria) || /\b(TRANSF?|TRASPASO|TRANSFERENCIA)\b/i.test(t.descripcion || '')
+  const out = rows.map((r) => ({ ...r }))
+  const used = new Set()
+
+  out.forEach((out1, i) => {
+    if (out1.importe >= 0 || used.has(i) || out1.transferPairId) return
+    const amount = Math.abs(out1.importe)
+    const date = new Date(out1.fechaContable).getTime()
+    let best = -1
+    let bestDiff = Infinity
+    out.forEach((in1, j) => {
+      if (used.has(j) || j === i || in1.transferPairId || in1.importe <= 0) return
+      if (!in1.accountId || in1.accountId === out1.accountId) return
+      if (Math.abs(in1.importe - amount) > 0.01) return
+      if (!looksLikeTransfer(out1) && !looksLikeTransfer(in1)) return
+      const diff = Math.abs(new Date(in1.fechaContable).getTime() - date)
+      if (diff <= 3 * DAY_MS && diff < bestDiff) { best = j; bestDiff = diff }
+    })
+    if (best === -1) return
+
+    const in1 = out[best]
+    const categoria = [out1, in1].map((t) => t.categoria).find((c) => transferCatIds.has(c)) ?? defaultTransferCatId
+    const pairId = `tp-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`
+    for (const t of [out1, in1]) {
+      if (!transferCatIds.has(t.categoria)) { t.categoria = categoria; t.subcategoria = null }
+      t.transferPairId = pairId
+    }
+    used.add(i)
+    used.add(best)
+  })
+  return out
+}
+
 /** Return the destination account id for a transfer transaction (subcategory wins). */
 export function resolveTransferDestination(tx, categories, subcategories) {
   // Subcategory-level destination takes priority

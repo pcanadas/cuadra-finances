@@ -5,6 +5,7 @@ import { shouldRemindBackup, snoozeBackupReminder, daysSinceBackup } from '../ut
 import PeriodPicker from '../components/PeriodPicker'
 import SelectSheet from '../components/SelectSheet'
 import { periodLabel } from '../utils/period'
+import { isTransferTx } from '../utils/transferPairing'
 import { isMobile } from '../platform'
 import { useTheme } from '../context/ThemeContext'
 import {
@@ -250,7 +251,7 @@ export default function Dashboard() {
   const yearTx = useMemo(
     () => transactions.filter((t) =>
       new Date(t.fechaContable).getFullYear() === selectedYear &&
-      !transferCatIds.has(t.categoria)
+      !isTransferTx(t, transferCatIds)
     ),
     [transactions, selectedYear, transferCatIds]
   )
@@ -489,7 +490,7 @@ export default function Dashboard() {
   const monthCompareData = useMemo(() => {
     if (!hasPrevYear) return []
     const prevYearTx = transactions.filter((t) =>
-      new Date(t.fechaContable).getFullYear() === prevYear && !transferCatIds.has(t.categoria)
+      new Date(t.fechaContable).getFullYear() === prevYear && !isTransferTx(t, transferCatIds)
     )
     const prevGastos = prevYearTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria))
     return Array.from({ length: 12 }, (_, i) => ({
@@ -518,7 +519,7 @@ export default function Dashboard() {
   const yearlyComparison = useMemo(() => {
     return availableYears.slice().reverse().map((year) => {
       const txYear = transactions.filter((t) =>
-        new Date(t.fechaContable).getFullYear() === year && !transferCatIds.has(t.categoria)
+        new Date(t.fechaContable).getFullYear() === year && !isTransferTx(t, transferCatIds)
       )
       const gastos   = txYear.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)).reduce((s, t) => s + Math.abs(t.importe), 0)
       const ingresos = txYear.filter((t) => t.importe > 0).reduce((s, t) => s + t.importe, 0)
@@ -564,7 +565,8 @@ export default function Dashboard() {
 
     return dueThisMonth.map((r) => {
       const isIncome = ingresoCatIds.has(r.categoriaId)
-      const pool = isIncome ? monthTx.filter((t) => t.importe > 0) : monthTx.filter((t) => t.importe < 0)
+      const own = monthTx.filter((t) => !isTransferTx(t, transferCatIds))
+      const pool = isIncome ? own.filter((t) => t.importe > 0) : own.filter((t) => t.importe < 0)
       const tolerant = (t) => Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3
       const match = r.subcategoriaId
         ? pool.find((t) => t.subcategoria === r.subcategoriaId && tolerant(t))
@@ -576,7 +578,7 @@ export default function Dashboard() {
             })()
       return { ...r, paid: !!match, paidAmount: match ? Math.abs(match.importe) : null }
     })
-  }, [dueThisMonth, transactions, currentMonth, currentYear, ingresoCatIds])
+  }, [dueThisMonth, transactions, currentMonth, currentYear, ingresoCatIds, transferCatIds])
 
   // Total expenses this month minus what's been identified as fixed payments = variable
   const fixedPaidTotal = useMemo(
@@ -587,7 +589,7 @@ export default function Dashboard() {
     return transactions.filter((t) => {
       const d = new Date(t.fechaContable)
       return d.getFullYear() === currentYear && d.getMonth() === currentMonth &&
-        t.importe < 0 && !transferCatIds.has(t.categoria) && !ingresoCatIds.has(t.categoria)
+        t.importe < 0 && !isTransferTx(t, transferCatIds) && !ingresoCatIds.has(t.categoria)
     }).reduce((s, t) => s + Math.abs(t.importe), 0)
   }, [transactions, currentYear, currentMonth, transferCatIds, ingresoCatIds])
 

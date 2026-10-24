@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveTransferDestination, findMatchingTransaction } from './transferPairing'
+import { resolveTransferDestination, findMatchingTransaction, isTransferTx, pairImportedTransfers } from './transferPairing'
 
 const CATS = [
   { id: 'cat-t', nombre: 'Transferencias', esTransferencia: true, cuentaDestinoId: 'acc-2', palabrasClave: [] },
@@ -88,5 +88,44 @@ describe('findMatchingTransaction', () => {
 
   it('returns null for wrong destination account', () => {
     expect(findMatchingTransaction(baseTx, allTx, 'acc-99', 3)).toBeNull()
+  })
+})
+
+describe('isTransferTx', () => {
+  const ids = new Set(['cat-16'])
+  it('counts transfer categories and paired movements as transfers', () => {
+    expect(isTransferTx({ categoria: 'cat-16' }, ids)).toBe(true)
+    expect(isTransferTx({ categoria: 'cat-15', transferPairId: 'tp-1' }, ids)).toBe(true)
+    expect(isTransferTx({ categoria: 'cat-15' }, ids)).toBe(false)
+  })
+})
+
+describe('pairImportedTransfers', () => {
+  const ids = new Set(['cat-16'])
+  const row = (id, accountId, importe, descripcion, categoria = 'cat-15', fechaContable = '2026-09-29') =>
+    ({ id, accountId, importe, descripcion, categoria, fechaContable })
+
+  it('pairs the outgoing transfer with the incoming side in the other account (multi-account statement)', () => {
+    const out = pairImportedTransfers([
+      row('a', 'acc-1', -1000, 'TRANSF INTERNA /Cuenta Ahorro', 'cat-16'),
+      row('b', 'acc-1', -17.85, 'MERCADONA'),
+      row('c', 'acc-3', 1000, 'TRANS /TITULAR'),
+    ], ids, 'cat-16')
+    expect(out[2].categoria).toBe('cat-16')               // ya no es «Otros» → no cuenta como ingreso
+    expect(out[0].transferPairId).toBeTruthy()
+    expect(out[2].transferPairId).toBe(out[0].transferPairId)
+    expect(out[1].transferPairId).toBeUndefined()
+  })
+
+  it('does not pair movements in the same account or unrelated ones', () => {
+    const out = pairImportedTransfers([
+      row('a', 'acc-1', -50, 'TRANSF A JUAN'),
+      row('b', 'acc-1', 50, 'TRANSF DE JUAN'),             // misma cuenta
+      row('c', 'acc-3', -20, 'COMPRA'),
+      row('d', 'acc-1', 20, 'DEVOLUCION'),                  // nada indica traspaso
+      row('e', 'acc-3', 70, 'TRASPASO', 'cat-15', '2026-10-10'), // demasiado lejos
+      row('f', 'acc-1', -70, 'TRASPASO', 'cat-15', '2026-09-29'),
+    ], ids, 'cat-16')
+    expect(out.every((t) => !t.transferPairId)).toBe(true)
   })
 })

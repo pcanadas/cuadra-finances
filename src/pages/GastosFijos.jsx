@@ -5,6 +5,7 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
 import SelectSheet from '../components/SelectSheet'
+import { isTransferTx } from '../utils/transferPairing'
 
 const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
@@ -86,13 +87,13 @@ export default function GastosFijos() {
     [incomeItems],
   )
 
-  // Month status: which fixed expenses already paid?
+  // Month status: which fixed expenses already paid? (los traspasos entre cuentas no son pagos ni cobros)
   const monthTx = useMemo(
     () => transactions.filter((t) => {
       const d = new Date(t.fechaContable)
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !isTransferTx(t, transferCatIds)
     }),
-    [transactions, currentMonth, currentYear],
+    [transactions, currentMonth, currentYear, transferCatIds],
   )
 
   // Only items due this month
@@ -123,7 +124,7 @@ export default function GastosFijos() {
     const existingNames = new Set(recurringItems.map((r) => normalize(r.nombre)))
     const yearTx = transactions.filter((t) => {
       const y = new Date(t.fechaContable).getFullYear()
-      return y === currentYear && !transferCatIds.has(t.categoria)
+      return y === currentYear && !isTransferTx(t, transferCatIds)
     })
     const groups = {}
     yearTx.forEach((t) => {
