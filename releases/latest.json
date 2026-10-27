@@ -1,11 +1,11 @@
 {
-  "version": "0.7.0",
-  "notes": "Importa extractos en PDF y en inglés, Dashboard por meses (se abre en el mes actual), alta rápida con «+ Nuevo» o la tecla N, menú «Más» con Ajustes, Exportar datos, Ayuda y Comentarios, recordatorio de copia de seguridad, traspasos entre tus cuentas que ya no cuentan como ingreso ni gasto, y correcciones en el modo oscuro.",
+  "version": "0.8.0",
+  "notes": "Cuadra ahora se llama Zenit: misma app y tus datos de siempre. Ya no se duplican movimientos al importar extractos que se solapan, los pendientes del banco se completan solos y Cuentas solo avisa de lo que de verdad no cuadra (y te deja borrar duplicados antiguos). La cuenta destino de una categoría de traspaso (p. ej. Cajero → Efectivo) se aplica también a los movimientos ya importados.",
   "pub_date": "2026-10-27T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQU4xeWNPdzBNdjdDbU1LaHptTkM3dXFtbG00SjFHcitNQ2ZrNWFaUXBwMk5BbGdQUFN5ZEdyN0dBdEFwMCsrRVFuc0N1enZ0VlBxc0huTHJwYU5HZEFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMDg3MTM0CWZpbGU6Q3VhZHJhXzAuNy4wX3g2NC1zZXR1cC5leGUKVmNzR1ZGOURnT1gyZmxGUmpIVHRKUWhiWTlUNGI3RXhTR3Y3M3BoV0hvZFhUVXBwUWt4NFRDQ2JaWVc1cmRwSjNMdmRXb3hHMHRKYXBvdkg5enpqRGc9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.7.0/Cuadra_0.7.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQURxb1g0VGNFNWRGWlNpdzJ3K1lXb01Ec29RNWc3SVYwSzlRRXA3Yk12VmRWS3JnOU95dkxTY0FuQXZEUWVRVmpydkNaVlczRG03cVV4MWJFdVZndXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI4MDYzCWZpbGU6WmVuaXRfMC44LjBfeDY0LXNldHVwLmV4ZQpuaHRuWGYzM0ZnTTZ5UngrSWl6ZHVhM2hHTkFaZFFyQkZzMTlkZ3ZrbmUxRXhuQWFKa3ZxaUI5bkQ0VHdxeFErYzZQUzR0THdmL1g4N1F5MU91UGlCUT09Cg==",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.8.0/Zenit_0.8.0_x64-setup.exe"
     }
   }
 }
