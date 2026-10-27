@@ -1,9 +1,9 @@
 {
-  "_info": "Datos del paquete para Microsoft Store. Al reservar el nombre, copia de Partner Center (Producto → Administración de productos → Identidad del producto) los valores de Package/Identity/Name, Package/Identity/Publisher y Package/Properties/PublisherDisplayName. Mientras pongan PENDIENTE, el MSIX solo sirve para probar en local.",
-  "displayName": "Zenit",
+  "_info": "Datos del paquete para Microsoft Store. Al reservar el nombre, copia de Partner Center (Producto → Administración de productos → Identidad del producto) los valores de Package/Identity/Name, Package/Identity/Publisher y Package/Properties/PublisherDisplayName. Ya están los de la app «Zenit Finanzas» reservada en Partner Center.",
+  "displayName": "Zenit Finanzas",
   "description": "Finanzas personales: gastos, ingresos, presupuestos y extractos del banco, con tus datos solo en tu ordenador.",
-  "identityName": "Pendiente.Zenit",
-  "publisher": "CN=Pendiente",
+  "identityName": "PatriciaCaadasXyfosCode.ZenitFinanzas",
+  "publisher": "CN=E87A9B63-730E-46E0-8E26-043C93E04ADE",
   "publisherDisplayName": "Patricia Cañadas (Xyfos Code)",
   "minWindowsVersion": "10.0.17763.0",
   "maxVersionTested": "10.0.26100.0"
