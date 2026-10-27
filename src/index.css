@@ -111,6 +111,15 @@ html.dark .text-amber-700                { color: #f07020 !important; }
 html.dark .text-amber-600                { color: #d96010 !important; }
 html.dark .text-amber-400                { color: #fd802e !important; }
 html.dark .hover\:bg-amber-100:hover     { background-color: #3d2810 !important; }
+html.dark .hover\:bg-amber-50:hover      { background-color: #3d2810 !important; }
+html.dark .hover\:bg-green-50:hover      { background-color: #0f2618 !important; }
+html.dark .hover\:bg-red-50:hover        { background-color: #3a1a1a !important; }
+html.dark .hover\:bg-red-100:hover       { background-color: #4a1f1f !important; }
+html.dark .bg-green-50                   { background-color: #0f2618 !important; }
+html.dark .border-green-200              { border-color: #166534 !important; }
+html.dark .text-green-700                { color: #4ade80 !important; }
+html.dark .border-rose-200               { border-color: #9f1239 !important; }
+html.dark .text-rose-700                 { color: #fb7185 !important; }
 
 /* Indigo accents → naranja */
 html.dark .text-indigo-600               { color: #fd802e !important; }

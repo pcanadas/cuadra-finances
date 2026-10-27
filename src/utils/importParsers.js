@@ -149,6 +149,7 @@ function parseBankinterSheet(sheet) {
         'Descripción': row[descIdx] ?? '',
         'Importe': row[impIdx] ?? '',
         'Saldo': '',
+        __pendiente: true, // aún sin contabilizar: llegará con saldo en el siguiente extracto
       })
     }
   }
@@ -320,7 +321,9 @@ export function mapRows(rows, mapping) {
     fechaValor: mapping.fechaValor ? parseDate(row[mapping.fechaValor], dayFirst) : '',
     descripcion: String(row[mapping.descripcion] ?? '').trim(),
     importe: parseAmount(row[mapping.importe] ?? ''),
-    saldo: parseAmount(row[mapping.saldo] ?? ''),
+    // Sin saldo (pendientes, extractos sin esa columna) es null, no 0: un 0 sería un saldo real
+    saldo: mapping.saldo && String(row[mapping.saldo] ?? '').trim() !== '' ? parseAmount(row[mapping.saldo]) : null,
+    ...(row.__pendiente ? { pendiente: true } : {}),
     categoria: null,
   }))
 }

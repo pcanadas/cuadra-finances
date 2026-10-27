@@ -187,3 +187,106 @@ export async function undoTransferPairing(tx, allTransactions, actions) {
     })
   }
 }
+
+// ── sincronizar con la configuración de las categorías ─────────────────────
+
+/**
+ * Pone al día las contrapartidas de TODOS los traspasos según la cuenta destino de su
+ * categoría o subcategoría (p. ej. al ponerle «Efectivo» a la categoría Cajero, cada retirada
+ * del banco aparece como entrada en Efectivo; al quitarla, esas entradas desaparecen).
+ * - Se respetan los emparejamientos entre dos movimientos reales del banco y las transferencias
+ *   apuntadas a mano (allí el destino lo eligió quien las apuntó).
+ * - Las contrapartidas no cuentan como ingreso ni gasto (isTransferTx).
+ * @returns {{ add: object[], update: { id: string, changes: object }[], remove: string[] }}
+ */
+export function planTransferSync(transactions, categories, subcategories, accounts) {
+  const transferCatIds = new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id))
+  const accountById = new Map(accounts.map((a) => [a.id, a]))
+  const byPair = new Map()
+  for (const t of transactions) {
+    if (!t.transferPairId) continue
+    if (!byPair.has(t.transferPairId)) byPair.set(t.transferPairId, [])
+    byPair.get(t.transferPairId).push(t)
+  }
+  const partnerOf = (t) => (t.transferPairId ? (byPair.get(t.transferPairId) ?? []).find((x) => x.id !== t.id) : null)
+  const isManual = (t) => String(t.id).startsWith('tx-manual')
+
+  const add = []
+  const update = new Map()
+  const remove = new Set()
+  const claimed = new Set()
+  const stamp = Date.now()
+  let n = 0
+  const change = (t, changes) => update.set(t.id, { ...update.get(t.id), ...changes })
+
+  for (const tx of transactions) {
+    if (tx.esContrapartida) continue
+    const partner = partnerOf(tx)
+    if (partner && (!partner.esContrapartida || isManual(tx))) continue
+
+    const dest = transferCatIds.has(tx.categoria) ? resolveTransferDestination(tx, categories, subcategories) : null
+    const destAccount = dest && dest !== tx.accountId ? accountById.get(dest) : null
+
+    if (partner && destAccount && partner.accountId === dest) {
+      // Al día; solo se sigue al origen si cambió su importe o su fecha
+      if (partner.importe !== -tx.importe || partner.fechaContable !== tx.fechaContable) {
+        change(partner, { importe: -tx.importe, fechaContable: tx.fechaContable })
+      }
+      continue
+    }
+    if (partner) remove.add(partner.id) // destino quitado o cambiado
+    if (!destAccount) {
+      if (tx.transferPairId) change(tx, { transferPairId: null })
+      continue
+    }
+
+    const pairId = `tp-${stamp}-${n++}-${Math.random().toString(36).slice(2, 6)}`
+    change(tx, { transferPairId: pairId })
+
+    if (destAccount.tipo !== 'efectivo') {
+      // A otro banco: el movimiento real de la cuenta destino, si ya está importado
+      const date = new Date(tx.fechaContable).getTime()
+      const match = transactions
+        .filter((t) => t.accountId === dest && !t.transferPairId && !t.esContrapartida && !claimed.has(t.id) &&
+          Math.abs(t.importe + tx.importe) <= 0.01 && Math.abs(new Date(t.fechaContable).getTime() - date) <= 3 * DAY_MS)
+        .sort((a, b) => Math.abs(new Date(a.fechaContable).getTime() - date) - Math.abs(new Date(b.fechaContable).getTime() - date))[0]
+      if (match) {
+        claimed.add(match.id)
+        change(match, { transferPairId: pairId, categoria: tx.categoria, subcategoria: tx.subcategoria || null })
+        continue
+      }
+    }
+
+    const origin = accountById.get(tx.accountId)?.nombre || 'otra cuenta'
+    add.push({
+      id: `tx-manual-${stamp}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+      esManual: true,
+      esContrapartida: true,
+      fechaContable: tx.fechaContable,
+      descripcion: tx.importe < 0 ? `Traspaso desde ${origin}` : `Traspaso a ${origin}`,
+      notas: tx.descripcion || '',
+      importe: -tx.importe,
+      categoria: tx.categoria,
+      subcategoria: tx.subcategoria || null,
+      accountId: dest,
+      transferPairId: pairId,
+    })
+  }
+
+  // Contrapartidas cuyo movimiento de origen ya no existe
+  for (const c of transactions) {
+    if (c.esContrapartida && !partnerOf(c)) remove.add(c.id)
+  }
+  return { add, update: [...update].map(([id, changes]) => ({ id, changes })), remove: [...remove] }
+}
+
+/** «47 movimientos añadidos en su cuenta destino…» para avisar tras sincronizar (null si no hubo cambios). */
+export function describeTransferSync({ created, linked, removed }) {
+  const n = (count, one, many) => `${count} ${count === 1 ? one : many}`
+  const parts = [
+    created && `${n(created, 'movimiento añadido', 'movimientos añadidos')} en su cuenta destino`,
+    linked && `${n(linked, 'emparejado', 'emparejados')} con su movimiento en la cuenta destino`,
+    removed && `${n(removed, 'contrapartida quitada', 'contrapartidas quitadas')}`,
+  ].filter(Boolean)
+  return parts.length ? `Traspasos actualizados: ${parts.join(', ')}. No cuentan como ingreso ni gasto.` : null
+}

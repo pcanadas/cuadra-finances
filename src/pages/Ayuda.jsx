@@ -4,13 +4,14 @@ import { SUPPORT_EMAIL } from '../platform/share'
 import { isMobile, deviceName } from '../platform'
 
 // Dónde está cada cosa en móvil y en escritorio
-const ADD = isMobile ? 'Pulsa el botón + de la barra inferior' : 'Pulsa «+ Nuevo» en la barra superior (o la tecla N)'
 const IMPORT = isMobile ? 'Más → Importar extracto' : 'Importar'
 
 const FAQ = [
   {
     q: '¿Cómo apunto un gasto o un ingreso?',
-    a: `${ADD}. Elige Gasto, Ingreso o Transferencia, ${isMobile ? 'toca' : 'elige'} la categoría, escribe el importe y pulsa Guardar. Por defecto se apunta con fecha de hoy y en la última cuenta que usaste.`,
+    a: isMobile
+      ? 'Pulsa el botón + de la barra inferior. Elige Gasto, Ingreso o Transferencia, toca la categoría, escribe el importe y pulsa Guardar. Por defecto se apunta con fecha de hoy y en la última cuenta que usaste.'
+      : 'En Movimientos, pulsa «+ Añadir manual». Lo normal en el ordenador es importar los extractos del banco; los movimientos a mano son para lo que no pasa por el banco, como el efectivo.',
   },
   {
     q: '¿Puedo importar los movimientos de mi banco?',
@@ -27,6 +28,10 @@ const FAQ = [
       : 'En Movimientos, marca sus casillas. Aparecerá una barra para elegir la nueva categoría y subcategoría.',
   },
   {
+    q: '¿Cómo reflejo el dinero que saco del cajero?',
+    a: 'En Categorías, marca la categoría (p. ej. Cajero) como transferencia interna y elige Efectivo como cuenta destino. Cada retirada aparecerá también como entrada en Efectivo, sin contar como ingreso ni como gasto. Sirve igual para traspasos a otra cuenta tuya.',
+  },
+  {
     q: '¿Dónde se guardan mis datos?',
     a: `Solo en tu ${deviceName}. Zenit no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.`,
   },
@@ -35,8 +40,10 @@ const FAQ = [
     a: `Al desinstalar se borran los datos. Antes, haz una copia en Más → Exportar datos → Copia de seguridad, guárdala donde quieras y restáurala después desde ${IMPORT}. También sirve para pasar tus datos del ordenador al móvil o al revés.`,
   },
   {
-    q: '¿Puedo cambiar los iconos o el tamaño de letra?',
-    a: 'Sí, en Más → Ajustes: tema claro u oscuro, tamaño de letra e iconos de cada categoría.',
+    q: isMobile ? '¿Puedo cambiar los iconos o el tamaño de letra?' : '¿Puedo cambiar el tema o el tamaño de letra?',
+    a: isMobile
+      ? 'Sí, en Más → Ajustes: tema claro u oscuro, tamaño de letra e iconos de cada categoría.'
+      : 'El tamaño de letra, en Más → Ajustes. El tema claro u oscuro, con el botón ☀️ / 🌙 de la barra superior.',
   },
 ]
 

@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import db from '../db/db'
+import { planImport } from '../utils/bankBalance'
+import { planTransferSync } from '../utils/transferPairing'
 
 const useTransactionStore = create((set, get) => ({
   transactions: [],
@@ -10,23 +12,25 @@ const useTransactionStore = create((set, get) => ({
     set({ transactions, loaded: true })
   },
 
-  addTransactions: async (newTransactions) => {
+  /**
+   * Importa filas de un extracto sin duplicar lo que ya existe (ver planImport): los repetidos
+   * se saltan y los pendientes que el banco ya ha contabilizado se completan con su saldo.
+   * @returns {Promise<{ added: number, updated: number }>}
+   */
+  addTransactions: async (newTransactions, defaultAccountId = null) => {
     const existing = get().transactions
-    const existingIds = new Set(existing.map((t) => t.id))
-    // Content fingerprint: date + description + amount + saldo (saldo makes it unique even
-    // when two transactions have identical date/description/amount on the same day)
-    const existingFingerprints = new Set(
-      existing.map((t) => `${t.fechaContable}|${t.descripcion}|${t.importe}|${t.saldo ?? ''}`)
-    )
-    const unique = newTransactions.filter((t) => {
-      if (existingIds.has(t.id)) return false
-      if (existingFingerprints.has(`${t.fechaContable}|${t.descripcion}|${t.importe}|${t.saldo ?? ''}`)) return false
-      return true
+    const ids = new Set(existing.map((t) => t.id))
+    const { add, update } = planImport(existing, newTransactions.filter((t) => !ids.has(t.id)), defaultAccountId)
+    if (!add.length && !update.length) return { added: 0, updated: 0 }
+    const changes = new Map(update.map((u) => [u.id, u.changes]))
+    await db.transaction('rw', db.transactions, async () => {
+      if (add.length) await db.transactions.bulkPut(add)
+      for (const { id, changes: c } of update) await db.transactions.update(id, c)
     })
-    if (unique.length === 0) return 0
-    await db.transactions.bulkPut(unique)
-    set((state) => ({ transactions: [...state.transactions, ...unique] }))
-    return unique.length
+    set((state) => ({
+      transactions: [...state.transactions.map((t) => (changes.has(t.id) ? { ...t, ...changes.get(t.id) } : t)), ...add],
+    }))
+    return { added: add.length, updated: update.length }
   },
 
   updateTransaction: async (id, updates) => {
@@ -62,6 +66,38 @@ const useTransactionStore = create((set, get) => ({
   deleteTransaction: async (id) => {
     await db.transactions.delete(id)
     set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }))
+  },
+
+  /**
+   * Contrapartidas de los traspasos al día con la cuenta destino de cada categoría/subcategoría
+   * (ver planTransferSync). Llamar tras cambiar esas categorías.
+   * @returns {Promise<{ created: number, linked: number, removed: number }>}
+   */
+  syncTransferCounterparts: async (categories, subcategories, accounts) => {
+    const { add, update, remove } = planTransferSync(get().transactions, categories, subcategories, accounts)
+    if (!add.length && !update.length && !remove.length) return { created: 0, linked: 0, removed: 0 }
+    const changes = new Map(update.map((u) => [u.id, u.changes]))
+    await db.transaction('rw', db.transactions, async () => {
+      if (remove.length) await db.transactions.bulkDelete(remove)
+      for (const { id, changes: c } of update) await db.transactions.update(id, c)
+      if (add.length) await db.transactions.bulkPut(add)
+    })
+    const removed = new Set(remove)
+    set((state) => ({
+      transactions: [
+        ...state.transactions.filter((t) => !removed.has(t.id)).map((t) => (changes.has(t.id) ? { ...t, ...changes.get(t.id) } : t)),
+        ...add,
+      ],
+    }))
+    // Emparejados con un movimiento real de la cuenta destino (ni creados ni el propio origen)
+    const linked = update.filter((u) => u.changes.categoria !== undefined).length
+    return { created: add.length, linked, removed: remove.length }
+  },
+
+  deleteTransactions: async (ids) => {
+    const remove = new Set(ids)
+    await db.transactions.bulkDelete([...remove])
+    set((state) => ({ transactions: state.transactions.filter((t) => !remove.has(t.id)) }))
   },
 
   clearAll: async () => {

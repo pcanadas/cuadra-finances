@@ -16,9 +16,12 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 - Copias de seguridad como `zenit-backup-AAAA-MM-DD.json`
 
 ### Añadido
+- **Cuenta destino en categorías de traspaso, también hacia atrás** — p. ej. Cajero → Efectivo: cada retirada aparece como entrada en Efectivo (sin contar como ingreso)
 - **Extractos con cabeceras en inglés** (CSV y Excel): Date, Description, Amount, Debit / Credit, fechas de EE. UU. y con el mes en letras…
 
 ### Corregido
+- **Duplicados al importar extractos que se solapan** (contaban doble) y **pendientes de Bankinter** guardados con saldo 0: ahora se completan al importar el siguiente extracto
+- **Inconsistencias falsas** en la comprobación de saldos de Cuentas
 - **Modo oscuro** — algunos textos se oscurecían al tocarlos
 - Política de privacidad actualizada (comentarios y actualizaciones en la versión de escritorio)
 

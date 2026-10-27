@@ -4,6 +4,7 @@ import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useTransactionStore from '../store/useTransactionStore'
 import useAccountStore from '../store/useAccountStore'
+import { describeTransferSync } from '../utils/transferPairing'
 import { categorizeSubcategory, extractKeyword } from '../utils/categorize'
 import SelectSheet from '../components/SelectSheet'
 
@@ -209,6 +210,14 @@ export default function Subcategorias() {
   const accounts = useAccountStore((s) => s.accounts)
 
   const [selectedCatId, setSelectedCatId] = useState(null)
+  const [transferNotice, setTransferNotice] = useState(null)
+
+  // Tras cambiar categorías de traspaso: contrapartidas al día con su cuenta destino
+  async function syncTransfers() {
+    const result = await useTransactionStore.getState().syncTransferCounterparts(
+      useCategoryStore.getState().categories, useSubcategoryStore.getState().subcategories, useAccountStore.getState().accounts)
+    setTransferNotice(describeTransferSync(result))
+  }
   const [page, setPage] = useState(1)
   const [filterYear, setFilterYear] = useState('')
   const [filterMonth, setFilterMonth] = useState('')
@@ -364,6 +373,7 @@ export default function Subcategorias() {
     setNewKeywords([])
     setNewColor(PRESET_COLORS[0])
     setNewCuentaDestinoId('')
+    await syncTransfers()
   }
 
   async function handleAutoAssign() {
@@ -375,6 +385,7 @@ export default function Subcategorias() {
     })
     if (Object.keys(updatesMap).length > 0) {
       await useTransactionStore.getState().bulkUpdateTransactions(updatesMap)
+      await syncTransfers()
     }
   }
 
@@ -397,6 +408,13 @@ export default function Subcategorias() {
           asignarlas automáticamente a tus movimientos.
         </p>
       </div>
+      {transferNotice && (
+        <div className="mb-4 flex items-start gap-3 px-4 py-2.5 rounded-xl border border-green-200 bg-green-50 text-sm text-green-700">
+          <span>⇄</span>
+          <span className="flex-1">{transferNotice}</span>
+          <button onClick={() => setTransferNotice(null)} className="text-green-700" aria-label="Cerrar">✕</button>
+        </div>
+      )}
 
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left panel: category list (en móvil se oculta al abrir una categoría) */}
@@ -483,8 +501,8 @@ export default function Subcategorias() {
                       <SubcatRow
                         key={sub.id}
                         sub={sub}
-                        onSave={(id, updates) => updateSubcategory(id, updates)}
-                        onDelete={(id) => deleteSubcategory(id)}
+                        onSave={async (id, updates) => { await updateSubcategory(id, updates); await syncTransfers() }}
+                        onDelete={async (id) => { await deleteSubcategory(id); await syncTransfers() }}
                         isTransferCategory={selectedCategory?.esTransferencia || false}
                         accounts={accounts}
                       />

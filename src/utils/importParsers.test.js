@@ -64,7 +64,7 @@ describe('mapRows', () => {
     const rows = [{ 'Fecha contable': '01/01/2026', 'Descripción': 'test', 'Importe': '', 'Saldo': '' }]
     const result = mapRows(rows, MAPPING)
     expect(result[0].importe).toBe(0)
-    expect(result[0].saldo).toBe(0)
+    expect(result[0].saldo).toBeNull() // sin saldo, no saldo 0
   })
 
   it('trims description whitespace', () => {

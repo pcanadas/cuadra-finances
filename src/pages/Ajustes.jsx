@@ -110,17 +110,20 @@ export default function Ajustes() {
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Ajustes</h1>
 
-      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <h2 className="text-sm font-semibold text-slate-700 mb-3">Apariencia</h2>
-        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
-          {[{ v: false, label: '☀️ Claro' }, { v: true, label: '🌙 Oscuro' }].map(({ v, label }) => (
-            <button key={label} onClick={() => setDark(v)}
-              className={`py-2.5 rounded-lg text-sm font-semibold ${dark === v ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Escritorio: el tema se cambia en la barra superior */}
+      {isMobile && (
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <h2 className="text-sm font-semibold text-slate-700 mb-3">Apariencia</h2>
+          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
+            {[{ v: false, label: '☀️ Claro' }, { v: true, label: '🌙 Oscuro' }].map(({ v, label }) => (
+              <button key={label} onClick={() => setDark(v)}
+                className={`py-2.5 rounded-lg text-sm font-semibold ${dark === v ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <div className="flex items-baseline justify-between">
@@ -151,22 +154,25 @@ export default function Ajustes() {
 
       {hasQuickAddNotification() && <QuickAddNotificationSetting />}
 
-      <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-        <h2 className="text-sm font-semibold text-slate-700">Iconos de categorías</h2>
-        <p className="text-xs text-slate-400 mt-0.5 mb-3">Se muestran al añadir movimientos. {isMobile ? 'Toca' : 'Haz clic en'} una categoría para cambiar su icono.</p>
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-          {sorted.map((c) => (
-            <button key={c.id} onClick={() => setEditingId(c.id)}
-              className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-slate-50 active:bg-slate-50">
-              <span className="w-11 h-11 rounded-full flex items-center justify-center text-2xl"
-                style={{ backgroundColor: c.color + '26' }}>
-                {getCategoryIcon(c)}
-              </span>
-              <span className="text-[11px] leading-tight text-slate-600 text-center line-clamp-2">{c.nombre}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Los iconos solo se usan en el alta rápida del móvil */}
+      {isMobile && (
+        <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+          <h2 className="text-sm font-semibold text-slate-700">Iconos de categorías</h2>
+          <p className="text-xs text-slate-400 mt-0.5 mb-3">Se muestran al añadir movimientos. Toca una categoría para cambiar su icono.</p>
+          <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
+            {sorted.map((c) => (
+              <button key={c.id} onClick={() => setEditingId(c.id)}
+                className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-slate-50 active:bg-slate-50">
+                <span className="w-11 h-11 rounded-full flex items-center justify-center text-2xl"
+                  style={{ backgroundColor: c.color + '26' }}>
+                  {getCategoryIcon(c)}
+                </span>
+                <span className="text-[11px] leading-tight text-slate-600 text-center line-clamp-2">{c.nombre}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {editing && (
         <IconPicker

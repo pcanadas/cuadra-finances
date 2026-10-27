@@ -4,7 +4,7 @@ import useTransactionStore from '../store/useTransactionStore'
 import useAccountStore from '../store/useAccountStore'
 import { categorizeTransaction } from '../utils/categorize'
 import useSubcategoryStore from '../store/useSubcategoryStore'
-import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
+import { handleTransferPairing, undoTransferPairing, describeTransferSync } from '../utils/transferPairing'
 import SelectSheet from '../components/SelectSheet'
 
 const PRESET_COLORS = [
@@ -232,7 +232,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
                 <label className="text-xs text-slate-500 block mb-1">Cuenta destino de la transferencia</label>
                 <SelectSheet title="Cuenta destino" value={cuentaDestinoId} onChange={setCuentaDestinoId} className="text-xs"
                   options={[{ value: '', label: '— Sin especificar —' }, ...accounts.map((a) => ({ value: a.id, label: a.nombre, color: a.color }))]} />
-                <p className="text-xs text-slate-400 mt-1">Los gastos de esta categoría se reflejarán como ingresos en la cuenta destino.</p>
+                <p className="text-xs text-slate-400 mt-1">Cada movimiento de esta categoría aparecerá también en la cuenta destino (lo que sale de una entra en la otra). No cuenta como ingreso ni como gasto.</p>
               </div>
             )}
           </div>
@@ -354,6 +354,14 @@ export default function Categorias() {
   const [showForm, setShowForm] = useState(false)
   const [recatResult, setRecatResult] = useState(null)
   const [recatLoading, setRecatLoading] = useState(false)
+  const [transferNotice, setTransferNotice] = useState(null)
+
+  // Tras cambiar categorías de traspaso: contrapartidas al día con su cuenta destino
+  async function syncTransfers() {
+    const result = await useTransactionStore.getState().syncTransferCounterparts(
+      useCategoryStore.getState().categories, useSubcategoryStore.getState().subcategories, useAccountStore.getState().accounts)
+    setTransferNotice(describeTransferSync(result))
+  }
 
   // Dismissed suggestions persisted in localStorage as "catId::keyword"
   const [dismissedSuggestions, setDismissedSuggestions] = useState(() => {
@@ -402,6 +410,7 @@ export default function Categorias() {
         }
       }
 
+      await syncTransfers()
       setRecatResult(updated)
       setRecatLoading(false)
     }, 0)
@@ -495,6 +504,14 @@ export default function Categorias() {
           </button>
         </div>
       </div>
+
+      {transferNotice && (
+        <div className="mb-4 flex items-start gap-3 px-4 py-2.5 rounded-xl border border-green-200 bg-green-50 text-sm text-green-700">
+          <span>⇄</span>
+          <span className="flex-1">{transferNotice}</span>
+          <button onClick={() => setTransferNotice(null)} className="text-green-700" aria-label="Cerrar">✕</button>
+        </div>
+      )}
 
       {showForm && (
         <div className="bg-white rounded-xl border border-indigo-200 shadow-sm p-5 mb-5">
@@ -614,8 +631,8 @@ export default function Categorias() {
           >
             <CategoryCard
               category={cat}
-              onUpdate={updateCategory}
-              onDelete={deleteCategory}
+              onUpdate={async (id, changes) => { await updateCategory(id, changes); await syncTransfers() }}
+              onDelete={async (id) => { await deleteCategory(id); await syncTransfers() }}
               txCount={txCountByCategory[cat.id] || 0}
               accounts={accounts}
             />

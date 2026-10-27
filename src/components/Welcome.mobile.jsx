@@ -13,14 +13,14 @@ export default function Welcome() {
       </p>
 
       <div className="w-full max-w-sm mt-7 space-y-3">
-        <button onClick={() => openQuickAdd()}
+        {isMobile && <button onClick={() => openQuickAdd()}
           className="w-full flex items-center gap-4 text-left bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-700 text-white rounded-2xl px-5 py-4 shadow-sm">
           <span className="text-3xl leading-none">＋</span>
           <span>
             <span className="block font-semibold">Apunta tu primer gasto</span>
-            <span className="block text-sm text-indigo-100">{isMobile ? 'En segundos, con el botón + de abajo' : 'Con «+ Nuevo» arriba o pulsando la tecla N'}</span>
+            <span className="block text-sm text-indigo-100">En segundos, con el botón + de abajo</span>
           </span>
-        </button>
+        </button>}
         <Link to="/importar"
           className="w-full flex items-center gap-4 text-left bg-white border border-slate-200 hover:bg-slate-50 active:bg-slate-50 rounded-2xl px-5 py-4 shadow-sm">
           <span className="text-3xl leading-none">📥</span>
@@ -29,6 +29,11 @@ export default function Welcome() {
             <span className="block text-sm text-slate-500">PDF, CSV o Excel descargado de tu banco</span>
           </span>
         </Link>
+        {!isMobile && (
+          <Link to="/movimientos" className="block text-sm text-indigo-600 hover:underline pt-1">
+            o añade movimientos a mano en Movimientos → «+ Añadir manual»
+          </Link>
+        )}
       </div>
 
       <p className="text-xs text-slate-400 mt-8 max-w-xs">

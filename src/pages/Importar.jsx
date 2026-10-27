@@ -95,6 +95,7 @@ export default function Importar() {
   const [error, setError] = useState('')
   const [importedCount, setImportedCount] = useState(0)
   const [skippedCount, setSkippedCount] = useState(0)
+  const [updatedCount, setUpdatedCount] = useState(0)
   const [previewSelected, setPreviewSelected] = useState(new Set())
   const [previewBulkCat, setPreviewBulkCat] = useState('')
   const [previewBulkSub, setPreviewBulkSub] = useState('')
@@ -106,8 +107,9 @@ export default function Importar() {
       const rows = await parseFile(file)
       if (!rows.length) throw new Error('El archivo está vacío')
       setRawRows(rows)
-      setColumns(Object.keys(rows[0]))
-      setMapping(guessMapping(Object.keys(rows[0])))
+      const keys = Object.keys(rows[0]).filter((k) => !k.startsWith('__')) // __pendiente… son marcas internas
+      setColumns(keys)
+      setMapping(guessMapping(keys))
       setStep('mapping')
     } catch (e) {
       setError(e.message || 'Error al procesar el archivo')
@@ -171,6 +173,7 @@ export default function Importar() {
 
   const handleImport = async () => {
     const defaultId = importAccountId || accounts[0]?.id || null
+    const importId = Date.now() // identifica esta importación (para detectar duplicados entre extractos)
     const transferCatIds = new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id))
     // Traspasos entre las cuentas del extracto: la salida y la entrada quedan emparejadas como
     // transferencia (si no, la entrada contaría como ingreso)
@@ -179,14 +182,16 @@ export default function Importar() {
         .filter((t) => !t.extractoCuenta || accountByStatement[t.extractoCuenta] !== SKIP_ACCOUNT)
         .map(({ extractoCuenta, ...t }) => {
           const accountId = (extractoCuenta && accountByStatement[extractoCuenta]) || defaultId
-          return accountId ? { ...t, accountId } : t
+          return accountId ? { ...t, accountId, importId } : { ...t, importId }
         }),
       transferCatIds,
       categories.find((c) => c.esTransferencia)?.id ?? null,
     )
-    const added = await addTransactions(rows)
+    // Los movimientos antiguos sin cuenta son de la primera cuenta
+    const { added, updated } = await addTransactions(rows, accounts[0]?.id ?? null)
     setImportedCount(added)
-    setSkippedCount(rows.length - added)
+    setUpdatedCount(updated)
+    setSkippedCount(rows.length - added - updated)
 
     // Pair imported transactions that were auto-categorised as internal transfers
     const freshTx = useTransactionStore.getState().transactions
@@ -211,6 +216,7 @@ export default function Importar() {
     setAccountByStatement({})
     setError('')
     setImportedCount(0)
+    setUpdatedCount(0)
     if (fileRef.current) fileRef.current.value = ''
   }
 
@@ -630,9 +636,14 @@ export default function Importar() {
             {importedCount} movimientos importados
           </h2>
           <p className="text-slate-500 text-sm mb-6">
+            {updatedCount > 0 && (
+              <span className="block text-emerald-600 mb-1">
+                {updatedCount} ya estaban (p. ej. pendientes del banco) y se han completado con el saldo definitivo.
+              </span>
+            )}
             {skippedCount > 0 && (
               <span className="block text-amber-600 mb-1">
-                {skippedCount} omitidos por ser duplicados (misma fecha, descripción e importe).
+                {skippedCount} omitidos porque ya estaban importados.
               </span>
             )}
             Puedes verlos en la sección <strong>{isMobile ? 'Registros' : 'Movimientos'}</strong> o volver {isMobile ? 'a Inicio' : 'al Dashboard'}.

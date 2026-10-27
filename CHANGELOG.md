@@ -3,10 +3,19 @@
 ## [0.8.0] — 2026-10-27
 
 ### Cambiado
+- **Sin alta rápida en escritorio** — fuera el botón «+ Nuevo» y la tecla N (en el ordenador se importan extractos; a mano, desde Movimientos → «+ Añadir manual»). Ajustes muestra solo el tamaño de letra: el tema está en la barra y los iconos de categorías solo los usa el móvil
 - **Cuadra pasa a llamarse Zenit** — nuevo nombre en la app, la ventana, el menú Inicio y «Aplicaciones instaladas». Al actualizar se conservan todos los datos (siguen en `%LOCALAPPDATA%\com.xyfos.cuadra`). El instalador quita la instalación antigua de Cuadra (carpeta, entrada de «Aplicaciones instaladas» y acceso directo, que pasa a llamarse Zenit) sin usar su desinstalador, para no tocar los datos. Si tenías Cuadra anclada a la barra de tareas, hay que volver a anclar Zenit
 - El ejecutable pasa de `Cuadra.exe` a `Zenit.exe` y las copias de seguridad se guardan como `zenit-backup-AAAA-MM-DD.json` (las antiguas `cuadra-backup-…` se siguen pudiendo restaurar)
 
+### Corregido
+- **Inconsistencias falsas en Cuentas** — la comprobación ya no reconstruye una cadena de saldos de años (se rompía y marcaba decenas de saltos que no lo eran): ahora un movimiento cuadra si otro cercano (31 días o sus 50 vecinos por fecha) deja justo el saldo que espera. Con extractos completos da 0 avisos; si falta un tramo, avisa en el movimiento siguiente
+- **Duplicados al importar extractos que se solapan** — el día de la descarga el banco da saldos provisionales y el mismo movimiento volvía a entrar con otro saldo, contando doble en los totales. Ahora se comparan fecha, concepto e importe contando las copias (dos movimientos iguales del mismo extracto siguen siendo dos) y se queda el saldo definitivo. Cuentas muestra los duplicados ya importados para borrarlos (con copia de seguridad automática antes)
+- **Movimientos pendientes de Bankinter** — se guardaban con saldo 0; ahora quedan como pendientes y se completan con su saldo al importar el siguiente extracto, sin duplicarse
+- El texto de la cuenta destino decía que los movimientos se reflejan «como ingresos»; no cuentan como ingreso
+- Resaltado de filas en la verificación de Cuentas: no se veía en modo claro y en oscuro era blanco y ocultaba el texto
+
 ### Añadido
+- **Cuenta destino en categorías de traspaso, también hacia atrás** — al poner (o cambiar) la cuenta destino de una categoría o subcategoría de transferencia interna, todos sus movimientos aparecen en la cuenta destino: p. ej. Cajero → Efectivo crea una entrada en Efectivo por cada retirada (o se empareja con el movimiento real si el destino es otro banco). Al quitarla, esas entradas desaparecen. No cuentan como ingreso ni gasto; se respetan las transferencias apuntadas a mano
 - **Versión para Microsoft Store** — `npm run store:build` genera el paquete MSIX (ver `DISTRIBUCION.md`); en esa versión las actualizaciones llegan por la Store
 
 ---
