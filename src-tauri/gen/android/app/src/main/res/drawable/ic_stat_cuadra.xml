@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Icono pequeño de la notificación (monocromo: Android lo tiñe). Barras como el logo. -->
+<!-- Icono pequeño de la notificación (monocromo: Android lo tiñe). Barras y sol, como el logo. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M4,14h3.5v7H4z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M10.25,9h3.5v12h-3.5z" />
-    <path android:fillColor="#FFFFFFFF" android:pathData="M16.5,4H20v17h-3.5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M4,15h3.5v6H4z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M10.25,11.5h3.5v9.5h-3.5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M16.5,8.5H20V21h-3.5z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M16.25,4.25a2,2 0,1 0,4 0a2,2 0,1 0,-4 0z" />
 </vector>
