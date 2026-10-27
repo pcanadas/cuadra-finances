@@ -6,7 +6,7 @@
     <rect x="196" y="600" width="140" height="230" rx="24" fill="#fd802e" opacity="0.55"/>
     <rect x="442" y="470" width="140" height="360" rx="24" fill="#fd802e" opacity="0.78"/>
     <rect x="688" y="330" width="140" height="500" rx="24" fill="#fd802e"/>
-    <circle cx="758" cy="196" r="110" fill="#fd802e" opacity="0.16"/>
-    <circle cx="758" cy="196" r="66" fill="#ffd9a8"/>
+    <circle cx="838" cy="196" r="110" fill="#fd802e" opacity="0.16"/>
+    <circle cx="838" cy="196" r="66" fill="#ffd9a8"/>
   </g>
 </svg>
