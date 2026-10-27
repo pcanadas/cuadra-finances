@@ -6,7 +6,7 @@ export default function Privacidad() {
   const email = <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span>
 
   return (
-    <InfoPage title="Política de privacidad" updated="22 de octubre de 2026">
+    <InfoPage title="Política de privacidad" updated="27 de octubre de 2026">
       <InfoSection>
         <p>Cuadra es una aplicación gratuita para llevar las finanzas personales, diseñada para que tus datos sean solo tuyos.</p>
       </InfoSection>
@@ -23,7 +23,7 @@ export default function Privacidad() {
         <p>Los extractos bancarios que importas se leen en tu dispositivo y no se envían a ningún sitio. Las copias de seguridad y exportaciones se guardan donde tú elijas; a partir de ahí, su custodia depende de ti.</p>
       </InfoSection>
       <InfoSection title="Comentarios y consultas">
-        <p>Si nos envías un comentario desde la app (Más → Comentarios), recibimos el texto que escribes, tu email solo si decides indicarlo, y la versión de la app y de Android para entender el problema. Se envía cifrado a nuestro servidor (xyfos.com), que nos lo reenvía por correo y <strong>no lo guarda</strong>. Para evitar abusos, el servidor usa tu dirección IP durante una hora, de forma cifrada, para limitar el número de envíos. Si nos escribes directamente por correo, recibimos tu dirección y el contenido del mensaje.</p>
+        <p>Si nos envías un comentario desde la app (Más → Comentarios), recibimos el texto que escribes, tu email solo si decides indicarlo, y la versión de la app y del sistema (Android o escritorio) para entender el problema. Se envía cifrado a nuestro servidor (xyfos.com), que nos lo reenvía por correo y <strong>no lo guarda</strong>. Para evitar abusos, el servidor usa tu dirección IP durante una hora, de forma cifrada, para limitar el número de envíos. Si nos escribes directamente por correo, recibimos tu dirección y el contenido del mensaje.</p>
         <p><strong>Finalidad:</strong> leer tus sugerencias, responderte si nos has dejado tu email y mejorar la app. <strong>Base legal:</strong> tu consentimiento, que das al enviarnos el mensaje.</p>
         <p><strong>Conservación:</strong> el tiempo necesario para atender tu comentario y, como máximo, 12 meses desde el último contacto.</p>
         <p><strong>Destinatarios:</strong> no se ceden a terceros. Los mensajes pasan por el proveedor de alojamiento y de correo del responsable, que actúa como encargado del tratamiento.</p>
@@ -33,7 +33,7 @@ export default function Privacidad() {
         <p>Si consideras que no hemos atendido bien tu solicitud, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
       </InfoSection>
       <InfoSection title="Permisos">
-        <p>La app solo accede a los archivos que eliges expresamente para importar o exportar, y a internet únicamente para enviar los comentarios.</p>
+        <p>La app solo accede a los archivos que eliges expresamente para importar o exportar, y a internet únicamente para enviar los comentarios y, en la versión de escritorio, para comprobar si hay actualizaciones (consulta un archivo público en GitHub, sin enviar ningún dato tuyo).</p>
       </InfoSection>
       <InfoSection title="Menores">
         <p>Cuadra no está dirigida a menores de 14 años.</p>

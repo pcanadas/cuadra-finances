@@ -9,3 +9,6 @@ export const isMobile = isAndroid
 
 // En móvil las actualizaciones llegan por Google Play
 export const canAutoUpdate = isTauri && !isMobile
+
+// Para textos como «tus datos solo están en este móvil / ordenador»
+export const deviceName = isMobile ? 'móvil' : 'ordenador'

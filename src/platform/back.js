@@ -55,3 +55,19 @@ export function useAndroidBackButton() {
     }
   }, [navigate])
 }
+
+/** ¿Hay alguna hoja o ventana abierta? (p. ej. para no abrir otra con un atajo de teclado) */
+export const hasOpenLayer = () => stack.length > 0
+
+/** Escritorio: Esc cierra lo último abierto, igual que el botón atrás en Android. Se monta una vez. */
+export function useEscapeKey() {
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || !stack.length) return
+      e.preventDefault()
+      stack[stack.length - 1]()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+}

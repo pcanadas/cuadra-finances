@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from './Navbar'
-import { useAndroidBackButton } from '../platform/back'
+import { useAndroidBackButton, useEscapeKey } from '../platform/back'
 
 export default function Layout() {
   useAndroidBackButton()
+  useEscapeKey()
 
   // Cada pantalla empieza arriba
   const { pathname } = useLocation()

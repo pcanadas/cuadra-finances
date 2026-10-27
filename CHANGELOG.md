@@ -1,5 +1,40 @@
 # Changelog
 
+## [0.7.0] — 2026-10-27
+
+Trae a escritorio las mejoras de la versión Android (1.1.0 – 1.1.3).
+
+### Añadido
+- **Importar extractos en PDF** — además de CSV y Excel. Probado con Bankinter: columnas Cargo/Abono, conceptos en varias líneas, PDF con contraseña y aviso si el PDF es una imagen sin texto. En los extractos con **varias cuentas** se elige a qué cuenta va cada una o se deja sin importar
+- **Extractos con cabeceras en inglés** — se reconocen columnas como *Date / Booking date / Transaction date*, *Value date*, *Description / Details / Payee*, *Amount* y *Balance* (Revolut, N26, Wise, bancos británicos…); cargo y abono en columnas separadas (*Debit / Credit*, *Paid out / Paid in*, también *Cargo / Abono*); importes `1,234.56` y `(12.50)`; fechas `27 Oct 2026`, `Oct 27, 2026`, `2026-10-27 14:30` y formato de EE. UU. `10/27/2026` (se detecta por columna)
+- **Dashboard por meses** — selector de periodo `‹ Octubre 2026 ▾ ›` para ver un mes o el año completo; se abre en el mes actual. Con un mes elegido, la tarjeta «Mes con más gasto» pasa a «Gasto diario» y la previsión muestra ese mes: «Cierre del mes» (pagados / no pagados, sobrante) para meses pasados y previsión para el actual y los futuros
+- **Alta rápida** — botón **«+ Nuevo»** en la barra superior o tecla **N**: gasto, ingreso o transferencia con categoría por icono, importe (Intro para guardar), día y cuenta. Aviso «Gasto guardado» con **Deshacer**
+- **Menú «Más»** en la barra superior: Exportar datos, Ajustes, Ayuda, Términos de uso, Política de privacidad, Sobre nosotros y Comentarios
+- **Ajustes** — tema, tamaño de letra e iconos de categorías
+- **Exportar datos** — movimientos a Excel y copia de seguridad completa en una sola pantalla
+- **Comentarios** — envía sugerencias desde la app (o por correo si no hay conexión)
+- **Ayuda, Términos de uso y Política de privacidad** dentro de la app
+- **Recordatorio de copia de seguridad** en el Dashboard (la primera vez tras una semana de uso; después, si pasa un mes sin copia)
+- **Bienvenida** cuando aún no hay datos: «Apunta tu primer gasto» o «Importa un extracto del banco»
+- **Tecla Esc** para cerrar ventanas y menús
+- **Cajero** — subcategoría de Transferencias internas que registra las retiradas como traspaso a la cuenta Efectivo (no cuentan como gasto). Se añade una vez si existen la categoría y la cuenta; afecta a lo que se importe a partir de ahora
+
+### Mejorado
+- **CSV y Excel con líneas antes de la cabecera** (titular, IBAN…) — se busca la cabecera real (CaixaBank); columnas vacías o repetidas ya no se pisan
+- **Traspasos entre cuentas propias** — al importar, la salida de una cuenta y la entrada del mismo importe en otra (±3 días) se emparejan como traspaso y nunca cuentan como ingreso ni gasto (Dashboard, previsión y Gastos fijos)
+- **Categorización automática** — las palabras clave con espacios exigen la palabra completa (un «BIZUM RECIBIDO» ya no cae en Impuestos por contener «IBI»)
+- **Nuevas categorías por defecto** en instalaciones nuevas: Alimentación, Ocio, Vivienda, Impuestos, Coche, Transportes, SS / Autónomos, Mascotas…
+- Barra superior más compacta en ventanas estrechas; «Acerca de» pasa a «Más → Sobre nosotros»
+
+### Corregido
+- **Excel en inglés confundido con Bankinter** — un Excel cuya primera columna contenía «ES» (p. ej. «Description» o «Notes») se leía como Bankinter y daba «El archivo está vacío»
+- **Modo oscuro** — la tarjeta de vista previa de la importación salía blanca con el texto ilegible, y algunos textos se oscurecían al pasar el ratón
+
+### Cambiado
+- Licencia del código: GNU GPL v3 o posterior (antes MIT)
+- Política de privacidad actualizada: comentarios desde escritorio y comprobación de actualizaciones
+
+---
 ## [0.6.1] — 2026-10-22
 
 ### Corregido

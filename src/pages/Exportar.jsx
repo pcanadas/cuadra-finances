@@ -18,14 +18,14 @@ function ExportCard({ icon, title, text, button, onClick }) {
       </div>
       <button disabled={busy}
         onClick={async () => { setBusy(true); try { await onClick() } finally { setBusy(false) } }}
-        className="mt-3 w-full py-2.5 rounded-xl bg-indigo-600 active:bg-indigo-700 text-white text-sm font-semibold disabled:opacity-60">
+        className="mt-3 w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-700 text-white text-sm font-semibold disabled:opacity-60">
         {busy ? 'Exportando…' : button}
       </button>
     </section>
   )
 }
 
-// Pantalla móvil (Más → Exportar datos)
+// Más → Exportar datos
 export default function Exportar() {
   const transactions = useTransactionStore((s) => s.transactions)
   const categories = useCategoryStore((s) => s.categories)

@@ -4,6 +4,7 @@ import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useAccountStore from '../store/useAccountStore'
 import { useBackHandler } from '../platform/back'
+import { isMobile } from '../platform'
 import { getCategoryIcon } from '../utils/categoryIcons'
 
 const LAST_ACCOUNT_KEY = 'cuadra.quickAdd.lastAccount'
@@ -58,7 +59,7 @@ function Section({ title, children }) {
   )
 }
 
-// ─── Alta rápida (pantalla completa) ────────────────────────────────────────
+// ─── Alta rápida (pantalla completa en móvil, ventana en escritorio) ────────
 
 export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
   const addManualTransaction = useTransactionStore((s) => s.addManualTransaction)
@@ -144,19 +145,22 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
       {label}
     </button>
   )
+  const saveOnEnter = (e) => { if (e.key === 'Enter') { e.preventDefault(); handleSave() } }
   const isOtherDay = fecha !== isoDate(today) && fecha !== isoDate(yesterday)
   const tipoActual = TIPOS.find((t) => t.id === tipo)
 
   return (
-    <div className="fixed inset-0 z-[70] bg-slate-50 flex flex-col"
-      style={{ paddingTop: 'var(--sat)', paddingBottom: 'var(--sab)' }}>
+    <div className="fixed inset-0 z-[70] flex lg:items-center lg:justify-center lg:bg-black/40 lg:p-6" onClick={onClose}>
+    <div className="flex-1 lg:flex-none w-full lg:max-w-lg h-full lg:h-auto lg:max-h-full bg-slate-50 flex flex-col lg:rounded-2xl lg:shadow-xl lg:overflow-hidden"
+      style={{ paddingTop: 'var(--sat)', paddingBottom: 'var(--sab)' }}
+      onClick={(e) => e.stopPropagation()}>
       {/* Barra superior */}
       <div className="flex items-center gap-2 px-2 h-12 bg-white border-b border-slate-200">
-        <button onClick={onClose} className="w-10 h-10 text-2xl text-slate-500" aria-label="Cerrar">✕</button>
+        <button onClick={onClose} className="w-10 h-10 text-2xl text-slate-500 hover:text-slate-700" aria-label="Cerrar" title="Cerrar (Esc)">✕</button>
         <h2 className="text-base font-semibold text-slate-800">Nuevo movimiento</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4 space-y-5">
         {/* Tipo */}
         <div className="grid grid-cols-3 gap-1 p-1 bg-slate-200/60 rounded-xl">
           {TIPOS.map((t) => (
@@ -176,7 +180,7 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
                 return (
                   <button key={c.id} type="button"
                     onClick={() => { setCategoria(active ? null : c.id); setSubcategoria(null) }}
-                    className={`flex flex-col items-center gap-1 py-2 rounded-xl border ${active ? 'bg-white shadow-sm' : 'border-transparent'}`}
+                    className={`flex flex-col items-center gap-1 py-2 rounded-xl border ${active ? 'bg-white shadow-sm' : 'border-transparent hover:bg-slate-100'}`}
                     style={active ? { borderColor: c.color } : undefined}>
                     <span className="w-11 h-11 rounded-full flex items-center justify-center text-2xl"
                       style={{ backgroundColor: c.color + '26' }}>
@@ -203,8 +207,9 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
         {/* Importe */}
         <Section title="Importe">
           <div className="flex items-center bg-white border border-slate-200 rounded-xl px-4 focus-within:ring-2 focus-within:ring-indigo-300">
-            <input type="text" inputMode="decimal" placeholder="0,00" value={importe}
+            <input type="text" inputMode="decimal" placeholder="0,00" value={importe} autoFocus={!isMobile}
               onChange={(e) => { setImporte(e.target.value.replace(/[^0-9.,]/g, '')); setError('') }}
+              onKeyDown={saveOnEnter}
               className="flex-1 min-w-0 py-3 text-3xl font-bold text-slate-800 bg-transparent focus:outline-none" />
             <span className="text-2xl font-semibold text-slate-400">€</span>
           </div>
@@ -226,7 +231,7 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
 
         {/* Nota */}
         <Section title="Nota">
-          <input type="text" placeholder="Opcional" value={nota} onChange={(e) => setNota(e.target.value)}
+          <input type="text" placeholder="Opcional" value={nota} onChange={(e) => setNota(e.target.value)} onKeyDown={saveOnEnter}
             className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-indigo-300" />
         </Section>
 
@@ -238,7 +243,7 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
         {tipo === 'transferencia' && (
           <Section title="Hacia">
             {accounts.length < 2
-              ? <p className="text-sm text-slate-400">Necesitas al menos dos cuentas (Registros → Cuentas).</p>
+              ? <p className="text-sm text-slate-400">Necesitas al menos dos cuentas ({isMobile ? 'Registros' : 'Movimientos'} → Cuentas).</p>
               : <AccountChips accounts={accounts} value={destinoId} onChange={setDestinoId} exclude={accountId} />}
           </Section>
         )}
@@ -252,6 +257,7 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
           Guardar {tipoActual.label.toLowerCase()}
         </button>
       </div>
+    </div>
     </div>
   )
 }

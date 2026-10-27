@@ -3,7 +3,7 @@ import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useAccountStore from '../store/useAccountStore'
-import { parseFile, mapRows } from '../utils/importParsers'
+import { parseFile, mapRows, guessMapping } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
 import { handleTransferPairing, pairImportedTransfers } from '../utils/transferPairing'
 import db from '../db/db'
@@ -107,17 +107,6 @@ export default function Importar() {
       if (!rows.length) throw new Error('El archivo está vacío')
       setRawRows(rows)
       setColumns(Object.keys(rows[0]))
-      // Auto-guess mapping
-      const guessMapping = (keys) => {
-        const find = (hints) => keys.find((k) => hints.some((h) => k.toLowerCase().includes(h))) || ''
-        return {
-          fechaContable: find(['fecha contable', 'f. contable', 'fecha_contable', 'fecha', 'date', 'f.contable']),
-          fechaValor: find(['fecha valor', 'f. valor', 'fecha_valor', 'valor']),
-          descripcion: find(['concepto', 'descripcion', 'descripción', 'description', 'movimiento', 'comercio']),
-          importe: find(['importe', 'cantidad', 'amount', 'cargo', 'abono']),
-          saldo: find(['saldo', 'balance']),
-        }
-      }
       setMapping(guessMapping(Object.keys(rows[0])))
       setStep('mapping')
     } catch (e) {

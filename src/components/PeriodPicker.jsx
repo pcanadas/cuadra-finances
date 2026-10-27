@@ -12,7 +12,7 @@ function PeriodSheet({ value, years, onChange, onClose }) {
   const maxYear = Math.max(...years, year)
 
   const pick = (p) => { onChange(p); onClose() }
-  const stepBtn = 'w-10 h-10 rounded-full text-xl text-slate-600 active:bg-slate-100 disabled:opacity-30'
+  const stepBtn = 'w-10 h-10 rounded-full text-xl text-slate-600 hover:bg-slate-100 active:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent'
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-end sm:items-center justify-center" onClick={onClose}>
@@ -22,7 +22,7 @@ function PeriodSheet({ value, years, onChange, onClose }) {
         <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 rounded-xl">
           {['mes', 'año'].map((m) => (
             <button key={m} onClick={() => setMode(m)}
-              className={`py-2 rounded-lg text-sm font-semibold ${mode === m ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500'}`}>
+              className={`py-2 rounded-lg text-sm font-semibold ${mode === m ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}>
               {m === 'mes' ? 'Mes' : 'Año'}
             </button>
           ))}
@@ -40,7 +40,7 @@ function PeriodSheet({ value, years, onChange, onClose }) {
                 const active = value.month === i && value.year === year
                 return (
                   <button key={m} onClick={() => pick({ year, month: i })}
-                    className={`py-3 rounded-xl text-sm font-medium ${active ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 active:bg-slate-100'}`}>
+                    className={`py-3 rounded-xl text-sm font-medium ${active ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 active:bg-slate-100'}`}>
                     {cap(m.slice(0, 3))}
                   </button>
                 )
@@ -53,7 +53,7 @@ function PeriodSheet({ value, years, onChange, onClose }) {
               const active = value.month == null && value.year === y
               return (
                 <button key={y} onClick={() => pick({ year: y, month: null })}
-                  className={`py-3 rounded-xl text-sm font-semibold ${active ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 active:bg-slate-100'}`}>
+                  className={`py-3 rounded-xl text-sm font-semibold ${active ? 'bg-indigo-600 text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 active:bg-slate-100'}`}>
                   {y}
                 </button>
               )
@@ -76,13 +76,13 @@ export default function PeriodPicker({ value, years, onChange }) {
     onChange({ year: Math.floor(idx / 12), month: idx % 12 })
   }
 
-  const arrow = 'w-9 h-9 rounded-full text-xl text-slate-500 bg-white shadow-sm active:bg-slate-100'
+  const arrow = 'w-9 h-9 rounded-full text-xl text-slate-500 bg-white shadow-sm hover:bg-slate-50 hover:text-slate-700 active:bg-slate-100'
 
   return (
     <div className="flex items-center gap-2">
       <button className={arrow} onClick={() => step(-1)} aria-label="Periodo anterior">‹</button>
       <button onClick={() => setOpen(true)}
-        className="min-w-[11.5rem] px-4 h-9 rounded-full bg-white shadow-sm text-sm font-semibold text-slate-700 active:bg-slate-100">
+        className="min-w-[11.5rem] px-4 h-9 rounded-full bg-white shadow-sm text-sm font-semibold text-slate-700 hover:bg-slate-50 active:bg-slate-100">
         {periodLabel(value)} <span className="text-slate-400">▾</span>
       </button>
       <button className={arrow} onClick={() => step(1)} aria-label="Periodo siguiente">›</button>

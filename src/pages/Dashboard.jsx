@@ -6,7 +6,7 @@ import PeriodPicker from '../components/PeriodPicker'
 import SelectSheet from '../components/SelectSheet'
 import { periodLabel } from '../utils/period'
 import { isTransferTx } from '../utils/transferPairing'
-import { isMobile } from '../platform'
+import { deviceName } from '../platform'
 import { useTheme } from '../context/ThemeContext'
 import {
   BarChart,
@@ -209,9 +209,9 @@ export default function Dashboard() {
   const { dark } = useTheme()
 
   const [selectedYear,       setSelectedYear]       = useState(new Date().getFullYear())
-  // null = año completo; en móvil se abre en el mes actual
-  const [selectedMonth,      setSelectedMonth]      = useState(() => (isMobile ? new Date().getMonth() : null))
-  const [showBackupReminder, setShowBackupReminder] = useState(() => isMobile && shouldRemindBackup(transactions.length > 0))
+  // null = año completo; se abre en el mes actual
+  const [selectedMonth,      setSelectedMonth]      = useState(() => new Date().getMonth())
+  const [showBackupReminder, setShowBackupReminder] = useState(() => shouldRemindBackup(transactions.length > 0))
   const [selectedCategory,   setSelectedCategory]   = useState('')
   const [selectedCategories, setSelectedCategories] = useState([]) // multi-category comparison
   const [expandedCategories, setExpandedCategories] = useState(new Set())
@@ -597,20 +597,7 @@ export default function Dashboard() {
   const availableEstimate = fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
 
   // ── empty state ──
-  if (transactions.length === 0) {
-    if (isMobile) return <Welcome />
-    return (
-      <div className="dashboard-bg min-h-screen p-6">
-        <h1 className="text-2xl font-bold text-slate-800 mb-6">Dashboard</h1>
-        <div className="bg-white rounded-2xl border border-dashed border-slate-300 p-16 text-center">
-          <p className="text-slate-400 text-lg font-medium">No hay movimientos aún.</p>
-          <p className="text-slate-400 text-sm mt-1">
-            Ve a <strong>Importar</strong> para cargar tu extracto bancario.
-          </p>
-        </div>
-      </div>
-    )
-  }
+  if (transactions.length === 0) return <Welcome />
 
   return (
     <div className="dashboard-bg space-y-4 lg:space-y-6 lg:p-1">
@@ -620,7 +607,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-3 lg:mb-5">
           <div className="hidden lg:block">
             <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
-            <p className="text-slate-400 text-sm mt-0.5">Resumen financiero anual</p>
+            <p className="text-slate-400 text-sm mt-0.5">{selectedMonth == null ? 'Resumen financiero anual' : 'Resumen financiero mensual'}</p>
           </div>
 <PeriodPicker
             value={{ year: selectedYear, month: selectedMonth }}
@@ -638,7 +625,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Recordatorio de copia de seguridad (móvil) ── */}
+      {/* ── Recordatorio de copia de seguridad ── */}
       {showBackupReminder && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
           <span className="text-2xl leading-none">💾</span>
@@ -646,7 +633,7 @@ export default function Dashboard() {
             <p className="text-sm font-semibold text-amber-900">
               {daysSinceBackup() == null ? 'Aún no has hecho ninguna copia de seguridad' : `Tu última copia es de hace ${daysSinceBackup()} días`}
             </p>
-            <p className="text-xs text-amber-800 mt-0.5">Tus datos solo están en este móvil: si lo cambias o desinstalas la app, se pierden.</p>
+            <p className="text-xs text-amber-800 mt-0.5">Tus datos solo están en este {deviceName}: si lo cambias o desinstalas la app, se pierden.</p>
             <div className="flex gap-4 mt-2">
               <Link to="/exportar" className="text-sm font-semibold text-amber-900 underline">Hacer copia</Link>
               <button onClick={() => { snoozeBackupReminder(); setShowBackupReminder(false) }} className="text-sm text-amber-700">Ahora no</button>

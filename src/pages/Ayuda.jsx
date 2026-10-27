@@ -1,15 +1,20 @@
 import { useState } from 'react'
 import InfoPage from '../components/InfoPage'
 import { SUPPORT_EMAIL } from '../platform/share'
+import { isMobile, deviceName } from '../platform'
+
+// Dónde está cada cosa en móvil y en escritorio
+const ADD = isMobile ? 'Pulsa el botón + de la barra inferior' : 'Pulsa «+ Nuevo» en la barra superior (o la tecla N)'
+const IMPORT = isMobile ? 'Más → Importar extracto' : 'Importar'
 
 const FAQ = [
   {
     q: '¿Cómo apunto un gasto o un ingreso?',
-    a: 'Pulsa el botón + de la barra inferior. Elige Gasto, Ingreso o Transferencia, toca la categoría, escribe el importe y pulsa Guardar. Por defecto se apunta con fecha de hoy y en la última cuenta que usaste.',
+    a: `${ADD}. Elige Gasto, Ingreso o Transferencia, ${isMobile ? 'toca' : 'elige'} la categoría, escribe el importe y pulsa Guardar. Por defecto se apunta con fecha de hoy y en la última cuenta que usaste.`,
   },
   {
     q: '¿Puedo importar los movimientos de mi banco?',
-    a: 'Sí, desde Más → Importar extracto. Admite PDF, CSV y Excel. Descarga el extracto desde la app o la web de tu banco y elígelo. Cuadra reconoce las columnas, asigna categorías y descarta los movimientos repetidos.',
+    a: `Sí, desde ${IMPORT}. Admite PDF, CSV y Excel, también con las columnas en inglés. Descarga el extracto desde la app o la web de tu banco y elígelo. Cuadra reconoce las columnas, asigna categorías y descarta los movimientos repetidos.`,
   },
   {
     q: 'Mi PDF da error al importarlo',
@@ -17,15 +22,17 @@ const FAQ = [
   },
   {
     q: '¿Cómo cambio la categoría de varios movimientos a la vez?',
-    a: 'En Registros, mantén pulsado uno para empezar a seleccionar y toca los demás. Abajo aparecerá una barra para elegir la nueva categoría.',
+    a: isMobile
+      ? 'En Registros, mantén pulsado uno para empezar a seleccionar y toca los demás. Abajo aparecerá una barra para elegir la nueva categoría.'
+      : 'En Movimientos, marca sus casillas. Aparecerá una barra para elegir la nueva categoría y subcategoría.',
   },
   {
     q: '¿Dónde se guardan mis datos?',
-    a: 'Solo en tu móvil. Cuadra no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.',
+    a: `Solo en tu ${deviceName}. Cuadra no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.`,
   },
   {
-    q: '¿Qué pasa si desinstalo la app o cambio de móvil?',
-    a: 'Al desinstalar se borran los datos. Antes, haz una copia en Más → Exportar datos → Copia de seguridad, guárdala donde quieras y restáurala después desde Importar extracto.',
+    q: `¿Qué pasa si desinstalo la app o cambio de ${deviceName}?`,
+    a: `Al desinstalar se borran los datos. Antes, haz una copia en Más → Exportar datos → Copia de seguridad, guárdala donde quieras y restáurala después desde ${IMPORT}. También sirve para pasar tus datos del ordenador al móvil o al revés.`,
   },
   {
     q: '¿Puedo cambiar los iconos o el tamaño de letra?',

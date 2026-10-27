@@ -33,7 +33,7 @@ function IconPicker({ category, onPick, onClose }) {
               {g.iconos.map((icon) => (
                 <button key={icon} onClick={() => onPick(icon)}
                   className={`aspect-square rounded-lg text-2xl flex items-center justify-center ${
-                    getCategoryIcon(category) === icon ? 'bg-indigo-100 ring-2 ring-indigo-400' : 'active:bg-slate-100'
+                    getCategoryIcon(category) === icon ? 'bg-indigo-100 ring-2 ring-indigo-400' : 'hover:bg-slate-100 active:bg-slate-100'
                   }`}>
                   {icon}
                 </button>
@@ -153,11 +153,11 @@ export default function Ajustes() {
 
       <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
         <h2 className="text-sm font-semibold text-slate-700">Iconos de categorías</h2>
-        <p className="text-xs text-slate-400 mt-0.5 mb-3">Se muestran al añadir movimientos. Toca una categoría para cambiar su icono.</p>
+        <p className="text-xs text-slate-400 mt-0.5 mb-3">Se muestran al añadir movimientos. {isMobile ? 'Toca' : 'Haz clic en'} una categoría para cambiar su icono.</p>
         <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
           {sorted.map((c) => (
             <button key={c.id} onClick={() => setEditingId(c.id)}
-              className="flex flex-col items-center gap-1 py-2 rounded-xl active:bg-slate-50">
+              className="flex flex-col items-center gap-1 py-2 rounded-xl hover:bg-slate-50 active:bg-slate-50">
               <span className="w-11 h-11 rounded-full flex items-center justify-center text-2xl"
                 style={{ backgroundColor: c.color + '26' }}>
                 {getCategoryIcon(c)}
