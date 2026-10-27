@@ -1,14 +1,14 @@
 import InfoPage, { InfoSection } from '../components/InfoPage'
 import { SUPPORT_EMAIL, DEVELOPER } from '../platform/share'
 
-// Mismo texto que https://www.xyfos.com/cuadra/privacidad (repo xyfos-code: src/pages/cuadra/privacidad.astro)
+// Mismo texto que https://www.xyfos.com/zenit/privacidad (repo xyfos-code: src/components/zenit/PrivacyPolicy.astro)
 export default function Privacidad() {
   const email = <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span>
 
   return (
     <InfoPage title="Política de privacidad" updated="27 de octubre de 2026">
       <InfoSection>
-        <p>Zenit es una aplicación gratuita para llevar las finanzas personales, diseñada para que tus datos sean solo tuyos.</p>
+        <p>Zenit (antes llamada Cuadra) es una aplicación gratuita para llevar las finanzas personales, para Android y Windows, diseñada para que tus datos sean solo tuyos.</p>
       </InfoSection>
       <InfoSection title="Responsable">
         <p>{DEVELOPER}. Contacto: {email}.</p>
@@ -39,10 +39,10 @@ export default function Privacidad() {
         <p>Zenit no está dirigida a menores de 14 años.</p>
       </InfoSection>
       <InfoSection title="Borrar tus datos">
-        <p>Puedes borrarlos en cualquier momento desde Importar extracto → Borrar todos los datos, o desinstalando la app.</p>
+        <p>Puedes borrarlos en cualquier momento desde la pantalla de importar extractos → Borrar todos los datos, o desinstalando la app.</p>
       </InfoSection>
       <InfoSection title="Cambios">
-        <p>Si esta política cambia, lo indicaremos en la app con una nueva fecha de actualización.</p>
+        <p>Si esta política cambia, lo indicaremos aquí y en la web con una nueva fecha de actualización.</p>
       </InfoSection>
     </InfoPage>
   )

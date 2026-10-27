@@ -1,7 +1,7 @@
 import InfoPage, { InfoSection } from '../components/InfoPage'
 import { SUPPORT_EMAIL, DEVELOPER } from '../platform/share'
 
-// Mismo texto que se publicará en https://www.xyfos.com/cuadra/terminos
+// Mismo texto que se publicará en https://www.xyfos.com/zenit/terminos
 export default function Terminos() {
   return (
     <InfoPage title="Términos de uso" updated="22 de octubre de 2026">
