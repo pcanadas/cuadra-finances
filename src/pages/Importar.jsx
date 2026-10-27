@@ -311,7 +311,7 @@ export default function Importar() {
                       <button
                         onClick={async () => {
                           const json = JSON.stringify(backupToJson(b), null, 2)
-                          await saveBackupJson(`cuadra-backup-${b.createdAt.slice(0, 10)}.json`, json)
+                          await saveBackupJson(`zenit-backup-${b.createdAt.slice(0, 10)}.json`, json)
                         }}
                         className="text-[11px] px-2 py-1 rounded border border-slate-200 text-slate-500 hover:bg-white transition-colors"
                       >

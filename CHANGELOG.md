@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.8.0] — 2026-10-27
+
+### Cambiado
+- **Cuadra pasa a llamarse Zenit** — nuevo nombre en la app, la ventana, el menú Inicio y «Aplicaciones instaladas». Al actualizar se conservan todos los datos (siguen en `%LOCALAPPDATA%\com.xyfos.cuadra`). El instalador quita la instalación antigua de Cuadra (carpeta, entrada de «Aplicaciones instaladas» y acceso directo, que pasa a llamarse Zenit) sin usar su desinstalador, para no tocar los datos. Si tenías Cuadra anclada a la barra de tareas, hay que volver a anclar Zenit
+- El ejecutable pasa de `Cuadra.exe` a `Zenit.exe` y las copias de seguridad se guardan como `zenit-backup-AAAA-MM-DD.json` (las antiguas `cuadra-backup-…` se siguen pudiendo restaurar)
+
+### Añadido
+- **Versión para Microsoft Store** — `npm run store:build` genera el paquete MSIX (ver `DISTRIBUCION.md`); en esa versión las actualizaciones llegan por la Store
+
+---
+
 ## [0.7.0] — 2026-10-27
 
 Trae a escritorio las mejoras de la versión Android (1.1.0 – 1.1.3).

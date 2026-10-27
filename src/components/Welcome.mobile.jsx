@@ -7,7 +7,7 @@ export default function Welcome() {
   return (
     <div className="flex flex-col items-center text-center px-2 pt-6 lg:pt-16 pb-4">
       <div className="text-5xl mb-3">👋</div>
-      <h1 className="text-xl font-bold text-slate-800">Te damos la bienvenida a Cuadra</h1>
+      <h1 className="text-xl font-bold text-slate-800">Te damos la bienvenida a Zenit</h1>
       <p className="text-sm text-slate-500 mt-2 max-w-xs">
         Empieza apuntando un gasto o importando los movimientos de tu banco.
       </p>

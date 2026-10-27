@@ -1,4 +1,6 @@
-# Cuadra — Finanzas personales
+# Zenit — Finanzas personales
+
+> Antes se llamaba **Cuadra** (hasta la versión 0.7.0 de escritorio). Al actualizar se conservan todos los datos.
 
 App de escritorio para gestión de finanzas personales, construida con React + Tauri. Importa extractos bancarios, categoriza movimientos automáticamente y visualiza la evolución de tus gastos e ingresos.
 
@@ -6,11 +8,11 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Cuadra_0.6.1_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Zenit_0.8.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
 No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
-> **Actualización desde una versión anterior** — los datos no se pierden. Cuadra guarda movimientos, categorías y configuración en IndexedDB (WebView2), una carpeta del perfil de Windows que el instalador no modifica. Puedes instalar encima o desinstalar primero; el resultado es el mismo.
+> **Actualización desde una versión anterior** — los datos no se pierden. Zenit guarda movimientos, categorías y configuración en IndexedDB (WebView2), una carpeta del perfil de Windows que el instalador no modifica. Puedes instalar encima o desinstalar primero; el resultado es el mismo.
 
 ---
 
@@ -205,7 +207,7 @@ $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "tu-contraseña"
 npm run tauri:build
 ```
 
-Genera `src-tauri/target/release/bundle/nsis/Cuadra_x.x.x_x64-setup.exe` + `.sig`.
+Genera `src-tauri/target/release/bundle/nsis/Zenit_x.x.x_x64-setup.exe` + `.sig`.
 
 **Requisitos:** Rust + cargo, WebView2 (incluido en Windows 11).
 
@@ -215,8 +217,8 @@ Genera `src-tauri/target/release/bundle/nsis/Cuadra_x.x.x_x64-setup.exe` + `.sig
 
 Copyright © 2026 Patricia Cañadas (Xyfos Code)
 
-Cuadra es software libre: puedes redistribuirlo y modificarlo bajo los términos de la **GNU General Public License** publicada por la Free Software Foundation, versión 3 o (a tu elección) cualquier versión posterior. Se distribuye con la esperanza de que sea útil, pero **sin ninguna garantía**. Ver [LICENSE](LICENSE).
+Zenit es software libre: puedes redistribuirlo y modificarlo bajo los términos de la **GNU General Public License** publicada por la Free Software Foundation, versión 3 o (a tu elección) cualquier versión posterior. Se distribuye con la esperanza de que sea útil, pero **sin ninguna garantía**. Ver [LICENSE](LICENSE).
 
 Las versiones publicadas hasta la 0.6.1 de escritorio y la 1.1.2 de Android se distribuyeron bajo licencia MIT.
 
-**Marca:** el nombre «Cuadra» y su logotipo no están cubiertos por la licencia. Si publicas una versión modificada, usa otro nombre y otro icono.
+**Marca:** el nombre «Zenit» (antes «Cuadra») y su logotipo no están cubiertos por la licencia. Si publicas una versión modificada, usa otro nombre y otro icono.

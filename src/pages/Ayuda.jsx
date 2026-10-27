@@ -14,7 +14,7 @@ const FAQ = [
   },
   {
     q: '¿Puedo importar los movimientos de mi banco?',
-    a: `Sí, desde ${IMPORT}. Admite PDF, CSV y Excel, también con las columnas en inglés. Descarga el extracto desde la app o la web de tu banco y elígelo. Cuadra reconoce las columnas, asigna categorías y descarta los movimientos repetidos.`,
+    a: `Sí, desde ${IMPORT}. Admite PDF, CSV y Excel, también con las columnas en inglés. Descarga el extracto desde la app o la web de tu banco y elígelo. Zenit reconoce las columnas, asigna categorías y descarta los movimientos repetidos.`,
   },
   {
     q: 'Mi PDF da error al importarlo',
@@ -28,7 +28,7 @@ const FAQ = [
   },
   {
     q: '¿Dónde se guardan mis datos?',
-    a: `Solo en tu ${deviceName}. Cuadra no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.`,
+    a: `Solo en tu ${deviceName}. Zenit no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.`,
   },
   {
     q: `¿Qué pasa si desinstalo la app o cambio de ${deviceName}?`,

@@ -41,7 +41,7 @@ export default function Licencias() {
   return (
     <InfoPage title="Licencias de terceros">
       <p className="text-sm text-slate-600 px-1">
-        Cuadra se construye con software de código abierto. Gracias a sus autores. Estas son las librerías que incluye y sus licencias.
+        Zenit se construye con software de código abierto. Gracias a sus autores. Estas son las librerías que incluye y sus licencias.
       </p>
       {!data ? (
         <p className="text-sm text-slate-400 px-1">Cargando…</p>

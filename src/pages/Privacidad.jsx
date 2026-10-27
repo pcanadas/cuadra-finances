@@ -8,7 +8,7 @@ export default function Privacidad() {
   return (
     <InfoPage title="Política de privacidad" updated="27 de octubre de 2026">
       <InfoSection>
-        <p>Cuadra es una aplicación gratuita para llevar las finanzas personales, diseñada para que tus datos sean solo tuyos.</p>
+        <p>Zenit es una aplicación gratuita para llevar las finanzas personales, diseñada para que tus datos sean solo tuyos.</p>
       </InfoSection>
       <InfoSection title="Responsable">
         <p>{DEVELOPER}. Contacto: {email}.</p>
@@ -17,7 +17,7 @@ export default function Privacidad() {
         <p>Los movimientos, cuentas, categorías, presupuestos y ajustes que introduces o importas. Se guardan <strong>únicamente en tu dispositivo</strong> y nunca se envían al responsable ni a terceros.</p>
       </InfoSection>
       <InfoSection title="Datos que recogemos">
-        <p><strong>Solo los comentarios que decidas enviarnos</strong> (ver más abajo). Cuadra no tiene cuentas de usuario, no incluye publicidad ni herramientas de analítica y nunca envía tus movimientos ni tus datos financieros.</p>
+        <p><strong>Solo los comentarios que decidas enviarnos</strong> (ver más abajo). Zenit no tiene cuentas de usuario, no incluye publicidad ni herramientas de analítica y nunca envía tus movimientos ni tus datos financieros.</p>
       </InfoSection>
       <InfoSection title="Archivos que importas o exportas">
         <p>Los extractos bancarios que importas se leen en tu dispositivo y no se envían a ningún sitio. Las copias de seguridad y exportaciones se guardan donde tú elijas; a partir de ahí, su custodia depende de ti.</p>
@@ -36,7 +36,7 @@ export default function Privacidad() {
         <p>La app solo accede a los archivos que eliges expresamente para importar o exportar, y a internet únicamente para enviar los comentarios y, en la versión de escritorio, para comprobar si hay actualizaciones (consulta un archivo público en GitHub, sin enviar ningún dato tuyo).</p>
       </InfoSection>
       <InfoSection title="Menores">
-        <p>Cuadra no está dirigida a menores de 14 años.</p>
+        <p>Zenit no está dirigida a menores de 14 años.</p>
       </InfoSection>
       <InfoSection title="Borrar tus datos">
         <p>Puedes borrarlos en cualquier momento desde Importar extracto → Borrar todos los datos, o desinstalando la app.</p>

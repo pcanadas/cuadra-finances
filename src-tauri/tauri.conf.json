@@ -1,9 +1,9 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Cuadra",
-  "version": "0.7.0",
+  "productName": "Zenit",
+  "version": "0.8.0",
   "identifier": "com.xyfos.cuadra",
-  "mainBinaryName": "Cuadra",
+  "mainBinaryName": "Zenit",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,7 +13,7 @@
   "app": {
     "windows": [
       {
-        "title": "Cuadra — Finanzas personales",
+        "title": "Zenit — Finanzas personales",
         "width": 1280,
         "height": 800,
         "minWidth": 900,

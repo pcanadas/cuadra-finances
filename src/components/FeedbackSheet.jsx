@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useBackHandler } from '../platform/back'
-import { isTauri } from '../platform'
+import { isTauri, isStore } from '../platform'
 import { composeEmail, sendFeedback } from '../platform/share'
 
 // Ventana "Comentarios": se envía al servidor de xyfos.com; si falla, se ofrece el correo
@@ -17,7 +17,7 @@ export default function FeedbackSheet({ onClose, onSent }) {
     import('@tauri-apps/api/app').then(({ getVersion }) => getVersion()).then(setVersion).catch(() => {})
   }, [])
 
-  const platform = navigator.userAgent.match(/Android [\d.]+/)?.[0] ?? 'escritorio'
+  const platform = navigator.userAgent.match(/Android [\d.]+/)?.[0] ?? (isStore ? 'escritorio (Microsoft Store)' : 'escritorio')
   const emailValid = !email.trim() || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
 
   async function send() {
@@ -28,7 +28,7 @@ export default function FeedbackSheet({ onClose, onSent }) {
   }
 
   function sendByEmail() {
-    composeEmail({ subject: 'Comentarios sobre Cuadra', body: `${text.trim()}\n\n—\nCuadra ${version} · ${platform}` })
+    composeEmail({ subject: 'Comentarios sobre Zenit', body: `${text.trim()}\n\n—\nZenit ${version} · ${platform}` })
     onClose()
   }
 

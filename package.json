@@ -1,7 +1,7 @@
 {
   "name": "cuadra-finances",
   "private": true,
-  "version": "0.7.0",
+  "version": "0.8.0",
   "license": "GPL-3.0-or-later",
   "type": "module",
   "scripts": {
@@ -18,7 +18,8 @@
     "android:dev": "tauri android dev",
     "android:build": "tauri android build --aab",
     "android:apk": "tauri android build --apk",
-    "licenses": "node scripts/gen-licenses.mjs"
+    "licenses": "node scripts/gen-licenses.mjs",
+    "store:build": "node scripts/build-msix.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.1",

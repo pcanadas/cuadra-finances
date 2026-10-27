@@ -7,6 +7,32 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
+## [Próxima versión] — sin publicar
+
+Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
+
+### Cambiado
+- **Cuadra pasa a llamarse Zenit** — nombre de la app en el móvil, textos y legales. El paquete sigue siendo `com.xyfos.cuadra`, así que se actualiza encima sin perder datos. Cambiar también el título de la ficha en Google Play
+- Copias de seguridad como `zenit-backup-AAAA-MM-DD.json`
+
+### Añadido
+- **Extractos con cabeceras en inglés** (CSV y Excel): Date, Description, Amount, Debit / Credit, fechas de EE. UU. y con el mes en letras…
+
+### Corregido
+- **Modo oscuro** — algunos textos se oscurecían al tocarlos
+- Política de privacidad actualizada (comentarios y actualizaciones en la versión de escritorio)
+
+### Notas para Google Play
+```
+<es-ES>
+• Cuadra ahora se llama Zenit: misma app y tus datos de siempre
+• Importa extractos con las columnas en inglés (Revolut, N26, Wise…)
+• Mejoras en el modo oscuro
+</es-ES>
+```
+
+---
+
 ## [1.1.3] — 2026-10-24
 
 ### Añadido

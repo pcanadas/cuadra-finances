@@ -48,8 +48,8 @@ export async function shareText({ title, text }) {
 
 export function recommendApp() {
   return shareText({
-    title: 'Recomendar Cuadra',
-    text: `Te recomiendo Cuadra, una app gratuita para llevar tus finanzas personales: gastos, ingresos y presupuestos, sin anuncios y con tus datos solo en tu móvil.\n${PLAY_STORE_URL}`,
+    title: 'Recomendar Zenit',
+    text: `Te recomiendo Zenit, una app gratuita para llevar tus finanzas personales: gastos, ingresos y presupuestos, sin anuncios y con tus datos solo en tu móvil.\n${PLAY_STORE_URL}`,
   })
 }
 

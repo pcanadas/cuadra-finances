@@ -58,5 +58,5 @@ export async function exportFullBackup() {
     db.recurringExpenses.toArray(),
   ])
   const payload = { version: 1, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats, accounts: accs, budgets: budgs, recurringExpenses: recs }
-  await saveBackupJson(`cuadra-backup-${today()}.json`, JSON.stringify(payload, null, 2))
+  await saveBackupJson(`zenit-backup-${today()}.json`, JSON.stringify(payload, null, 2))
 }

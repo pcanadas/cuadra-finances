@@ -6,7 +6,7 @@ export default function Terminos() {
   return (
     <InfoPage title="Términos de uso" updated="22 de octubre de 2026">
       <InfoSection title="Titular">
-        <p>Cuadra es una aplicación gratuita y sin ánimo comercial desarrollada por {DEVELOPER}. Al usarla aceptas estos términos.</p>
+        <p>Zenit es una aplicación gratuita y sin ánimo comercial desarrollada por {DEVELOPER}. Al usarla aceptas estos términos.</p>
       </InfoSection>
       <InfoSection title="Información orientativa">
         <p>Los totales, gráficos, previsiones y categorías se calculan a partir de los datos que introduces o importas. Son orientativos y <strong>no constituyen asesoramiento financiero, fiscal ni legal</strong>. Comprueba siempre las cifras importantes con tu banco.</p>
@@ -19,7 +19,7 @@ export default function Terminos() {
         <p>En la medida permitida por la ley, el titular no responde de los daños derivados de su uso. Esto no limita la responsabilidad que no pueda excluirse legalmente, como la derivada de dolo o culpa grave, ni los derechos que te correspondan como consumidor.</p>
       </InfoSection>
       <InfoSection title="Código abierto">
-        <p>El código de Cuadra es público bajo licencia GNU GPL v3 o posterior, que regula su reutilización. El nombre «Cuadra» y su logotipo no están incluidos en esa licencia.</p>
+        <p>El código de Zenit es público bajo licencia GNU GPL v3 o posterior, que regula su reutilización. El nombre «Zenit» y su logotipo no están incluidos en esa licencia.</p>
       </InfoSection>
       <InfoSection title="Ley aplicable">
         <p>Estos términos se rigen por la legislación española. Si actúas como consumidor, podrás acudir a los tribunales de tu domicilio.</p>

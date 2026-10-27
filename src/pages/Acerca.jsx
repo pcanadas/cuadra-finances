@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
 import { version as APP_VERSION } from '../../package.json'
 import { Link } from 'react-router-dom'
-import { isTauri as IS_TAURI, isMobile, deviceName } from '../platform'
+import { isTauri as IS_TAURI, isMobile, isStore, deviceName } from '../platform'
 import { SUPPORT_EMAIL, DEVELOPER } from '../platform/share'
 
 export default function Acerca() {
@@ -60,7 +60,7 @@ export default function Acerca() {
   return (
     <div className="max-w-lg mx-auto py-6 lg:py-16 lg:px-4 flex flex-col items-center gap-6 lg:gap-8">
       <div className="text-center">
-        <h1 className="text-4xl font-bold text-indigo-600 mb-1">Cuadra</h1>
+        <h1 className="text-4xl font-bold text-indigo-600 mb-1">Zenit</h1>
         <p className="text-slate-500 text-sm">Finanzas personales</p>
         <p className="mt-3 text-xs text-slate-400 font-mono">v{version}</p>
       </div>
@@ -73,8 +73,8 @@ export default function Acerca() {
 
         <div className="border-t border-slate-100" />
 
-        {isMobile ? (
-          <p className="text-center text-sm text-slate-500">Las actualizaciones llegan a través de Google Play.</p>
+        {isMobile || isStore ? (
+          <p className="text-center text-sm text-slate-500">Las actualizaciones llegan a través de {isMobile ? 'Google Play' : 'Microsoft Store'}.</p>
         ) : (
         <div className="flex flex-col gap-2">
           <button
@@ -120,7 +120,7 @@ export default function Acerca() {
 
       <div className="w-full bg-white border border-slate-200 rounded-2xl p-5 space-y-3 text-sm text-slate-600 leading-relaxed">
         <p>
-          Cuadra es una app de <strong className="text-slate-800">{DEVELOPER}</strong> para llevar tus finanzas personales:
+          Zenit es una app de <strong className="text-slate-800">{DEVELOPER}</strong> para llevar tus finanzas personales:
           gratuita, sin anuncios, sin cuentas y con tus datos solo en tu {deviceName}.
         </p>
         <p>Contacto: <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span></p>
