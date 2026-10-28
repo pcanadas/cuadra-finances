@@ -14,6 +14,7 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 ### Cambiado
 - **Cuadra pasa a llamarse Zenit** — nombre de la app en el móvil, textos y legales. El paquete sigue siendo `com.xyfos.cuadra`, así que se actualiza encima sin perder datos. Cambiar también el título de la ficha en Google Play
 - Copias de seguridad como `zenit-backup-AAAA-MM-DD.json`
+- **Base de datos preparada para sincronizar (modelo v4)** — se actualiza sola al abrir la app por primera vez, con copia de seguridad automática antes; no cambia nada visible (ver `CHANGELOG.md` 0.9.0)
 
 ### Añadido
 - **Cuenta destino en categorías de traspaso, también hacia atrás** — p. ej. Cajero → Efectivo: cada retirada aparece como entrada en Efectivo (sin contar como ingreso)
@@ -23,6 +24,8 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 - **Duplicados al importar extractos que se solapan** (contaban doble) y **pendientes de Bankinter** guardados con saldo 0: ahora se completan al importar el siguiente extracto
 - **Inconsistencias falsas** en la comprobación de saldos de Cuentas
 - **Modo oscuro** — algunos textos se oscurecían al tocarlos
+- **Cuentas** — los movimientos anteriores al primer extracto (manuales o traspasos) no salían en la evolución del saldo
+- Restaurar una copia desde archivo fallaba si tenía gastos fijos
 - Política de privacidad actualizada (comentarios y actualizaciones en la versión de escritorio)
 
 ### Notas para Google Play

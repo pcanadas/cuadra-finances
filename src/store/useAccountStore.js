@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import db from '../db/db'
+import db, { live, softDelete } from '../db/db'
+import { newId } from '../db/ids'
 
 const DEFAULT_ACCOUNTS = [
   { id: 'acc-1', nombre: 'Cuenta principal', tipo: 'banco',    color: '#6366f1' },
@@ -11,7 +12,7 @@ const useAccountStore = create((set, get) => ({
   loaded: false,
 
   loadFromDB: async () => {
-    const stored = await db.accounts.toArray()
+    const stored = await live(db.accounts)
     if (stored.length === 0) {
       await db.accounts.bulkPut(DEFAULT_ACCOUNTS)
       set({ accounts: DEFAULT_ACCOUNTS, loaded: true })
@@ -21,7 +22,7 @@ const useAccountStore = create((set, get) => ({
   },
 
   addAccount: async (account) => {
-    const newAccount = { ...account, id: `acc-${Date.now()}` }
+    const newAccount = { ...account, id: newId() }
     await db.accounts.put(newAccount)
     set((s) => ({ accounts: [...s.accounts, newAccount] }))
   },
@@ -34,7 +35,7 @@ const useAccountStore = create((set, get) => ({
   },
 
   deleteAccount: async (id) => {
-    await db.accounts.delete(id)
+    await softDelete(db.accounts, [id])
     set((s) => ({ accounts: s.accounts.filter((a) => a.id !== id) }))
   },
 }))

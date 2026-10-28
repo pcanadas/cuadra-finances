@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.9.0] — sin publicar
+
+### Cambiado
+- **Base de datos preparada para sincronizar entre dispositivos (modelo v4)** — se actualiza sola la primera vez que se abre la app (unos segundos con años de movimientos), con una copia de seguridad automática antes («auto: antes de actualizar la base de datos»). No cambia nada de lo que ves. Cada registro guarda cuándo se modificó y desde qué dispositivo; los movimientos, si son manuales o importados y una huella (fecha, concepto e importe) para reconocer el mismo movimiento en otro dispositivo; los registros nuevos usan identificadores únicos (UUID v7). Al borrar un movimiento, categoría, cuenta, presupuesto o gasto fijo queda una marca de borrado sin su contenido, para que en el futuro el borrado llegue a los demás dispositivos. «Borrar todos los datos» y restaurar una copia lo siguen borrando todo por completo
+- Las copias de seguridad de cualquier versión anterior se completan al restaurarlas
+
+### Corregido
+- **Restaurar una copia desde archivo fallaba si tenía gastos fijos** y no borraba los gastos fijos que había antes
+- **Cuentas no mostraba lo anterior al primer extracto** — en una cuenta con extractos importados, los movimientos manuales y los traspasos desde otras cuentas con fecha anterior al primer extracto no salían en el gráfico ni en el saldo inicial. Ahora aparecen, con su saldo calculado hacia atrás desde el primer saldo del banco, y un aviso indica cuántos son
+
 ## [0.8.0] — 2026-10-27
 
 ### Cambiado

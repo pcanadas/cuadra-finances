@@ -1,4 +1,5 @@
-import db from '../db/db'
+import db, { live, replaceAllData } from '../db/db'
+import { snapshot } from '../db/records'
 
 const MAX_BACKUPS = 10
 
@@ -8,26 +9,15 @@ const MAX_BACKUPS = 10
  */
 export async function createBackup(reason = 'manual') {
   const [transactions, categories, subcategories, accounts, budgets, recurringExpenses] = await Promise.all([
-    db.transactions.toArray(),
-    db.categories.toArray(),
-    db.subcategories.toArray(),
-    db.accounts.toArray(),
-    db.budgets.toArray(),
-    db.recurringExpenses.toArray(),
+    live(db.transactions),
+    live(db.categories),
+    live(db.subcategories),
+    live(db.accounts),
+    live(db.budgets),
+    live(db.recurringExpenses),
   ])
 
-  const backup = {
-    id: `bk-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    createdAt: new Date().toISOString(),
-    reason,
-    stats: {
-      transactions: transactions.length,
-      categories: categories.length,
-      subcategories: subcategories.length,
-      accounts: accounts.length,
-    },
-    data: { transactions, categories, subcategories, accounts, budgets, recurringExpenses },
-  }
+  const backup = snapshot(reason, { transactions, categories, subcategories, accounts, budgets, recurringExpenses })
 
   await db.backups.put(backup)
 
@@ -59,22 +49,7 @@ export async function restoreBackup(backupId) {
   // Auto-backup current state before overwriting
   await createBackup('auto: antes de restaurar')
 
-  const { transactions, categories, subcategories, accounts, budgets, recurringExpenses } = backup.data
-
-  await db.transaction('rw', db.transactions, db.categories, db.subcategories, db.accounts, db.budgets, db.recurringExpenses, async () => {
-    await db.transactions.clear()
-    await db.categories.clear()
-    await db.subcategories.clear()
-    await db.accounts.clear()
-    await db.budgets.clear()
-    await db.recurringExpenses.clear()
-    if (transactions?.length)       await db.transactions.bulkPut(transactions)
-    if (categories?.length)         await db.categories.bulkPut(categories)
-    if (subcategories?.length)      await db.subcategories.bulkPut(subcategories)
-    if (accounts?.length)           await db.accounts.bulkPut(accounts)
-    if (budgets?.length)            await db.budgets.bulkPut(budgets)
-    if (recurringExpenses?.length)  await db.recurringExpenses.bulkPut(recurringExpenses)
-  })
+  await replaceAllData(backup.data)
 }
 
 /**
@@ -90,6 +65,7 @@ export async function deleteBackup(backupId) {
 export function backupToJson(backup) {
   return {
     version: 1,
+    schemaVersion: 4,
     exportedAt: backup.createdAt,
     transactions: backup.data.transactions,
     categories: backup.data.categories,

@@ -4,6 +4,9 @@
  * destination account so the money flow is reflected on both sides.
  */
 
+import { newId } from '../db/ids'
+import { isManualTx } from '../db/records'
+
 const DAY_MS = 86_400_000
 
 // ── helpers ────────────────────────────────────────────────────────────────
@@ -50,7 +53,7 @@ export function pairImportedTransfers(rows, transferCatIds, defaultTransferCatId
 
     const in1 = out[best]
     const categoria = [out1, in1].map((t) => t.categoria).find((c) => transferCatIds.has(c)) ?? defaultTransferCatId
-    const pairId = `tp-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`
+    const pairId = newId()
     for (const t of [out1, in1]) {
       if (!transferCatIds.has(t.categoria)) { t.categoria = categoria; t.subcategoria = null }
       t.transferPairId = pairId
@@ -123,7 +126,7 @@ export async function handleTransferPairing(
   const destAccount = accounts.find((a) => a.id === destAccountId)
   if (!destAccount) return
 
-  const pairId = `tp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  const pairId = newId()
 
   // Mark the original transaction
   await actions.updateTransaction(tx.id, { transferPairId: pairId })
@@ -209,14 +212,12 @@ export function planTransferSync(transactions, categories, subcategories, accoun
     byPair.get(t.transferPairId).push(t)
   }
   const partnerOf = (t) => (t.transferPairId ? (byPair.get(t.transferPairId) ?? []).find((x) => x.id !== t.id) : null)
-  const isManual = (t) => String(t.id).startsWith('tx-manual')
+  const isManual = isManualTx
 
   const add = []
   const update = new Map()
   const remove = new Set()
   const claimed = new Set()
-  const stamp = Date.now()
-  let n = 0
   const change = (t, changes) => update.set(t.id, { ...update.get(t.id), ...changes })
 
   for (const tx of transactions) {
@@ -240,7 +241,7 @@ export function planTransferSync(transactions, categories, subcategories, accoun
       continue
     }
 
-    const pairId = `tp-${stamp}-${n++}-${Math.random().toString(36).slice(2, 6)}`
+    const pairId = newId()
     change(tx, { transferPairId: pairId })
 
     if (destAccount.tipo !== 'efectivo') {
@@ -259,8 +260,9 @@ export function planTransferSync(transactions, categories, subcategories, accoun
 
     const origin = accountById.get(tx.accountId)?.nombre || 'otra cuenta'
     add.push({
-      id: `tx-manual-${stamp}-${n}-${Math.random().toString(36).slice(2, 6)}`,
+      id: newId(),
       esManual: true,
+      origen: 'manual',
       esContrapartida: true,
       fechaContable: tx.fechaContable,
       descripcion: tx.importe < 0 ? `Traspaso desde ${origin}` : `Traspaso a ${origin}`,

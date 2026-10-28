@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import db from '../db/db'
+import db, { live, softDelete } from '../db/db'
+import { newId } from '../db/ids'
 
 // Categorías iniciales (solo se crean en una instalación nueva).
 // La categorización usa la PRIMERA categoría cuya palabra clave aparece en el concepto,
@@ -35,7 +36,7 @@ const useCategoryStore = create((set, get) => ({
   loaded: false,
 
   loadFromDB: async () => {
-    const stored = await db.categories.toArray()
+    const stored = await live(db.categories)
     if (stored.length === 0) {
       // First run: seed defaults
       await db.categories.bulkPut(DEFAULT_CATEGORIES)
@@ -67,7 +68,7 @@ const useCategoryStore = create((set, get) => ({
   },
 
   addCategory: async (category) => {
-    const newCat = { ...category, id: `cat-${Date.now()}` }
+    const newCat = { ...category, id: newId() }
     await db.categories.put(newCat)
     set((state) => ({ categories: [...state.categories, newCat] }))
   },
@@ -92,7 +93,7 @@ const useCategoryStore = create((set, get) => ({
   },
 
   deleteCategory: async (id) => {
-    await db.categories.delete(id)
+    await softDelete(db.categories, [id])
     set((state) => ({ categories: state.categories.filter((c) => c.id !== id) }))
   },
 

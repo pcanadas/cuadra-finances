@@ -6,6 +6,7 @@ import useAccountStore from '../store/useAccountStore'
 import { useBackHandler } from '../platform/back'
 import { isMobile } from '../platform'
 import { getCategoryIcon } from '../utils/categoryIcons'
+import { newId } from '../db/ids'
 
 const LAST_ACCOUNT_KEY = 'cuadra.quickAdd.lastAccount'
 
@@ -114,7 +115,7 @@ export default function QuickAdd({ initialTipo = 'gasto', onClose, onSaved }) {
     if (tipo === 'transferencia') {
       const origen = accounts.find((a) => a.id === accountId)
       const destino = accounts.find((a) => a.id === destinoId)
-      const pairId = `tp-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      const pairId = newId()
       const base = { fechaContable: fecha, categoria: transferCat?.id ?? null, categoriaManual: true, transferPairId: pairId, notas }
       await addManualTransaction({ ...base, descripcion: notas || `Traspaso a ${destino?.nombre}`, importe: -amount, accountId })
       await addManualTransaction({ ...base, descripcion: notas || `Traspaso desde ${origen?.nombre}`, importe: amount, accountId: destinoId, esContrapartida: true })

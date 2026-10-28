@@ -1,5 +1,6 @@
 import Papa from 'papaparse'
 import * as XLSX from 'xlsx'
+import { newId } from '../db/ids'
 
 // Columnas de cargo y abono por separado (en vez de un único importe con signo)
 const DEBIT_COL_RE = /^(cargos?|debe|reintegros?|debits?|debit amount|withdrawals?|paid out|money out)\b/i
@@ -315,7 +316,8 @@ export function mapRows(rows, mapping) {
   const dates = rows.flatMap((r) => [r[mapping.fechaContable], mapping.fechaValor ? r[mapping.fechaValor] : ''])
   const dayFirst = detectDayFirst(dates)
   return rows.map((row, i) => ({
-    id: `tx-${Date.now()}-${i}-${Math.random().toString(36).slice(2)}`,
+    id: newId(),
+    origen: 'importado',
     bankRowIndex: i,
     fechaContable: parseDate(row[mapping.fechaContable], dayFirst),
     fechaValor: mapping.fechaValor ? parseDate(row[mapping.fechaValor], dayFirst) : '',

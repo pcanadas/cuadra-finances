@@ -26,7 +26,8 @@ describe('mapRows', () => {
     expect(result[0].importe).toBeCloseTo(-45.30)
     expect(result[0].saldo).toBeCloseTo(1234.56)
     expect(result[0].categoria).toBeNull()
-    expect(result[0].id).toMatch(/^tx-/)
+    expect(result[0].id).toMatch(/^[0-9a-f-]{36}$/)
+    expect(result[0].origen).toBe('importado')
   })
 
   it('parses Spanish thousands format', () => {

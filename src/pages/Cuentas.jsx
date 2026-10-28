@@ -15,7 +15,7 @@ import useAccountStore from '../store/useAccountStore'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isMobile } from '../platform'
-import { checkBalances, findDuplicates } from '../utils/bankBalance'
+import { balanceHistory, checkBalances, findDuplicates } from '../utils/bankBalance'
 import { createBackup } from '../utils/backupManager'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -316,11 +316,10 @@ export default function Cuentas() {
     })
   }, [allAccountTxs])
 
-  // Movimientos con saldo del banco (sin pendientes) — orden de fecha para gráfico y estadísticas
-  const accountTxsDateSorted = useMemo(() => {
-    const valid = new Set(check.withBalance)
-    return allAccountTxsDateSorted.filter((t) => valid.has(t))
-  }, [allAccountTxsDateSorted, check])
+  // Movimientos con saldo del banco (sin pendientes) y los anteriores al primer extracto,
+  // con el saldo calculado hacia atrás — orden de fecha para gráfico y estadísticas
+  const history = useMemo(() => balanceHistory(allAccountTxsDateSorted, check.withBalance), [allAccountTxsDateSorted, check])
+  const accountTxsDateSorted = history.series
 
   // Synthetic mode: no real saldo but there are manual transactions
   const isSynthetic = accountTxsDateSorted.length === 0 && allAccountTxsDateSorted.length > 0
@@ -382,9 +381,9 @@ export default function Cuentas() {
       lastSaldo:  last.saldo,
       change:     last.saldo - first.saldo,
       txCount:    allAccountTxsDateSorted.length,
-      withSaldo:  accountTxsDateSorted.length,
+      withSaldo:  check.withBalance.length,
     }
-  }, [accountTxsDateSorted, syntheticTxs, isSynthetic, saldoInicial, allAccountTxsDateSorted])
+  }, [accountTxsDateSorted, syntheticTxs, isSynthetic, saldoInicial, allAccountTxsDateSorted, check])
 
   const yMin = useMemo(() => {
     if (!chartData.length) return 'auto'
@@ -448,6 +447,12 @@ export default function Cuentas() {
                   className="w-28 border border-blue-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
                 />
               </div>
+            </div>
+          )}
+          {history.calculated > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 text-sm text-blue-700">
+              <span className="font-semibold">{history.calculated} movimiento{history.calculated !== 1 ? 's' : ''} anterior{history.calculated !== 1 ? 'es' : ''} al primer extracto</span>
+              {' '}— su saldo se calcula hacia atrás desde el primer saldo del banco.
             </div>
           )}
           {/* Stats row */}

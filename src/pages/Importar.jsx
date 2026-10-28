@@ -6,7 +6,7 @@ import useAccountStore from '../store/useAccountStore'
 import { parseFile, mapRows, guessMapping } from '../utils/importParsers'
 import { autoCategorize } from '../utils/categorize'
 import { handleTransferPairing, pairImportedTransfers } from '../utils/transferPairing'
-import db from '../db/db'
+import { replaceAllData } from '../db/db'
 import { exportFullBackup, saveBackupJson } from '../utils/exportData'
 import { isMobile } from '../platform'
 import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } from '../utils/backupManager'
@@ -56,19 +56,7 @@ export default function Importar() {
       const payload = JSON.parse(text)
       if (!payload.version || !payload.transactions || !payload.categories) throw new Error('Formato de backup no válido')
       await createBackup('auto: antes de restaurar archivo')
-      await db.transaction('rw', db.transactions, db.categories, db.subcategories, db.accounts, db.budgets, async () => {
-        await db.transactions.clear()
-        await db.categories.clear()
-        await db.subcategories.clear()
-        await db.accounts.clear()
-        await db.budgets.clear()
-        if (payload.transactions.length)  await db.transactions.bulkPut(payload.transactions)
-        if (payload.categories.length)    await db.categories.bulkPut(payload.categories)
-        if (payload.subcategories?.length) await db.subcategories.bulkPut(payload.subcategories)
-        if (payload.accounts?.length)     await db.accounts.bulkPut(payload.accounts)
-        if (payload.budgets?.length)            await db.budgets.bulkPut(payload.budgets)
-        if (payload.recurringExpenses?.length)  await db.recurringExpenses.bulkPut(payload.recurringExpenses)
-      })
+      await replaceAllData(payload)
       // Reload all stores from DB
       await Promise.all([
         useTransactionStore.getState().loadFromDB(),

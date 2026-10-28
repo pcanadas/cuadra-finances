@@ -9,6 +9,8 @@
  * Todas las funciones reciben los movimientos de UNA cuenta.
  */
 
+import { isManualTx } from '../db/records'
+
 const DAY = 86_400_000
 export const WINDOW_DAYS = 31     // el banco puede anotar un movimiento con fecha bastante anterior
 const WINDOW_COUNT = 50           // o entre los 50 movimientos más cercanos por fecha (cuentas con poco movimiento)
@@ -21,7 +23,7 @@ const movementKey = (t) => `${t.fechaContable}|${t.descripcion}|${t.importe}`
 const normalize = (s) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 
 /** Movimiento traído de un extracto (no apuntado a mano). */
-export const isImported = (t) => !String(t.id).startsWith('tx-manual')
+export const isImported = (t) => !isManualTx(t)
 
 /**
  * Pendiente del banco: aún sin saldo. Las versiones anteriores guardaban el saldo vacío
@@ -75,6 +77,29 @@ export function checkBalances(txs, { windowDays = WINDOW_DAYS, windowCount = WIN
     .filter((t) => t !== first && !hasPrev(t))
     .sort((a, b) => a.fechaContable.localeCompare(b.fechaContable))
   return { issues, pending, withBalance }
+}
+
+/**
+ * Evolución del saldo de una cuenta con extractos: los movimientos con saldo del banco y,
+ * antes del primero, los apuntados a mano o traspasados desde otras cuentas, con el saldo
+ * calculado hacia atrás desde el primer saldo del banco.
+ * @param sorted todos los movimientos de la cuenta, por fecha
+ * @param withBalance los de saldo válido (de checkBalances)
+ * @returns {{ series: object[], calculated: number }} series por fecha, cada uno con `saldo`
+ */
+export function balanceHistory(sorted, withBalance) {
+  const valid = new Set(withBalance)
+  const banked = sorted.filter((t) => valid.has(t))
+  if (!banked.length) return { series: [], calculated: 0 }
+  const anchor = banked[0]
+  const earlier = sorted.filter((t) => !valid.has(t) && !isPending(t) && t.fechaContable < anchor.fechaContable)
+  let running = cents(anchor.saldo - anchor.importe)
+  const computed = []
+  for (let i = earlier.length - 1; i >= 0; i--) {
+    computed.unshift({ ...earlier[i], saldo: running / 100 })
+    running -= cents(earlier[i].importe ?? 0)
+  }
+  return { series: [...computed, ...banked], calculated: computed.length }
 }
 
 /**

@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import db from '../db/db'
+import db, { live, softDelete } from '../db/db'
+import { newId } from '../db/ids'
 
 // Subcategorías iniciales: se crean una sola vez (también en instalaciones existentes),
 // solo si existen su categoría y su cuenta destino, y no se vuelven a crear si el usuario las borra.
@@ -14,14 +15,11 @@ const useSubcategoryStore = create((set) => ({
   loaded: false,
 
   loadFromDB: async () => {
-    let subcategories = await db.subcategories.toArray()
+    let subcategories = await live(db.subcategories)
     let seeded = false
     try { seeded = localStorage.getItem(SEED_KEY) === '1' } catch { /* sin almacenamiento */ }
     if (!seeded) {
-      const [catIds, accIds] = await Promise.all([
-        db.categories.toCollection().primaryKeys(),
-        db.accounts.toCollection().primaryKeys(),
-      ])
+      const [catIds, accIds] = (await Promise.all([live(db.categories), live(db.accounts)])).map((list) => list.map((r) => r.id))
       const toAdd = DEFAULT_SUBCATEGORIES.filter((s) =>
         catIds.includes(s.categoriaId) && (!s.cuentaDestinoId || accIds.includes(s.cuentaDestinoId)) &&
         !subcategories.some((x) => x.id === s.id))
@@ -35,7 +33,7 @@ const useSubcategoryStore = create((set) => ({
   },
 
   addSubcategory: async (subcat) => {
-    const newSub = { ...subcat, id: `subcat-${Date.now()}` }
+    const newSub = { ...subcat, id: newId() }
     await db.subcategories.put(newSub)
     set((state) => ({ subcategories: [...state.subcategories, newSub] }))
   },
@@ -48,7 +46,7 @@ const useSubcategoryStore = create((set) => ({
   },
 
   deleteSubcategory: async (id) => {
-    await db.subcategories.delete(id)
+    await softDelete(db.subcategories, [id])
     set((state) => ({ subcategories: state.subcategories.filter((s) => s.id !== id) }))
   },
 }))

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { checkBalances, findDuplicates, planImport } from './bankBalance'
+import { balanceHistory, checkBalances, findDuplicates, planImport } from './bankBalance'
 
 // Extracto encadenado: cada movimiento parte del saldo del anterior
 function statement(importId, start, moves, firstIndex = 0) {
@@ -124,5 +124,31 @@ describe('planImport', () => {
     const other = statement(90000, 100, MOVES.slice(0, 1)).map((t) => ({ ...t, accountId: 'acc-2' }))
     expect(planImport(legacy, other, 'acc-1').add).toHaveLength(1)
     expect(planImport(legacy, statement(90000, 100, MOVES.slice(0, 1)), 'acc-1').add).toHaveLength(0)
+  })
+})
+
+describe('balanceHistory', () => {
+  const manual = (fecha, importe, n) => ({ id: `tx-manual-${n}-x`, fechaContable: fecha, descripcion: 'A MANO', importe, saldo: null, accountId: 'acc-1' })
+  const sort = (list) => [...list].sort((a, b) => a.fechaContable.localeCompare(b.fechaContable))
+
+  it('computes earlier movements backwards from the first bank balance', () => {
+    const bank = statement(1, 100, MOVES) // saldo antes del primero: 100
+    const all = sort([manual('2026-09-10', 30, 1), manual('2026-09-20', -10, 2), ...bank])
+    const { series, calculated } = balanceHistory(all, checkBalances(all).withBalance)
+    expect(calculated).toBe(2)
+    expect(series.map((t) => t.saldo).slice(0, 3)).toEqual([110, 100, 2100])
+  })
+
+  it('leaves the bank balances untouched and ignores manual movements after the first statement', () => {
+    const bank = statement(1, 100, MOVES)
+    const all = sort([...bank, manual('2026-10-03', -20, 1)])
+    const { series, calculated } = balanceHistory(all, checkBalances(all).withBalance)
+    expect(calculated).toBe(0)
+    expect(series).toEqual(bank)
+  })
+
+  it('is empty without bank balances', () => {
+    const all = [manual('2026-09-10', 30, 1)]
+    expect(balanceHistory(all, checkBalances(all).withBalance)).toEqual({ series: [], calculated: 0 })
   })
 })

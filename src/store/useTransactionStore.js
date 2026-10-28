@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import db from '../db/db'
+import db, { live, softDelete } from '../db/db'
+import { newId } from '../db/ids'
 import { planImport } from '../utils/bankBalance'
 import { planTransferSync } from '../utils/transferPairing'
 
@@ -8,7 +9,7 @@ const useTransactionStore = create((set, get) => ({
   loaded: false,
 
   loadFromDB: async () => {
-    const transactions = await db.transactions.toArray()
+    const transactions = await live(db.transactions)
     set({ transactions, loaded: true })
   },
 
@@ -56,15 +57,16 @@ const useTransactionStore = create((set, get) => ({
   addManualTransaction: async (tx) => {
     const newTx = {
       ...tx,
-      id: `tx-manual-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: newId(),
       esManual: true,
+      origen: 'manual',
     }
     await db.transactions.put(newTx)
     set((state) => ({ transactions: [...state.transactions, newTx] }))
   },
 
   deleteTransaction: async (id) => {
-    await db.transactions.delete(id)
+    await softDelete(db.transactions, [id])
     set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) }))
   },
 
@@ -78,7 +80,7 @@ const useTransactionStore = create((set, get) => ({
     if (!add.length && !update.length && !remove.length) return { created: 0, linked: 0, removed: 0 }
     const changes = new Map(update.map((u) => [u.id, u.changes]))
     await db.transaction('rw', db.transactions, async () => {
-      if (remove.length) await db.transactions.bulkDelete(remove)
+      await softDelete(db.transactions, remove)
       for (const { id, changes: c } of update) await db.transactions.update(id, c)
       if (add.length) await db.transactions.bulkPut(add)
     })
@@ -96,10 +98,11 @@ const useTransactionStore = create((set, get) => ({
 
   deleteTransactions: async (ids) => {
     const remove = new Set(ids)
-    await db.transactions.bulkDelete([...remove])
+    await softDelete(db.transactions, [...remove])
     set((state) => ({ transactions: state.transactions.filter((t) => !remove.has(t.id)) }))
   },
 
+  // «Borrar todos los datos»: borrado completo, sin lápidas
   clearAll: async () => {
     await db.transactions.clear()
     set({ transactions: [] })

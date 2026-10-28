@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import db from '../db/db'
+import db, { live, softDelete } from '../db/db'
+import { newId } from '../db/ids'
 
 /**
  * Recurring expense record:
@@ -20,14 +21,14 @@ const useRecurringStore = create((set, get) => ({
   loaded: false,
 
   loadFromDB: async () => {
-    const items = await db.recurringExpenses.toArray()
+    const items = await live(db.recurringExpenses)
     set({ items, loaded: true })
   },
 
   addItem: async (item) => {
     const newItem = {
       ...item,
-      id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      id: newId(),
       activo: true,
     }
     await db.recurringExpenses.put(newItem)
@@ -42,7 +43,7 @@ const useRecurringStore = create((set, get) => ({
   },
 
   deleteItem: async (id) => {
-    await db.recurringExpenses.delete(id)
+    await softDelete(db.recurringExpenses, [id])
     set((s) => ({ items: s.items.filter((i) => i.id !== id) }))
   },
 }))

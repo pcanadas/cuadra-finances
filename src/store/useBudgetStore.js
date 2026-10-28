@@ -1,12 +1,13 @@
 import { create } from 'zustand'
-import db from '../db/db'
+import db, { live, softDelete } from '../db/db'
+import { newId } from '../db/ids'
 
 const useBudgetStore = create((set, get) => ({
   budgets: [],
   loaded: false,
 
   loadFromDB: async () => {
-    const budgets = await db.budgets.toArray()
+    const budgets = await live(db.budgets)
     set({ budgets, loaded: true })
   },
 
@@ -15,7 +16,7 @@ const useBudgetStore = create((set, get) => ({
     if (limite <= 0) {
       // Remove budget
       if (existing) {
-        await db.budgets.delete(existing.id)
+        await softDelete(db.budgets, [existing.id])
         set((s) => ({ budgets: s.budgets.filter((b) => b.id !== existing.id) }))
       }
       return
@@ -26,7 +27,7 @@ const useBudgetStore = create((set, get) => ({
         budgets: s.budgets.map((b) => (b.id === existing.id ? { ...b, limite } : b)),
       }))
     } else {
-      const newBudget = { id: `budget-${Date.now()}`, categoriaId, limite }
+      const newBudget = { id: newId(), categoriaId, limite }
       await db.budgets.put(newBudget)
       set((s) => ({ budgets: [...s.budgets, newBudget] }))
     }
