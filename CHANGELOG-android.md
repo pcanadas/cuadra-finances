@@ -17,6 +17,7 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 - **Base de datos preparada para sincronizar (modelo v4)** — se actualiza sola al abrir la app por primera vez, con copia de seguridad automática antes; no cambia nada visible (ver `CHANGELOG.md` 0.9.0)
 
 ### Añadido
+- **Disponible para gastar** en Inicio — cuánto te queda hasta fin de mes y cuánto al día (ingresos previstos − gastado − gastos fijos pendientes)
 - **Cuenta destino en categorías de traspaso, también hacia atrás** — p. ej. Cajero → Efectivo: cada retirada aparece como entrada en Efectivo (sin contar como ingreso)
 - **Extractos con cabeceras en inglés** (CSV y Excel): Date, Description, Amount, Debit / Credit, fechas de EE. UU. y con el mes en letras…
 

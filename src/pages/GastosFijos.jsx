@@ -6,22 +6,12 @@ import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
 import SelectSheet from '../components/SelectSheet'
 import { isTransferTx } from '../utils/transferPairing'
+import { fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
 
 const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 const PERIOD_LABELS = { mensual: 'Mensual', bimestral: 'Bimestral', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }
-const PERIOD_MONTHS = { mensual: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 }
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-
-/** Returns true if the item is due in the given month (0-11) */
-function isDueInMonth(item, month) {
-  if (item.periodicidad === 'mensual') return true
-  const ref = item.mesReferencia ?? 0 // 0-11
-  const interval = PERIOD_MONTHS[item.periodicidad] || 1
-  // Check if (month - ref) is a multiple of interval (mod 12)
-  const diff = ((month - ref) % 12 + 12) % 12
-  return diff % interval === 0
-}
 
 /** Returns the list of month indices (0-11) when the item is due */
 function getDueMonths(item) {
@@ -99,23 +89,7 @@ export default function GastosFijos() {
   // Only items due this month
   const dueThisMonth = useMemo(() => activeItems.filter((r) => isDueInMonth(r, currentMonth)), [activeItems, currentMonth])
 
-  const fixedStatus = useMemo(() => {
-    return dueThisMonth.map((r) => {
-      const isIncome = ingresoCatIds.has(r.categoriaId)
-      const pool = isIncome ? monthTx.filter((t) => t.importe > 0) : monthTx.filter((t) => t.importe < 0)
-      const tolerant = (t) => Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3
-      // Priority: subcategory > category > name words
-      const match = r.subcategoriaId
-        ? pool.find((t) => t.subcategoria === r.subcategoriaId && tolerant(t))
-        : r.categoriaId
-          ? pool.find((t) => t.categoria === r.categoriaId && tolerant(t))
-          : (() => {
-              const words = r.nombre.toUpperCase().split(/\s+/).filter((w) => w.length >= 4)
-              return words.length > 0 ? pool.find((t) => { const d = (t.descripcion || '').toUpperCase(); return words.every((w) => d.includes(w)) && tolerant(t) }) : null
-            })()
-      return { ...r, paid: !!match, paidAmount: match ? Math.abs(match.importe) : null, isIncome }
-    })
-  }, [dueThisMonth, monthTx, ingresoCatIds])
+  const fixedStatus = useMemo(() => fixedStatusForMonth(dueThisMonth, monthTx, ingresoCatIds), [dueThisMonth, monthTx, ingresoCatIds])
 
   // Suggestions: expenses in 3+ months, not already added, not dismissed
   const suggestions = useMemo(() => {

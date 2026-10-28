@@ -6,6 +6,8 @@ import PeriodPicker from '../components/PeriodPicker'
 import SelectSheet from '../components/SelectSheet'
 import { periodLabel } from '../utils/period'
 import { isTransferTx } from '../utils/transferPairing'
+import { activeInMonth, fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
+import { availableToSpend } from '../insights/available'
 import { deviceName } from '../platform'
 import { useTheme } from '../context/ThemeContext'
 import {
@@ -41,14 +43,6 @@ const formatYAxis = (v) => {
   return new Intl.NumberFormat('es-ES', { maximumFractionDigits: 0 }).format(v)
 }
 
-const PERIOD_MONTHS = { mensual: 1, bimestral: 2, trimestral: 3, semestral: 6, anual: 12 }
-function isDueInMonth(item, month) {
-  if (item.periodicidad === 'mensual') return true
-  const ref = item.mesReferencia ?? 0
-  const interval = PERIOD_MONTHS[item.periodicidad] || 1
-  return ((month - ref) % 12 + 12) % 12 % interval === 0
-}
-
 const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const MONTH_NAMES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
@@ -73,6 +67,44 @@ function SummaryCard({ title, value, subtitle, subtitleClass = '', valueClass = 
       <p className="text-[10px] lg:text-xs font-semibold uppercase tracking-wide text-slate-400 leading-tight">{title}</p>
       <p className={`text-base sm:text-xl lg:text-2xl font-bold leading-tight tabular-nums break-words ${valueClass}`}>{value}</p>
       {subtitle && <p className={`text-[11px] lg:text-xs text-slate-400 leading-tight ${subtitleClass}`}>{subtitle}</p>}
+    </div>
+  )
+}
+
+const INCOME_BASIS = {
+  fijos: (i) => (i.pendingFixed === 0 ? 'ya recibidos'
+    : i.received === 0 ? 'ingresos fijos por cobrar'
+    : `${formatEur(i.received)} recibidos + ${formatEur(i.pendingFixed)} fijos por cobrar`),
+  media: (i) => `tu media de los últimos ${i.months} meses`,
+  recibidos: () => 'ya recibidos',
+}
+
+/** Disponible para gastar hasta fin de mes (ver insights/available.js). */
+function AvailableCard({ available: a }) {
+  const over = a.total < 0
+  return (
+    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 ${over ? 'border-t-rose-300' : 'border-t-violet-300'} p-4 lg:p-6`}>
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
+        <div>
+          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">💶 {over ? 'Te has pasado este mes' : 'Disponible para gastar'}</p>
+          <p className={`text-3xl font-bold mt-1 ${over ? 'text-rose-500' : 'text-violet-600'}`}>{formatEur(Math.abs(a.total))}</p>
+        </div>
+        <p className="text-sm text-slate-500 pb-1">
+          {over
+            ? 'Has gastado más de lo que vas a ingresar este mes'
+            : <><strong className="text-slate-700">{formatEur(a.perDay)} al día</strong> · {a.daysLeft === 1 ? 'último día del mes' : `quedan ${a.daysLeft} días`}</>}
+        </p>
+      </div>
+      <p className="text-xs text-slate-400 mt-3 leading-relaxed">
+        Ingresos {formatEur(a.income.expected)} <span className="text-slate-400">({INCOME_BASIS[a.income.basis](a.income)})</span>
+        {' '}− gastado {formatEur(a.spent)}
+        {a.pendingFixed > 0 && <> − {a.pendingFixedCount === 1 ? '1 gasto fijo pendiente' : `${a.pendingFixedCount} gastos fijos pendientes`} {formatEur(a.pendingFixed)}</>}
+      </p>
+      {a.income.basis === 'media' && (
+        <p className="text-xs text-slate-400 mt-1">
+          Para afinarlo, añade tu nómina en <Link to="/gastos-fijos" className="text-indigo-500 hover:text-indigo-700 font-medium">Gastos fijos</Link>.
+        </p>
+      )}
     </div>
   )
 }
@@ -297,7 +329,7 @@ export default function Dashboard() {
   }, [gastosTx])
 
   // ── previsión: mes elegido (o el actual en la vista anual del año en curso) ──
-  const today = new Date()
+  const [today] = useState(() => new Date()) // fijo mientras la página está abierta
   const forecastMonth = selectedMonth ?? (selectedYear === today.getFullYear() ? today.getMonth() : null)
   const currentMonth = forecastMonth ?? today.getMonth()
   const currentYear  = selectedYear
@@ -531,10 +563,10 @@ export default function Dashboard() {
   const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 
   // Fixed items still in force during the forecast month
-  const activeRecurring = useMemo(() => {
-    const monthStart = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-01`
-    return recurringItems.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= monthStart))
-  }, [recurringItems, currentYear, currentMonth])
+  const activeRecurring = useMemo(
+    () => activeInMonth(recurringItems, currentYear, currentMonth),
+    [recurringItems, currentYear, currentMonth],
+  )
 
   // Only items due this month
   const dueThisMonth = useMemo(
@@ -560,24 +592,9 @@ export default function Dashboard() {
   const fixedStatus = useMemo(() => {
     const monthTx = transactions.filter((t) => {
       const d = new Date(t.fechaContable)
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear
+      return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !isTransferTx(t, transferCatIds)
     })
-
-    return dueThisMonth.map((r) => {
-      const isIncome = ingresoCatIds.has(r.categoriaId)
-      const own = monthTx.filter((t) => !isTransferTx(t, transferCatIds))
-      const pool = isIncome ? own.filter((t) => t.importe > 0) : own.filter((t) => t.importe < 0)
-      const tolerant = (t) => Math.abs(Math.abs(t.importe) - r.importe) < r.importe * 0.3
-      const match = r.subcategoriaId
-        ? pool.find((t) => t.subcategoria === r.subcategoriaId && tolerant(t))
-        : r.categoriaId
-          ? pool.find((t) => t.categoria === r.categoriaId && tolerant(t))
-          : (() => {
-              const words = r.nombre.toUpperCase().split(/\s+/).filter((w) => w.length >= 4)
-              return words.length > 0 ? pool.find((t) => { const d = (t.descripcion || '').toUpperCase(); return words.every((w) => d.includes(w)) && tolerant(t) }) : null
-            })()
-      return { ...r, paid: !!match, paidAmount: match ? Math.abs(match.importe) : null }
-    })
+    return fixedStatusForMonth(dueThisMonth, monthTx, ingresoCatIds)
   }, [dueThisMonth, transactions, currentMonth, currentYear, ingresoCatIds, transferCatIds])
 
   // Total expenses this month minus what's been identified as fixed payments = variable
@@ -594,7 +611,14 @@ export default function Dashboard() {
   }, [transactions, currentYear, currentMonth, transferCatIds, ingresoCatIds])
 
   const variableSpentThisMonth = totalSpentThisMonth - fixedPaidTotal
-  const availableEstimate = fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
+
+  // Disponible para gastar hasta fin de mes (solo el mes en curso)
+  const available = useMemo(
+    () => (forecastWhen === 0 ? availableToSpend({ transactions, transferCatIds, ingresoCatIds, recurringItems }) : null),
+    [forecastWhen, transactions, transferCatIds, ingresoCatIds, recurringItems],
+  )
+  const availableEstimate = available ? available.total : fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
+  const showAvailable = available && selectedMonth === today.getMonth() && selectedYear === today.getFullYear()
 
   // ── empty state ──
   if (transactions.length === 0) return <Welcome />
@@ -624,6 +648,8 @@ export default function Dashboard() {
             : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle="Media por día" subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
         </div>
       </div>
+
+      {showAvailable && <AvailableCard available={available} />}
 
       {/* ── Recordatorio de copia de seguridad ── */}
       {showBackupReminder && (
