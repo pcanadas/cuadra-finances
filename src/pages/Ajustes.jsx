@@ -119,7 +119,7 @@ function AppLockSetting() {
         <div>
           <h2 className="text-sm font-semibold text-slate-700">🔒 Bloquear Zenit</h2>
           <p className="text-xs text-slate-500 mt-1">
-            Pide {bio ? `tu ${bio} o ` : ''}el PIN, patrón o contraseña del móvil para entrar. Zenit no guarda ninguna contraseña ni huella: lo comprueba Android.
+            Pide {bio ? `tu ${bio} o ` : ''}el PIN, patrón o contraseña del móvil al abrir Zenit. Zenit no guarda ninguna contraseña ni huella: lo comprueba Android.
           </p>
         </div>
         <button role="switch" aria-checked={on} onClick={toggle} aria-label="Bloquear Zenit"
@@ -130,8 +130,8 @@ function AppLockSetting() {
       {message && <p className="text-xs text-amber-700 mt-3">{message}</p>}
       {on && (
         <div className="flex items-center justify-between gap-3 mt-3">
-          <span className="text-xs text-slate-500">Volver a pedirlo al salir de la app</span>
-          <SelectSheet title="Volver a pedirlo" value={String(delay)} className="text-xs"
+          <span className="text-xs text-slate-500">Cuándo pedirlo</span>
+          <SelectSheet title="Cuándo pedirlo" value={String(delay)} className="text-xs"
             onChange={(v) => { setDelay(Number(v)); setLockDelay(Number(v)) }}
             options={LOCK_DELAYS.map((d) => ({ value: String(d.value), label: d.label }))} />
         </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { setSystemBarsDark } from '../platform/appLock'
 
 export function useDarkMode() {
   const [dark, setDark] = useState(() => {
@@ -11,7 +12,7 @@ export function useDarkMode() {
     document.documentElement.classList.toggle('dark', dark)
     localStorage.setItem('cuadra-theme', dark ? 'dark' : 'light')
     // Android: iconos de la barra de estado y de navegación acordes al tema (MainActivity.kt)
-    window.CuadraTheme?.set(dark)
+    setSystemBarsDark(dark)
   }, [dark])
 
   return [dark, setDark]

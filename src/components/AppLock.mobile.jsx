@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { authenticateUser, getLockDelay, isAppLockEnabled, isAuthBusy, isAuthInProgress, setAppLockEnabled } from '../platform/appLock'
+import { ONLY_ON_OPEN, authenticateUser, getLockDelay, isAppLockEnabled, isAuthBusy, isAuthInProgress, setAppLockEnabled, setScreenLocked } from '../platform/appLock'
 
 /**
- * Pantalla de bloqueo (solo Android, si está activado en Ajustes): al abrir la app y al volver
- * a ella tras el tiempo elegido. Tapa la app sin desmontarla, así no se pierde lo que estuviera
+ * Pantalla de bloqueo (solo Android, si está activado en Ajustes): al abrir la app y, si se ha
+ * elegido, también al volver a ella tras estar fuera un tiempo. Nunca al salir. Tapa la app sin desmontarla, así no se pierde lo que estuviera
  * a medias (p. ej. un formulario).
  */
 export default function AppLock({ children }) {
@@ -23,9 +23,7 @@ export default function AppLock({ children }) {
   }, [])
 
   // Iconos de la barra de estado claros sobre el fondo oscuro; al desbloquear, los del tema
-  useEffect(() => {
-    window.CuadraTheme?.set(locked || document.documentElement.classList.contains('dark'))
-  }, [locked])
+  useEffect(() => { setScreenLocked(locked) }, [locked])
 
   // Al bloquearse, el diálogo sale solo
   useEffect(() => {
@@ -36,7 +34,7 @@ export default function AppLock({ children }) {
 
   useEffect(() => {
     const onVisibility = () => {
-      if (!isAppLockEnabled() || isAuthInProgress()) return
+      if (!isAppLockEnabled() || getLockDelay() === ONLY_ON_OPEN || isAuthInProgress()) return
       if (document.visibilityState === 'hidden') {
         hiddenAt.current = Date.now()
       } else if (hiddenAt.current != null) {

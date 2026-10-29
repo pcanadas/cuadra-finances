@@ -41,7 +41,7 @@ const FAQ = [
   },
   ...(isMobile ? [{
     q: '¿Puedo proteger Zenit con la huella o un PIN?',
-    a: 'Sí: en Más → Ajustes, activa «Bloquear Zenit». Te pedirá la huella, la cara o el PIN, patrón o contraseña del móvil al abrir la app y al volver a ella (tú eliges tras cuánto tiempo). Lo comprueba Android: Zenit no guarda ninguna contraseña ni huella.',
+    a: 'Sí: en Más → Ajustes, activa «Bloquear Zenit». Te pedirá la huella, la cara o el PIN, patrón o contraseña del móvil al abrir la app (y, si quieres, también al volver a ella tras un rato fuera). Lo comprueba Android: Zenit no guarda ninguna contraseña ni huella.',
   }] : []),
   {
     q: `¿Qué pasa si desinstalo la app o cambio de ${deviceName}?`,

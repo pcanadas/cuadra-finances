@@ -12,14 +12,18 @@ const DELAY_KEY = 'cuadra.lock.delay'
 
 export const canUseAppLock = isTauri && isAndroid
 
-/** Tras cuántos segundos fuera de la app se vuelve a pedir. */
+/**
+ * Cuándo se pide: siempre al abrir la app y, si se elige, también al volver a ella tras
+ * estar fuera ese tiempo (segundos). -1 = solo al abrir.
+ */
+export const ONLY_ON_OPEN = -1
 export const LOCK_DELAYS = [
-  { value: 0, label: 'Nada más salir' },
-  { value: 60, label: 'Tras 1 minuto' },
-  { value: 300, label: 'Tras 5 minutos' },
-  { value: 900, label: 'Tras 15 minutos' },
+  { value: ONLY_ON_OPEN, label: 'Solo al abrir Zenit' },
+  { value: 60, label: 'También al volver tras 1 minuto fuera' },
+  { value: 300, label: 'También al volver tras 5 minutos fuera' },
+  { value: 900, label: 'También al volver tras 15 minutos fuera' },
 ]
-const DEFAULT_DELAY = 60
+const DEFAULT_DELAY = ONLY_ON_OPEN
 
 const read = (k) => { try { return localStorage.getItem(k) } catch { return null } }
 const write = (k, v) => { try { localStorage.setItem(k, v) } catch { /* sin almacenamiento */ } }
@@ -31,6 +35,17 @@ export function getLockDelay() {
   return raw != null && LOCK_DELAYS.some((d) => d.value === Number(raw)) ? Number(raw) : DEFAULT_DELAY
 }
 export const setLockDelay = (seconds) => write(DELAY_KEY, String(seconds))
+
+// Iconos de la barra de estado (Android, MainActivity.kt): claros mientras está bloqueada, porque
+// la pantalla de bloqueo es oscura; si no, los del tema de la app.
+let screenLocked = false
+export function setSystemBarsDark(themeDark) {
+  window.CuadraTheme?.set(screenLocked || themeDark)
+}
+export function setScreenLocked(locked) {
+  screenLocked = locked
+  setSystemBarsDark(document.documentElement.classList.contains('dark'))
+}
 
 // El diálogo del sistema abre otra pantalla: la app pasa a segundo plano y vuelve. Mientras
 // dura (y un momento después) eso no debe contar como salir de la app.
