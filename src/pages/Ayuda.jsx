@@ -39,6 +39,10 @@ const FAQ = [
     q: '¿Dónde se guardan mis datos?',
     a: `Solo en tu ${deviceName}. Zenit no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.`,
   },
+  ...(isMobile ? [{
+    q: '¿Puedo proteger Zenit con la huella o un PIN?',
+    a: 'Sí: en Más → Ajustes, activa «Bloquear Zenit». Te pedirá la huella, la cara o el PIN, patrón o contraseña del móvil al abrir la app y al volver a ella (tú eliges tras cuánto tiempo). Lo comprueba Android: Zenit no guarda ninguna contraseña ni huella.',
+  }] : []),
   {
     q: `¿Qué pasa si desinstalo la app o cambio de ${deviceName}?`,
     a: `Al desinstalar se borran los datos. Antes, haz una copia en Más → Exportar datos → Copia de seguridad, guárdala donde quieras y restáurala después desde ${IMPORT}. También sirve para pasar tus datos del ordenador al móvil o al revés.`,

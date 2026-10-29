@@ -83,6 +83,7 @@ const seenNpm = new Set()
 
 // ─── Rust (crates que acaban en los binarios de Android y Windows) ──────────
 const seenRust = new Set()
+const androidCrateDirs = [] // crates con proyecto Android propio (plugins de Tauri, tauri)
 for (const target of ['aarch64-linux-android', 'x86_64-pc-windows-msvc']) {
   let meta
   try {
@@ -103,6 +104,7 @@ for (const target of ['aarch64-linux-android', 'x86_64-pc-windows-msvc']) {
   for (const p of meta.packages) {
     if (!reachable.has(p.id) || !p.source) continue // solo dependencias externas
     const key = `${p.name}@${p.version}`
+    if (target.includes('android')) androidCrateDirs.push(dirname(p.manifest_path))
     if (seenRust.has(key)) continue
     seenRust.add(key)
     const license = p.license ?? (p.license_file ? 'Ver texto' : 'Desconocida')
@@ -110,12 +112,27 @@ for (const target of ['aarch64-linux-android', 'x86_64-pc-windows-msvc']) {
   }
 }
 
-// ─── Android (Gradle: app/build.gradle.kts) ─────────────────────────────────
+// ─── Android (Gradle: la app y los proyectos Android de los crates, p. ej. plugins de Tauri) ─
+// Gradle usa la versión más alta de cada librería. Todas son de AndroidX / Material: Apache-2.0.
 const apache = Object.entries(texts).find(([, t]) => /Apache License\s+Version 2\.0/.test(t) && t.length > 9000)?.[0] ?? null
-const gradle = readFileSync(join(root, 'src-tauri/gen/android/app/build.gradle.kts'), 'utf8')
-for (const [, coord] of gradle.matchAll(/^\s*implementation\("([^"]+)"\)/gm)) {
-  const [group, artifact, version] = coord.split(':')
-  packages.push({ name: `${group}:${artifact}`, version, license: 'Apache-2.0', source: 'android', text: apache })
+const gradleFiles = [join(root, 'src-tauri/gen/android/app/build.gradle.kts')]
+for (const dir of androidCrateDirs) {
+  for (const sub of ['android', 'mobile/android']) {
+    const f = join(dir, sub, 'build.gradle.kts')
+    if (existsSync(f)) gradleFiles.push(f)
+  }
+}
+const newer = (a, b) => a.localeCompare(b, 'en', { numeric: true }) > 0
+const androidLibs = new Map()
+for (const file of gradleFiles) {
+  for (const [, coord] of readFileSync(file, 'utf8').matchAll(/^\s*implementation\("([^"]+)"\)/gm)) {
+    const [group, artifact, version] = coord.split(':')
+    const name = `${group}:${artifact}`
+    if (!androidLibs.has(name) || newer(version, androidLibs.get(name))) androidLibs.set(name, version)
+  }
+}
+for (const [name, version] of [...androidLibs].sort(([a], [b]) => a.localeCompare(b))) {
+  packages.push({ name, version, license: 'Apache-2.0', source: 'android', text: apache })
 }
 
 // Paquetes sin archivo de licencia: texto estándar de la licencia que declaran

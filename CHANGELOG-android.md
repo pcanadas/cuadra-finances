@@ -7,9 +7,9 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
-## [Próxima versión] — sin publicar
+## [1.2.0] — sin publicar
 
-Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
+Versión fijada en `src-tauri/tauri.android.conf.json` (versionCode 1002000). Pon la fecha al publicarla.
 
 ### Cambiado
 - **Cuadra pasa a llamarse Zenit** — nombre de la app en el móvil, textos y legales. El paquete sigue siendo `com.xyfos.cuadra`, así que se actualiza encima sin perder datos. Cambiar también el título de la ficha en Google Play
@@ -17,6 +17,7 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 - **Base de datos preparada para sincronizar (modelo v4)** — se actualiza sola al abrir la app por primera vez, con copia de seguridad automática antes; no cambia nada visible (ver `CHANGELOG.md` 0.9.0)
 
 ### Añadido
+- **Bloquear Zenit con la huella, la cara o el PIN del móvil** (Ajustes → «Bloquear Zenit», desactivado por defecto) — usa el diálogo de Android (plugin `biometric`); Zenit no guarda ninguna contraseña ni dato biométrico. Se pide al abrir la app y al volver a ella pasado el tiempo elegido (nada más salir, 1, 5 o 15 minutos; por defecto 1 minuto). Activarlo y desactivarlo también piden identificarse. La pantalla de bloqueo tapa la app sin cerrarla (no se pierde lo que estuviera a medias). Si el móvil se queda sin bloqueo de pantalla, el de Zenit se desactiva para no dejarte fuera de tus datos
 - **Ahorro y metas** (Más → Ahorro y metas) — ahorra una cantidad al mes o reúne una cantidad para una fecha; traspasándolo a una cuenta o apartándolo sin moverlo. Cada mes: conseguido, parcial o no conseguido. Lo pendiente se descuenta del «Disponible para gastar»
 - **Aviso de presupuesto superado** en Inicio
 - **Disponible para gastar** en Inicio — cuánto te queda hasta fin de mes y cuánto al día (ingresos previstos − gastado − gastos fijos pendientes)
@@ -36,8 +37,12 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 ```
 <es-ES>
 • Cuadra ahora se llama Zenit: misma app y tus datos de siempre
-• Importa extractos con las columnas en inglés (Revolut, N26, Wise…)
-• Mejoras en el modo oscuro
+• Nuevo: bloquea Zenit con tu huella o el PIN del móvil (Ajustes)
+• Nuevo: Ahorro y metas, con seguimiento mes a mes
+• «Disponible para gastar» hasta fin de mes en Inicio
+• Aviso al superar un presupuesto
+• Gastos fijos muestra lo pagado o cobrado en varias veces
+• Extractos con columnas en inglés y sin duplicados
 </es-ES>
 ```
 

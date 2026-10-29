@@ -6,6 +6,8 @@ import { isMobile } from '../platform'
 import { getCategoryIcon, ICON_GROUPS } from '../utils/categoryIcons'
 import { NOTIFY_EVENT, hasQuickAddNotification, getQuickAddNotification, setQuickAddNotification, openNotificationSettings } from '../platform/notifications'
 import { TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP, getTextSize, getSystemTextSize, setTextSize } from '../platform/textSize'
+import { canUseAppLock, isAppLockEnabled, setAppLockEnabled, getLockDelay, setLockDelay, LOCK_DELAYS, authenticateUser, biometryName } from '../platform/appLock'
+import SelectSheet from '../components/SelectSheet'
 
 // ─── Selector de icono (hoja inferior) ──────────────────────────────────────
 
@@ -90,6 +92,54 @@ function QuickAddNotificationSetting() {
   )
 }
 
+/** Bloqueo con huella/cara o el bloqueo de pantalla del móvil (solo Android). */
+function AppLockSetting() {
+  const [on, setOn] = useState(isAppLockEnabled)
+  const [delay, setDelay] = useState(getLockDelay)
+  const [bio, setBio] = useState(null)
+  const [message, setMessage] = useState(null)
+
+  useEffect(() => { biometryName().then(setBio) }, [])
+
+  // Activarlo y desactivarlo también piden identificarse
+  async function toggle() {
+    setMessage(null)
+    const { ok, code } = await authenticateUser(on ? 'Desactivar el bloqueo de Zenit' : 'Activar el bloqueo de Zenit')
+    if (ok) {
+      setAppLockEnabled(!on)
+      setOn(!on)
+    } else if (code === 'passcodeNotSet') {
+      setMessage('Tu móvil no tiene bloqueo de pantalla. Configura un PIN, patrón o huella en los ajustes de Android y vuelve a intentarlo.')
+    }
+  }
+
+  return (
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">🔒 Bloquear Zenit</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            Pide {bio ? `tu ${bio} o ` : ''}el PIN, patrón o contraseña del móvil para entrar. Zenit no guarda ninguna contraseña ni huella: lo comprueba Android.
+          </p>
+        </div>
+        <button role="switch" aria-checked={on} onClick={toggle} aria-label="Bloquear Zenit"
+          className={`relative w-12 h-7 shrink-0 rounded-full transition-colors ${on ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+          <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
+      {message && <p className="text-xs text-amber-700 mt-3">{message}</p>}
+      {on && (
+        <div className="flex items-center justify-between gap-3 mt-3">
+          <span className="text-xs text-slate-500">Volver a pedirlo al salir de la app</span>
+          <SelectSheet title="Volver a pedirlo" value={String(delay)} className="text-xs"
+            onChange={(v) => { setDelay(Number(v)); setLockDelay(Number(v)) }}
+            options={LOCK_DELAYS.map((d) => ({ value: String(d.value), label: d.label }))} />
+        </div>
+      )}
+    </section>
+  )
+}
+
 export default function Ajustes() {
   const { dark, setDark } = useTheme()
   const categories = useCategoryStore((s) => s.categories)
@@ -109,6 +159,8 @@ export default function Ajustes() {
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl lg:text-2xl font-bold text-slate-800">Ajustes</h1>
+
+      {canUseAppLock && <AppLockSetting />}
 
       {/* Escritorio: el tema se cambia en la barra superior */}
       {isMobile && (

@@ -5,6 +5,12 @@ pub fn run() {
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init());
 
+  // Bloqueo con huella o PIN del móvil (src/platform/appLock.js)
+  #[cfg(target_os = "android")]
+  {
+    builder = builder.plugin(tauri_plugin_biometric::init());
+  }
+
   #[cfg(not(target_os = "android"))]
   {
     builder = builder
