@@ -22,6 +22,11 @@ export default function AppLock({ children }) {
     }
   }, [])
 
+  // Iconos de la barra de estado claros sobre el fondo oscuro; al desbloquear, los del tema
+  useEffect(() => {
+    window.CuadraTheme?.set(locked || document.documentElement.classList.contains('dark'))
+  }, [locked])
+
   // Al bloquearse, el diálogo sale solo
   useEffect(() => {
     if (!locked) return

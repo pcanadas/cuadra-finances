@@ -40,15 +40,16 @@ export const isAuthInProgress = () => busy || Date.now() < quietUntil
 export const isAuthBusy = () => busy
 
 /**
- * Pide identificarse. @returns {Promise<{ ok: boolean, code?: string }>}
+ * Pide identificarse. `title` es la acción («Desbloquear Zenit»); Android ya muestra encima el
+ * nombre de la app, así que no se repite. @returns {Promise<{ ok: boolean, code?: string }>}
  * code 'passcodeNotSet': el móvil no tiene bloqueo de pantalla; 'userCancel': cancelado.
  */
-export async function authenticateUser(reason) {
+export async function authenticateUser(title) {
   if (!canUseAppLock) return { ok: true }
   busy = true
   try {
     const { authenticate } = await import('@tauri-apps/plugin-biometric')
-    await authenticate(reason, { allowDeviceCredential: true, title: 'Zenit', subtitle: reason })
+    await authenticate('Usa el bloqueo de pantalla de tu móvil', { allowDeviceCredential: true, title })
     return { ok: true }
   } catch (e) {
     return { ok: false, code: e?.code ?? (typeof e === 'string' ? e : undefined) }
