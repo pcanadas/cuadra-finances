@@ -8,9 +8,11 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Zenit_0.9.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Microsoft Store](https://apps.microsoft.com/detail/9NLLQLF0SRTX) («Zenit Finanzas») o el instalador [Zenit_0.9.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
-No requiere instalación de dependencias. Incluye actualizaciones automáticas.
+**Android** — Google Play, en prueba cerrada ([escríbeme](mailto:patricia@xyfos.com?subject=Probar%20Zenit%20para%20Android) para probarla)
+
+No requiere instalación de dependencias. Incluye actualizaciones automáticas (desde la Store o, con el instalador, desde la propia app).
 
 > **Actualización desde una versión anterior** — los datos no se pierden. Zenit guarda movimientos, categorías y configuración en IndexedDB (WebView2), una carpeta del perfil de Windows que el instalador no modifica. Puedes instalar encima o desinstalar primero; el resultado es el mismo.
 
