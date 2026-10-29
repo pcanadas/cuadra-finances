@@ -7,9 +7,9 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
-## [1.2.0] — sin publicar
+## [1.2.0] — 2026-10-29
 
-Versión fijada en `src-tauri/tauri.android.conf.json` (versionCode 1002000). Pon la fecha al publicarla.
+versionCode 1002000.
 
 ### Cambiado
 - **Cuadra pasa a llamarse Zenit** — nombre de la app en el móvil, textos y legales. El paquete sigue siendo `com.xyfos.cuadra`, así que se actualiza encima sin perder datos. Cambiar también el título de la ficha en Google Play

@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.9.0] — sin publicar
+## [0.9.0] — 2026-10-29
 
 ### Añadido
 - **Ahorro y metas** — página nueva (pestaña «Ahorro»). **Ahorro**: una cantidad que quieres guardar cada mes, sin finalidad concreta. **Metas**: una cantidad para una fecha (p. ej. un viaje), con lo que ya tengas; cada mes indica cuánto apartar para llegar a tiempo (sube si un mes no se aporta). Se pueden tener varios de cada. Cada uno, o se **traspasa a una cuenta** (cuenta lo que llega a esa cuenta por traspasos desde las demás, menos lo que sale) o queda **apartado** sin moverlo (cuenta lo que sobra del mes, repartido por orden de creación). Fecha de inicio opcional: con una anterior se ven también los meses pasados. Cada mes queda como **conseguido**, **parcial** (se apartó algo) o **no conseguido**; el mes en curso, «en curso». En el Dashboard, resumen de cada plan con sus últimos meses
@@ -9,7 +9,7 @@
 - **Disponible para gastar** — en el Dashboard, en el mes en curso: cuánto te queda hasta fin de mes y cuánto es al día. Ingresos previstos − lo ya gastado − los gastos fijos aún sin pagar. Los ingresos previstos son lo ya cobrado más los ingresos fijos por cobrar; si no tienes ingresos fijos, tu media de ingresos de los últimos 3 meses (por si la nómina aún no ha llegado). Debajo se ve de dónde sale cada cifra. El «Disponible estimado» de la previsión del mes usa el mismo cálculo
 
 ### Cambiado
-- **Base de datos preparada para sincronizar entre dispositivos (modelo v4)** — se actualiza sola la primera vez que se abre la app (unos segundos con años de movimientos), con una copia de seguridad automática antes («auto: antes de actualizar la base de datos»). No cambia nada de lo que ves. Cada registro guarda cuándo se modificó y desde qué dispositivo; los movimientos, si son manuales o importados y una huella (fecha, concepto e importe) para reconocer el mismo movimiento en otro dispositivo; los registros nuevos usan identificadores únicos (UUID v7). Al borrar un movimiento, categoría, cuenta, presupuesto o gasto fijo queda una marca de borrado sin su contenido, para que en el futuro el borrado llegue a los demás dispositivos. «Borrar todos los datos» y restaurar una copia lo siguen borrando todo por completo
+- **Base de datos preparada para sincronizar entre dispositivos (modelos v4 y v5)** — se actualiza sola la primera vez que se abre la app (unos segundos con años de movimientos), con una copia de seguridad automática antes («auto: antes de actualizar la base de datos»). No cambia nada de lo que ves. Cada registro guarda cuándo se modificó y desde qué dispositivo; los movimientos, si son manuales o importados y una huella (fecha, concepto e importe) para reconocer el mismo movimiento en otro dispositivo; los registros nuevos usan identificadores únicos (UUID v7). Al borrar un movimiento, categoría, cuenta, presupuesto o gasto fijo queda una marca de borrado sin su contenido, para que en el futuro el borrado llegue a los demás dispositivos. «Borrar todos los datos» y restaurar una copia lo siguen borrando todo por completo
 - Las copias de seguridad de cualquier versión anterior se completan al restaurarlas
 
 ### Corregido

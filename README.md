@@ -8,7 +8,7 @@ App de escritorio para gestión de finanzas personales, construida con React + T
 
 ## Descarga
 
-**Windows** — [Zenit_0.8.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
+**Windows** — [Zenit_0.9.0_x64-setup.exe](https://github.com/pcanadas/cuadra-finances/releases/latest)
 
 No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 
@@ -37,11 +37,13 @@ No requiere instalación de dependencias. Incluye actualizaciones automáticas.
 - **Comparación mensual entre años** — superpone barras del año seleccionado vs el anterior
 - **Comparación de múltiples categorías** — selecciona hasta 6 categorías y compara su evolución mensual
 - **Gastos fijos y planificación** — página dedicada para gestionar gastos e ingresos recurrentes; periodicidad configurable (mensual, bimestral, trimestral, semestral, anual) con mes de referencia; fecha de fin opcional; matching inteligente por subcategoría → categoría → palabras del nombre; sugerencias auto-detectadas de gastos e ingresos descartables; presupuestos por categoría con barras de progreso
-- **Presupuestos mensuales** — límites de gasto por categoría con barras de progreso (verde/ámbar/rojo)
+- **Presupuestos mensuales** — límites de gasto por categoría con barras de progreso (verde/ámbar/rojo) y aviso en el Dashboard al superarlos
+- **Disponible para gastar** — cuánto queda hasta fin de mes y cuánto al día: ingresos previstos − gastado − gastos fijos pendientes − lo que falta por apartar para ahorro y metas
+- **Ahorro y metas** — planes de ahorro mensual y metas con cantidad y fecha; por traspaso a una cuenta o apartado sin moverlo; seguimiento mes a mes (conseguido, parcial o no conseguido)
 - **Exportar a Excel** — botón en Movimientos que genera un XLSX con los movimientos filtrados
 - **Evolución del saldo** por cuenta con verificador de coherencia (detecta huecos en el extracto) y opciones de editar o marcar como revisada
 - **Escala √ en gráficos** — toggle para comprimir barras cuando un mes outlier aplasta el resto
-- **Pruebas automatizadas** — Vitest con 39 tests unitarios para categorización, emparejamiento de transferencias y parseo de importaciones
+- **Pruebas automatizadas** — Vitest con 138 tests: categorización, importación, saldos, transferencias, migraciones de la base de datos, disponible para gastar, ahorro y metas
 - **Historial de backups** — hasta 10 copias automáticas en IndexedDB antes de operaciones destructivas; restaurar, descargar y eliminar desde Importar
 - **Página Acerca de** — versión dinámica desde `package.json` y comprobador de actualizaciones
 - **Tema oscuro/claro** con paleta personalizada y persistencia
