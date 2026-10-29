@@ -1,6 +1,5 @@
 import * as XLSX from 'xlsx'
-import db, { live } from '../db/db'
-import { createBackup } from './backupManager'
+import { createBackup, readAllData } from './backupManager'
 import { saveFile, describeSavedPath } from '../platform/files'
 import { markBackupDone } from './backupReminder'
 
@@ -49,14 +48,6 @@ export async function saveBackupJson(filename, json) {
 /** Copia de seguridad completa (todas las tablas) a un archivo JSON. */
 export async function exportFullBackup() {
   await createBackup('manual: exportación')
-  const [transactions, cats, subcats, accs, budgs, recs] = await Promise.all([
-    live(db.transactions),
-    live(db.categories),
-    live(db.subcategories),
-    live(db.accounts),
-    live(db.budgets),
-    live(db.recurringExpenses),
-  ])
-  const payload = { version: 1, schemaVersion: 4, exportedAt: new Date().toISOString(), transactions, categories: cats, subcategories: subcats, accounts: accs, budgets: budgs, recurringExpenses: recs }
+  const payload = { version: 1, schemaVersion: 5, exportedAt: new Date().toISOString(), ...(await readAllData()) }
   await saveBackupJson(`zenit-backup-${today()}.json`, JSON.stringify(payload, null, 2))
 }

@@ -98,6 +98,11 @@ html.dark .to-indigo-50   { --tw-gradient-to:   #262626 !important; }
 html.dark .bg-rose-50    { background-color: #2a1515 !important; }
 html.dark .bg-emerald-50 { background-color: #0f2618 !important; }
 html.dark .bg-violet-50  { background-color: #1c1726 !important; }
+/* Etiquetas de estado (historial de ahorro y metas) */
+html.dark .bg-emerald-100 { background-color: #0f3320 !important; }
+html.dark .bg-amber-100   { background-color: #3d2810 !important; }
+html.dark .bg-rose-100    { background-color: #4a1f1f !important; }
+html.dark .text-emerald-700 { color: #34d399 !important; }
 html.dark .bg-amber-50   { background-color: #261c0f !important; }
 html.dark .bg-indigo-50  { background-color: #171726 !important; }
 html.dark .bg-red-50     { background-color: #2a1515 !important; }

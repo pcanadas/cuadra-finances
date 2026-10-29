@@ -253,7 +253,7 @@ export default function GastosFijos() {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
           <p className="text-sm font-semibold text-slate-700 mb-1">Estado del mes actual</p>
           <p className="text-xs text-slate-400 mb-3">
-            {fixedStatus.filter((r) => r.paid).length} de {fixedStatus.length} cobrados/pagados
+            {fixedStatus.filter((r) => r.paid).length} de {fixedStatus.length} cobrados/pagados{fixedStatus.some((r) => r.partial) && ` · ${fixedStatus.filter((r) => r.partial).length} en parte`}
           </p>
 
           {/* Income items */}
@@ -301,7 +301,7 @@ export default function GastosFijos() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-semibold ${b.over ? 'text-red-500' : 'text-slate-600'}`}>
-                      {formatEur(b.spent)} / {formatEur(b.limite)}
+                      {formatEur(b.spent)} / {formatEur(b.limite)}{b.over && ` · superado en ${formatEur(b.spent - b.limite)}`}
                     </span>
                     <button onClick={() => { setEditBudgetCat(b.categoriaId); setEditBudgetVal(String(b.limite)) }}
                       className="text-xs lg:text-[10px] px-1 py-1 lg:p-0 text-slate-400 hover:text-slate-600">editar</button>
@@ -367,7 +367,12 @@ export default function GastosFijos() {
 }
 
 // ── Item row component ──
+/** ✓ pagado/cobrado, ◐ en parte, ○ nada todavía. */
+const paidMark = (r) => (r.paid ? { icon: '✓', className: 'text-emerald-500' } : r.partial ? { icon: '◐', className: 'text-amber-500' } : { icon: '○', className: 'text-slate-300' })
+const paidText = (r) => (r.paid ? `${r.isIncome ? 'cobrado' : 'pagado'} ${formatEur(r.paidAmount)}` : `${formatEur(r.paidAmount)} de ${formatEur(r.importe)}`)
+
 function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
+  const mark = paidMark(r)
   const cat = categories.find((c) => c.id === r.categoriaId)
   const subcat = subcategories?.find((s) => s.id === r.subcategoriaId)
   const months = r.periodicidad !== 'mensual' ? getDueMonths(r).map((m) => MONTH_SHORT[m]).join(', ') : null
@@ -375,7 +380,7 @@ function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
     <>
       {/* Móvil: dos líneas, tocar para editar (eliminar desde el formulario) */}
       <button onClick={onEdit} className="lg:hidden w-full flex items-start gap-3 py-2.5 px-1 text-left border-b border-slate-100 last:border-b-0 active:bg-slate-50">
-        <span className={`mt-0.5 text-base ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>{r.paid ? '✓' : '○'}</span>
+        <span className={`mt-0.5 text-base ${mark.className}`}>{mark.icon}</span>
         <span className="flex-1 min-w-0">
           <span className="flex items-baseline gap-2">
             <span className="flex-1 min-w-0 text-sm text-slate-800 truncate">{r.nombre}</span>
@@ -385,7 +390,7 @@ function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
             {cat && <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />{subcat ? subcat.nombre : cat.nombre}</span>}
             <span>{PERIOD_LABELS[r.periodicidad] || r.periodicidad}{months && ` · ${months}`}</span>
             {r.fechaFin && <span className="text-amber-500">hasta {r.fechaFin}</span>}
-            {r.paid && r.paidAmount != null && <span className="text-emerald-600">pagado {formatEur(r.paidAmount)}</span>}
+            {r.paidAmount != null && <span className={r.paid ? 'text-emerald-600' : 'text-amber-600'}>{paidText(r)}</span>}
           </span>
         </span>
       </button>
@@ -393,7 +398,7 @@ function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
       {/* Escritorio */}
       <div className="hidden lg:flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
         <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-sm ${r.paid ? 'text-emerald-500' : 'text-slate-300'}`}>{r.paid ? '✓' : '○'}</span>
+          <span className={`text-sm ${mark.className}`}>{mark.icon}</span>
           <span className="text-sm text-slate-700 truncate">{r.nombre}</span>
           {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
           {subcat && <span className="text-[10px] text-slate-500">{subcat.nombre}</span>}
@@ -402,7 +407,7 @@ function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
           {r.fechaFin && <span className="text-[10px] text-amber-500">hasta {r.fechaFin}</span>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {r.paid && r.paidAmount != null && <span className="text-[11px] text-emerald-500">{formatEur(r.paidAmount)}</span>}
+          {r.paidAmount != null && <span className={`text-[11px] ${r.paid ? 'text-emerald-500' : 'text-amber-600'}`}>{paidText(r)}</span>}
           <span className={`text-xs font-semibold ${r.paid ? 'text-slate-400 line-through' : 'text-slate-600'}`}>{formatEur(r.importe)}</span>
           <button onClick={onEdit} className="text-[10px] text-slate-400 hover:text-slate-600">editar</button>
           <button onClick={onDelete} className="text-[10px] text-red-400 hover:text-red-600">quitar</button>

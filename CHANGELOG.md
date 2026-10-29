@@ -3,6 +3,9 @@
 ## [0.9.0] — sin publicar
 
 ### Añadido
+- **Ahorro y metas** — página nueva (pestaña «Ahorro»). **Ahorro**: una cantidad que quieres guardar cada mes, sin finalidad concreta. **Metas**: una cantidad para una fecha (p. ej. un viaje), con lo que ya tengas; cada mes indica cuánto apartar para llegar a tiempo (sube si un mes no se aporta). Se pueden tener varios de cada. Cada uno, o se **traspasa a una cuenta** (cuenta lo que llega a esa cuenta por traspasos desde las demás, menos lo que sale) o queda **apartado** sin moverlo (cuenta lo que sobra del mes, repartido por orden de creación). Fecha de inicio opcional: con una anterior se ven también los meses pasados. Cada mes queda como **conseguido**, **parcial** (se apartó algo) o **no conseguido**; el mes en curso, «en curso». En el Dashboard, resumen de cada plan con sus últimos meses
+- **Disponible para gastar** descuenta lo que aún falta por apartar este mes para ahorro y metas
+- **Aviso de presupuesto superado** en el Dashboard (con cuánto te has pasado) y en Gastos fijos
 - **Disponible para gastar** — en el Dashboard, en el mes en curso: cuánto te queda hasta fin de mes y cuánto es al día. Ingresos previstos − lo ya gastado − los gastos fijos aún sin pagar. Los ingresos previstos son lo ya cobrado más los ingresos fijos por cobrar; si no tienes ingresos fijos, tu media de ingresos de los últimos 3 meses (por si la nómina aún no ha llegado). Debajo se ve de dónde sale cada cifra. El «Disponible estimado» de la previsión del mes usa el mismo cálculo
 
 ### Cambiado
@@ -10,7 +13,9 @@
 - Las copias de seguridad de cualquier versión anterior se completan al restaurarlas
 
 ### Corregido
+- **Gastos fijos no mostraba lo pagado o cobrado si no era en un solo movimiento** — solo se daba por pagado si un único movimiento de su categoría se parecía al importe (±30 %), así que un ingreso cobrado en varias partes o la compra del súper en muchas veces no aparecían. Ahora, si no hay un movimiento así, se suman los del mes de su categoría o subcategoría y se ve el progreso (◐ «1200,00 € de 2000,00 €»); al llegar al importe queda pagado ✓. Cada movimiento cuenta para un solo fijo (el alquiler no paga también la comunidad) y el último fijo de cada categoría muestra lo que se haya pasado. «Disponible para gastar» descuenta solo lo que falta de cada uno
 - **Restaurar una copia desde archivo fallaba si tenía gastos fijos** y no borraba los gastos fijos que había antes
+- Restaurar una copia desde el historial no recargaba presupuestos ni gastos fijos hasta reiniciar la app
 - **Cuentas no mostraba lo anterior al primer extracto** — en una cuenta con extractos importados, los movimientos manuales y los traspasos desde otras cuentas con fecha anterior al primer extracto no salían en el gráfico ni en el saldo inicial. Ahora aparecen, con su saldo calculado hacia atrás desde el primer saldo del banco, y un aviso indica cuántos son
 
 ## [0.8.0] — 2026-10-27

@@ -1,23 +1,20 @@
 import db, { live, replaceAllData } from '../db/db'
-import { snapshot } from '../db/records'
+import { SYNCED_TABLES, snapshot } from '../db/records'
 
 const MAX_BACKUPS = 10
+
+/** Todos los datos vigentes, por tabla (lo que guarda una copia de seguridad). */
+export async function readAllData() {
+  const lists = await Promise.all(SYNCED_TABLES.map((name) => live(db.table(name))))
+  return Object.fromEntries(SYNCED_TABLES.map((name, i) => [name, lists[i]]))
+}
 
 /**
  * Create a snapshot of the current database state and store it in the backups table.
  * @param {string} reason - Why the backup was created (e.g. "auto: antes de restaurar", "manual")
  */
 export async function createBackup(reason = 'manual') {
-  const [transactions, categories, subcategories, accounts, budgets, recurringExpenses] = await Promise.all([
-    live(db.transactions),
-    live(db.categories),
-    live(db.subcategories),
-    live(db.accounts),
-    live(db.budgets),
-    live(db.recurringExpenses),
-  ])
-
-  const backup = snapshot(reason, { transactions, categories, subcategories, accounts, budgets, recurringExpenses })
+  const backup = snapshot(reason, await readAllData())
 
   await db.backups.put(backup)
 
@@ -65,7 +62,7 @@ export async function deleteBackup(backupId) {
 export function backupToJson(backup) {
   return {
     version: 1,
-    schemaVersion: 4,
+    schemaVersion: 5,
     exportedAt: backup.createdAt,
     transactions: backup.data.transactions,
     categories: backup.data.categories,
@@ -73,5 +70,6 @@ export function backupToJson(backup) {
     accounts: backup.data.accounts,
     budgets: backup.data.budgets,
     recurringExpenses: backup.data.recurringExpenses,
+    goals: backup.data.goals ?? [],
   }
 }

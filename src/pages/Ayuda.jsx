@@ -32,6 +32,10 @@ const FAQ = [
     a: 'En Categorías, marca la categoría (p. ej. Cajero) como transferencia interna y elige Efectivo como cuenta destino. Cada retirada aparecerá también como entrada en Efectivo, sin contar como ingreso ni como gasto. Sirve igual para traspasos a otra cuenta tuya.',
   },
   {
+    q: '¿Qué diferencia hay entre presupuestos, ahorro y metas?',
+    a: `Un presupuesto es un límite de gasto al mes para una categoría (en Gastos fijos) y te avisa al superarlo. El ahorro es una cantidad que quieres guardar cada mes, sin más; una meta, una cantidad para una fecha (un viaje, un coche…). Los dos se crean en ${isMobile ? 'Más → ' : ''}Ahorro y metas: puedes traspasar el dinero a una cuenta tuya o dejarlo apartado en la tuya, y cada mes se marca como conseguido, parcial o no conseguido. Lo que falta por apartar se descuenta del «Disponible para gastar».`,
+  },
+  {
     q: '¿Dónde se guardan mis datos?',
     a: `Solo en tu ${deviceName}. Zenit no tiene servidores ni cuentas de usuario: nadie más puede ver tus movimientos.`,
   },

@@ -17,6 +17,8 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 - **Base de datos preparada para sincronizar (modelo v4)** — se actualiza sola al abrir la app por primera vez, con copia de seguridad automática antes; no cambia nada visible (ver `CHANGELOG.md` 0.9.0)
 
 ### Añadido
+- **Ahorro y metas** (Más → Ahorro y metas) — ahorra una cantidad al mes o reúne una cantidad para una fecha; traspasándolo a una cuenta o apartándolo sin moverlo. Cada mes: conseguido, parcial o no conseguido. Lo pendiente se descuenta del «Disponible para gastar»
+- **Aviso de presupuesto superado** en Inicio
 - **Disponible para gastar** en Inicio — cuánto te queda hasta fin de mes y cuánto al día (ingresos previstos − gastado − gastos fijos pendientes)
 - **Cuenta destino en categorías de traspaso, también hacia atrás** — p. ej. Cajero → Efectivo: cada retirada aparece como entrada en Efectivo (sin contar como ingreso)
 - **Extractos con cabeceras en inglés** (CSV y Excel): Date, Description, Amount, Debit / Credit, fechas de EE. UU. y con el mes en letras…
@@ -27,6 +29,7 @@ Fija la versión en `src-tauri/tauri.android.conf.json` antes de compilar.
 - **Modo oscuro** — algunos textos se oscurecían al tocarlos
 - **Cuentas** — los movimientos anteriores al primer extracto (manuales o traspasos) no salían en la evolución del saldo
 - Restaurar una copia desde archivo fallaba si tenía gastos fijos
+- **Gastos fijos** — lo cobrado o pagado en varios movimientos (p. ej. ingresos en dos partes, la compra del súper) ahora se suma y se ve el progreso
 - Política de privacidad actualizada (comentarios y actualizaciones en la versión de escritorio)
 
 ### Notas para Google Play

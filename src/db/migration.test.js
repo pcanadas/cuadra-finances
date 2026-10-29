@@ -83,6 +83,11 @@ describe('migración a v4', () => {
     expect(await importId('tx-1700001000000-0-dd')).toBe(1700001000000)
   })
 
+  it('crea la tabla de ahorro y metas (v5)', async () => {
+    expect(db.verno).toBe(5)
+    expect(await db.goals.count()).toBe(0)
+  })
+
   it('crea los índices nuevos', async () => {
     const hash = (await db.transactions.get('tx-1700000000000-0-aa')).importHash
     expect(await db.transactions.where('importHash').equals(hash).count()).toBe(1)

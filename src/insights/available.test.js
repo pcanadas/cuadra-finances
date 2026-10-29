@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { availableToSpend } from './available'
-import { isDueInMonth, findFixedPayment } from './fixedItems'
+import { isDueInMonth, findFixedPayment, fixedStatusForMonth } from './fixedItems'
 
 const TODAY = new Date(2026, 9, 11) // 11 de octubre de 2026: quedan 21 días contando hoy
 const transferCatIds = new Set(['cat-transf'])
@@ -63,6 +63,12 @@ describe('availableToSpend', () => {
     expect(run([])).toBeNull()
   })
 
+  it('resta lo que falta por apartar para ahorro y metas', () => {
+    const r = availableToSpend({ transactions: [...NOMINAS, tx('2026-10-02', -300)], transferCatIds, ingresoCatIds, savings: 400, today: TODAY })
+    expect(r.savings).toBe(400)
+    expect(r.total).toBe(1400)
+  })
+
   it('ignora movimientos futuros', () => {
     const r = run([...NOMINAS, tx('2026-11-01', -999)])
     expect(r.spent).toBe(0)
@@ -81,5 +87,49 @@ describe('fijos', () => {
     const item = { nombre: 'Netflix mensual', importe: 13 }
     expect(findFixedPayment(item, [tx('2026-10-03', -12.99, { descripcion: 'NETFLIX.COM MENSUAL' })], false)).not.toBeNull()
     expect(findFixedPayment(item, [tx('2026-10-03', -30, { descripcion: 'NETFLIX.COM MENSUAL' })], false)).toBeNull()
+  })
+
+  describe('fixedStatusForMonth', () => {
+    const fijo = (id, importe, extra) => ({ id, nombre: id, importe, periodicidad: 'mensual', activo: true, ...extra })
+    const status = (items, txs) => fixedStatusForMonth(items, txs, ingresoCatIds)
+
+    it('un ingreso que llega en varias partes muestra lo cobrado hasta ahora', () => {
+      const [r] = status([fijo('Nómina', 2000, { categoriaId: 'cat-ingresos' })],
+        [tx('2026-10-05', 800, { categoria: 'cat-ingresos' }), tx('2026-10-12', 400, { categoria: 'cat-ingresos' })])
+      expect(r).toMatchObject({ isIncome: true, paid: false, partial: true, paidAmount: 1200 })
+    })
+
+    it('un gasto hecho en muchas compras se da por pagado al llegar a la cantidad', () => {
+      const compras = Array.from({ length: 8 }, (_, i) => tx(`2026-10-0${i + 1}`, -50, { categoria: 'cat-super' }))
+      const [r] = status([fijo('Súper', 400, { categoriaId: 'cat-super' })], compras)
+      expect(r).toMatchObject({ paid: true, paidAmount: 400 })
+    })
+
+    it('si sobra, el último fijo de la categoría se queda con el resto (se ve que se ha pasado)', () => {
+      const [r] = status([fijo('Súper', 400, { categoriaId: 'cat-super' })], [tx('2026-10-02', -300, { categoria: 'cat-super' }), tx('2026-10-09', -220, { categoria: 'cat-super' })])
+      expect(r.paidAmount).toBe(520)
+    })
+
+    it('dos fijos de la misma categoría no cuentan dos veces el mismo pago', () => {
+      const items = [fijo('Alquiler', 700, { categoriaId: 'cat-vivienda' }), fijo('Comunidad', 60, { categoriaId: 'cat-vivienda' })]
+      const [alquiler, comunidad] = status(items, [tx('2026-10-01', -700, { categoria: 'cat-vivienda' })])
+      expect(alquiler).toMatchObject({ paid: true, paidAmount: 700 })
+      expect(comunidad).toMatchObject({ paid: false, partial: false, paidAmount: null })
+    })
+
+    it('los movimientos de una subcategoría con fijo propio no cuentan para el de su categoría', () => {
+      const items = [fijo('Luz', 80, { categoriaId: 'cat-casa', subcategoriaId: 'sub-luz' }), fijo('Casa', 200, { categoriaId: 'cat-casa' })]
+      const [luz, casa] = status(items, [tx('2026-10-03', -40, { categoria: 'cat-casa', subcategoria: 'sub-luz' }), tx('2026-10-04', -50, { categoria: 'cat-casa' })])
+      expect(luz).toMatchObject({ partial: true, paidAmount: 40 })
+      expect(casa).toMatchObject({ partial: true, paidAmount: 50 })
+    })
+
+    it('«Disponible para gastar» solo descuenta lo que falta de cada fijo', () => {
+      const r = availableToSpend({
+        transactions: [...NOMINAS, tx('2026-10-05', 800, { categoria: 'cat-ingresos' })], transferCatIds, ingresoCatIds, today: TODAY,
+        recurringItems: [fijo('Nómina', 2000, { categoriaId: 'cat-ingresos' })],
+      })
+      expect(r.income).toMatchObject({ received: 800, pendingFixed: 1200, expected: 2000 })
+    })
   })
 })

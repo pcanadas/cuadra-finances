@@ -8,6 +8,8 @@ import { periodLabel } from '../utils/period'
 import { isTransferTx } from '../utils/transferPairing'
 import { activeInMonth, fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
 import { availableToSpend } from '../insights/available'
+import useGoalResults from '../hooks/useGoalResults'
+import MonthChips from '../components/MonthChips'
 import { deviceName } from '../platform'
 import { useTheme } from '../context/ThemeContext'
 import {
@@ -99,12 +101,64 @@ function AvailableCard({ available: a }) {
         Ingresos {formatEur(a.income.expected)} <span className="text-slate-400">({INCOME_BASIS[a.income.basis](a.income)})</span>
         {' '}− gastado {formatEur(a.spent)}
         {a.pendingFixed > 0 && <> − {a.pendingFixedCount === 1 ? '1 gasto fijo pendiente' : `${a.pendingFixedCount} gastos fijos pendientes`} {formatEur(a.pendingFixed)}</>}
+        {a.savings > 0 && <> − por apartar para <Link to="/ahorro" className="text-indigo-500 hover:text-indigo-700">ahorro y metas</Link> {formatEur(a.savings)}</>}
       </p>
       {a.income.basis === 'media' && (
         <p className="text-xs text-slate-400 mt-1">
           Para afinarlo, añade tu nómina en <Link to="/gastos-fijos" className="text-indigo-500 hover:text-indigo-700 font-medium">Gastos fijos</Link>.
         </p>
       )}
+    </div>
+  )
+}
+
+/** Presupuestos superados este mes. */
+function BudgetAlert({ over }) {
+  return (
+    <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-2xl p-4">
+      <span className="text-xl leading-none">⚠️</span>
+      <div className="text-sm text-rose-700">
+        <p className="font-semibold">{over.length === 1 ? 'Has superado un presupuesto este mes' : `Has superado ${over.length} presupuestos este mes`}</p>
+        <p className="mt-0.5">
+          {over.map((b, i) => (
+            <span key={b.categoriaId}>{i > 0 && ' · '}{b.cat.nombre}: {formatEur(b.spent)} de {formatEur(b.limite)} (+{formatEur(b.spent - b.limite)})</span>
+          ))}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/** Ahorro y metas: cómo va este mes cada plan (detalle en /ahorro). */
+function GoalsCard({ results }) {
+  return (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-4 lg:p-6">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">🐷 Ahorro y metas</p>
+        <Link to="/ahorro" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Ver todo →</Link>
+      </div>
+      <div className="space-y-3">
+        {results.map((r) => {
+          const cur = r.current
+          const done = r.meta?.reached
+          let text
+          if (done) text = `🎉 Conseguida: ${formatEur(r.accumulated)}`
+          else if (r.goal.modo === 'cuenta') text = `${formatEur(cur.contributed ?? 0)} de ${formatEur(cur.quota)} este mes`
+          else text = `${formatEur(cur.quota)} reservados este mes`
+          return (
+            <div key={r.goal.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-700 truncate">{r.goal.tipo === 'meta' ? '🎯' : '🐷'} {r.goal.nombre}</p>
+                <p className="text-xs text-slate-400">
+                  {text}
+                  {r.goal.tipo === 'meta' && !done && ` · llevas ${formatEur(r.accumulated)} de ${formatEur(r.goal.objetivo)}`}
+                </p>
+              </div>
+              {r.months.length > 1 && <MonthChips months={r.months} max={6} />}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -599,8 +653,8 @@ export default function Dashboard() {
 
   // Total expenses this month minus what's been identified as fixed payments = variable
   const fixedPaidTotal = useMemo(
-    () => fixedStatus.filter((r) => r.paid && !ingresoCatIds.has(r.categoriaId)).reduce((s, r) => s + (r.paidAmount ?? r.importe), 0),
-    [fixedStatus, ingresoCatIds],
+    () => fixedStatus.filter((r) => !r.isIncome && r.paidAmount).reduce((s, r) => s + r.paidAmount, 0),
+    [fixedStatus],
   )
   const totalSpentThisMonth = useMemo(() => {
     return transactions.filter((t) => {
@@ -612,13 +666,17 @@ export default function Dashboard() {
 
   const variableSpentThisMonth = totalSpentThisMonth - fixedPaidTotal
 
-  // Disponible para gastar hasta fin de mes (solo el mes en curso)
+  // Disponible para gastar hasta fin de mes (solo el mes en curso), descontando lo que falta por apartar
+  const goals = useGoalResults()
   const available = useMemo(
-    () => (forecastWhen === 0 ? availableToSpend({ transactions, transferCatIds, ingresoCatIds, recurringItems }) : null),
-    [forecastWhen, transactions, transferCatIds, ingresoCatIds, recurringItems],
+    () => (forecastWhen === 0 ? availableToSpend({ transactions, transferCatIds, ingresoCatIds, recurringItems, savings: goals.pendingThisMonth }) : null),
+    [forecastWhen, transactions, transferCatIds, ingresoCatIds, recurringItems, goals],
   )
   const availableEstimate = available ? available.total : fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
-  const showAvailable = available && selectedMonth === today.getMonth() && selectedYear === today.getFullYear()
+  const isCurrentMonthView = selectedMonth === today.getMonth() && selectedYear === today.getFullYear()
+  const showAvailable = available && isCurrentMonthView
+  const overBudgets = isCurrentMonthView ? budgetProgress.filter((b) => b.over) : []
+  const activeGoals = isCurrentMonthView ? goals.results.filter((r) => r.current) : []
 
   // ── empty state ──
   if (transactions.length === 0) return <Welcome />
@@ -650,6 +708,8 @@ export default function Dashboard() {
       </div>
 
       {showAvailable && <AvailableCard available={available} />}
+      {overBudgets.length > 0 && <BudgetAlert over={overBudgets} />}
+      {activeGoals.length > 0 && <GoalsCard results={activeGoals} />}
 
       {/* ── Recordatorio de copia de seguridad ── */}
       {showBackupReminder && (

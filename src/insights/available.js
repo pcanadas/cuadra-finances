@@ -8,7 +8,8 @@ const AVERAGE_MONTHS = 3
 
 /**
  * Disponible para gastar hasta fin del mes en curso:
- *   ingresos previstos − ya gastado − gastos fijos aún sin pagar, repartido entre los días que quedan.
+ *   ingresos previstos − ya gastado − gastos fijos aún sin pagar − lo que falta por apartar este mes
+ *   para ahorro y metas (`savings`, ver goals.js), repartido entre los días que quedan.
  *
  * Ingresos previstos:
  * - con ingresos fijos que tocan este mes: lo ya recibido + los fijos aún no cobrados,
@@ -20,10 +21,10 @@ const AVERAGE_MONTHS = 3
  * @returns {null | {
  *   total: number, perDay: number, daysLeft: number,
  *   income: { expected: number, received: number, pendingFixed: number, average: number|null, months: number, basis: 'fijos'|'media'|'recibidos' },
- *   spent: number, pendingFixed: number, pendingFixedCount: number
+ *   spent: number, pendingFixed: number, pendingFixedCount: number, savings: number
  * }} null si no hay nada que prever (sin ingresos ni historial)
  */
-export function availableToSpend({ transactions, transferCatIds, ingresoCatIds, recurringItems = [], today = new Date() }) {
+export function availableToSpend({ transactions, transferCatIds, ingresoCatIds, recurringItems = [], savings = 0, today = new Date() }) {
   const year = today.getFullYear()
   const month = today.getMonth()
   const monthKey = (y, m) => y * 12 + m
@@ -46,9 +47,11 @@ export function availableToSpend({ transactions, transferCatIds, ingresoCatIds, 
 
   const due = activeInMonth(recurringItems, year, month).filter((r) => isDueInMonth(r, month))
   const status = fixedStatusForMonth(due, monthTx, ingresoCatIds)
-  const pendingIncome = sum(status.filter((r) => r.isIncome && !r.paid).map((r) => r.importe))
+  // De lo que aún no está pagado, lo que falta (si ya ha llegado una parte, solo el resto)
+  const stillDue = (r) => Math.max(0, r.importe - (r.paidAmount ?? 0))
+  const pendingIncome = sum(status.filter((r) => r.isIncome && !r.paid).map(stillDue))
   const pendingExpenses = status.filter((r) => !r.isIncome && !r.paid)
-  const pendingFixed = sum(pendingExpenses.map((r) => r.importe))
+  const pendingFixed = sum(pendingExpenses.map(stillDue))
 
   // Media de ingresos de los últimos meses completos con movimientos
   const previous = [...byMonth.keys()].filter((k) => k < current).sort((a, b) => b - a).slice(0, AVERAGE_MONTHS)
@@ -68,7 +71,7 @@ export function availableToSpend({ transactions, transferCatIds, ingresoCatIds, 
   if (expected === 0 && !monthTx.length && average == null) return null
 
   const daysLeft = new Date(year, month + 1, 0).getDate() - today.getDate() + 1
-  const total = round2(expected - spent - pendingFixed)
+  const total = round2(expected - spent - pendingFixed - savings)
   return {
     total,
     perDay: total > 0 ? round2(total / daysLeft) : 0,
@@ -77,5 +80,6 @@ export function availableToSpend({ transactions, transferCatIds, ingresoCatIds, 
     spent: round2(spent),
     pendingFixed: round2(pendingFixed),
     pendingFixedCount: pendingExpenses.length,
+    savings: round2(savings),
   }
 }

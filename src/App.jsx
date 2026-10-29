@@ -18,12 +18,14 @@ import Terminos from './pages/Terminos'
 import Privacidad from './pages/Privacidad'
 import Licencias from './pages/Licencias'
 import GastosFijos from './pages/GastosFijos'
+import Ahorro from './pages/Ahorro'
 import useTransactionStore from './store/useTransactionStore'
 import useCategoryStore from './store/useCategoryStore'
 import useSubcategoryStore from './store/useSubcategoryStore'
 import useAccountStore from './store/useAccountStore'
 import useBudgetStore from './store/useBudgetStore'
 import useRecurringStore from './store/useRecurringStore'
+import useGoalStore from './store/useGoalStore'
 
 export default function App() {
   const loadTransactions  = useTransactionStore((s) => s.loadFromDB)
@@ -32,12 +34,13 @@ export default function App() {
   const loadAccounts      = useAccountStore((s) => s.loadFromDB)
   const loadBudgets       = useBudgetStore((s) => s.loadFromDB)
   const loadRecurring     = useRecurringStore((s) => s.loadFromDB)
+  const loadGoals         = useGoalStore((s) => s.loadFromDB)
 
   const [ready, setReady] = useState(false)
   const [error, setError]  = useState(null)
 
   useEffect(() => {
-    Promise.all([loadTransactions(), loadCategories(), loadSubcategories(), loadAccounts(), loadBudgets(), loadRecurring()])
+    Promise.all([loadTransactions(), loadCategories(), loadSubcategories(), loadAccounts(), loadBudgets(), loadRecurring(), loadGoals()])
       .then(() => setReady(true))
       .catch((err) => {
         console.error('Error loading data from database:', err)
@@ -77,6 +80,7 @@ export default function App() {
           <Route path="subcategorias" element={<Subcategorias />} />
           <Route path="cuentas" element={<Cuentas />} />
           <Route path="gastos-fijos" element={<GastosFijos />} />
+          <Route path="ahorro" element={<Ahorro />} />
           <Route path="acerca" element={<Acerca />} />
           <Route path="ajustes" element={<Ajustes />} />
           <Route path="exportar" element={<Exportar />} />

@@ -12,6 +12,7 @@ import { isMobile } from '../platform'
 import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } from '../utils/backupManager'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
+import useGoalStore from '../store/useGoalStore'
 import SelectSheet from '../components/SelectSheet'
 import { TransactionCardList } from '../components/TransactionList.mobile'
 
@@ -21,6 +22,12 @@ const SKIP_ACCOUNT = '__skip__' // cuenta del extracto que no se importa
 function formatEur(amount) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
 }
+
+/** Tras restaurar una copia: todos los datos vuelven a leerse de la base de datos. */
+const reloadAllStores = () => Promise.all(
+  [useTransactionStore, useCategoryStore, useSubcategoryStore, useAccountStore, useBudgetStore, useRecurringStore, useGoalStore]
+    .map((store) => store.getState().loadFromDB()),
+)
 
 export default function Importar() {
   const allTransactions = useTransactionStore((s) => s.transactions)
@@ -57,15 +64,7 @@ export default function Importar() {
       if (!payload.version || !payload.transactions || !payload.categories) throw new Error('Formato de backup no válido')
       await createBackup('auto: antes de restaurar archivo')
       await replaceAllData(payload)
-      // Reload all stores from DB
-      await Promise.all([
-        useTransactionStore.getState().loadFromDB(),
-        useCategoryStore.getState().loadFromDB(),
-        useSubcategoryStore.getState().loadFromDB(),
-        useAccountStore.getState().loadFromDB(),
-        useBudgetStore.getState().loadFromDB(),
-        useRecurringStore.getState().loadFromDB(),
-      ])
+      await reloadAllStores()
       setBackupStatus('ok')
     } catch (err) {
       console.error(err)
@@ -318,12 +317,7 @@ export default function Importar() {
                           setRestoringId(b.id)
                           try {
                             await restoreBackup(b.id)
-                            await Promise.all([
-                              useTransactionStore.getState().loadFromDB(),
-                              useCategoryStore.getState().loadFromDB(),
-                              useSubcategoryStore.getState().loadFromDB(),
-                              useAccountStore.getState().loadFromDB(),
-                            ])
+                            await reloadAllStores()
                             setBackupStatus('ok')
                             await refreshBackupHistory()
                           } catch {

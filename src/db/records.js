@@ -13,7 +13,7 @@
  *   No es único: dos cafés iguales el mismo día tienen el mismo.
  */
 
-export const SYNCED_TABLES = ['transactions', 'categories', 'subcategories', 'accounts', 'budgets', 'recurringExpenses']
+export const SYNCED_TABLES = ['transactions', 'categories', 'subcategories', 'accounts', 'budgets', 'recurringExpenses', 'goals']
 
 export const isDeleted = (r) => r?.deletedAt != null
 export const tombstone = (id, now = Date.now()) => ({ id, deletedAt: now })

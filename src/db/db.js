@@ -33,6 +33,8 @@ db.version(3).stores({
 })
 
 // v4: preparación para sincronizar (ver records.js). Copia de seguridad antes de migrar.
+// Tablas que existían en la v4: al actualizar desde la v3, las de versiones posteriores aún no están.
+const V4_TABLES = ['transactions', 'categories', 'subcategories', 'accounts', 'budgets', 'recurringExpenses']
 db.version(4).stores({
   transactions:  'id, fechaContable, categoria, subcategoria, accountId, hlc, importHash',
   categories:    'id, hlc',
@@ -43,15 +45,20 @@ db.version(4).stores({
   recurringExpenses: 'id, hlc',
 }).upgrade(async (tx) => {
   const data = {}
-  for (const name of SYNCED_TABLES) data[name] = await tx.table(name).toArray()
+  for (const name of V4_TABLES) data[name] = await tx.table(name).toArray()
   if (Object.values(data).every((list) => !list.length)) return
   await tx.table('backups').put(snapshot('auto: antes de actualizar la base de datos', data))
   // Vaciar y volver a añadir (en la misma transacción) es mucho más rápido que sobrescribir
   const migrated = migrateData(data)
-  for (const name of SYNCED_TABLES) {
+  for (const name of V4_TABLES) {
     await tx.table(name).clear()
     await tx.table(name).bulkAdd(migrated[name])
   }
+})
+
+// v5: planes de ahorro y metas (ver insights/goals.js)
+db.version(5).stores({
+  goals: 'id, hlc',
 })
 
 // Cada escritura en una tabla sincronizable lleva su marca de tiempo; los movimientos, además,
