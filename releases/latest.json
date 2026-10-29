@@ -1,11 +1,11 @@
 {
-  "version": "0.8.0",
-  "notes": "Cuadra ahora se llama Zenit: misma app y tus datos de siempre. Ya no se duplican movimientos al importar extractos que se solapan, los pendientes del banco se completan solos y Cuentas solo avisa de lo que de verdad no cuadra (y te deja borrar duplicados antiguos). La cuenta destino de una categoría de traspaso (p. ej. Cajero → Efectivo) se aplica también a los movimientos ya importados.",
-  "pub_date": "2026-10-27T00:00:00Z",
+  "version": "0.9.0",
+  "notes": "Nuevo: Ahorro y metas (guarda una cantidad cada mes o reúne una cantidad para una fecha, con seguimiento mes a mes) y Disponible para gastar en el Dashboard (cuánto te queda hasta fin de mes y cuánto al día). Aviso al superar un presupuesto. Gastos fijos muestra lo pagado o cobrado aunque sea en varios movimientos, y Cuentas incluye los movimientos anteriores al primer extracto. La primera vez que abras esta versión, la base de datos se actualiza sola (con copia de seguridad antes).",
+  "pub_date": "2026-10-29T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQURxb1g0VGNFNWRGWlNpdzJ3K1lXb01Ec29RNWc3SVYwSzlRRXA3Yk12VmRWS3JnOU95dkxTY0FuQXZEUWVRVmpydkNaVlczRG03cVV4MWJFdVZndXdvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMTI4MDYzCWZpbGU6WmVuaXRfMC44LjBfeDY0LXNldHVwLmV4ZQpuaHRuWGYzM0ZnTTZ5UngrSWl6ZHVhM2hHTkFaZFFyQkZzMTlkZ3ZrbmUxRXhuQWFKa3ZxaUI5bkQ0VHdxeFErYzZQUzR0THdmL1g4N1F5MU91UGlCUT09Cg==",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.8.0/Zenit_0.8.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUFvQ04zL201NlRaWWpPT0pnWGNaN1oxUHRQYXFocVFKL3lnQkwzOGlncTRmOEtNVDY1UjVJdzdZN0p1VldLQ3B5Ujh0eE90NHMydXJ5L3RsT09ZNGdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjkwOTkyCWZpbGU6WmVuaXRfMC45LjBfeDY0LXNldHVwLmV4ZQpGUlk5ODh4UWs2bjFoWE1aTWIxeGFXV0gvME5xY3NWMldhZ3hzdXFlVFl0enlHNTJ5cXJEdVEvM3lFQW5CenJISEl5QTZRNEN1RGtRVzdHZkQwQmhEdz09Cg==",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.9.0/Zenit_0.9.0_x64-setup.exe"
     }
   }
 }
