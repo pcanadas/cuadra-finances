@@ -207,6 +207,14 @@ describe('findStalePending', () => {
     const groups = findStalePending(txs)
     expect(groups.map((g) => [g.remove[0].id, g.keep[0].id])).toEqual([['p1', 'b1'], ['p2', 'b2']])
   })
+
+  it('also finds old pendings saved with balance 0 (before 0.8.0)', () => {
+    const legacy = { id: 'old', fechaContable: '2026-10-26', descripcion: 'WWW.TIENDA 25/10/26', importe: -14.13, saldo: 0, accountId: 'acc-1' }
+    const booked = book('b', '2026-10-28', 'WWW.TIENDA*XY21F87E14', -14.13, 900)
+    expect(findStalePending([legacy, booked]).map((g) => g.remove[0].id)).toEqual(['old'])
+    // Sin contabilizado que case, no se toca
+    expect(findStalePending([legacy])).toEqual([])
+  })
 })
 
 describe('pending matching with repeated purchases', () => {

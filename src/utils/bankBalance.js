@@ -240,16 +240,18 @@ export function planImport(existing, incoming, defaultAccountId = null) {
 
 /**
  * Pendientes guardados que el banco ya contabilizó y quedaron duplicados (versiones anteriores, o
- * cuando el extracto seguía listándolo como pendiente): mismo importe, concepto parecido y un
+ * cuando el extracto seguía listándolo como pendiente; también los antiguos con saldo 0): mismo importe, concepto parecido y un
  * contabilizado el mismo día o pocos días después. Mismo formato que findDuplicates.
  * @returns {{ keep: object[], remove: object[] }[]}
  */
 export function findStalePending(txs) {
   const imported = txs.filter(isImported)
-  const booked = imported.filter((t) => !isPending(t) && t.saldo != null)
+  // Antes de la 0.8.0 los pendientes se guardaban con saldo 0 y sin marca
+  const pendingLike = (t) => isPending(t) || t.saldo === 0
+  const booked = imported.filter((t) => !pendingLike(t) && t.saldo != null)
   const taken = new Set()
   const groups = []
-  for (const p of imported.filter(isPending).sort((a, b) => a.fechaContable.localeCompare(b.fechaContable))) {
+  for (const p of imported.filter(pendingLike).sort((a, b) => a.fechaContable.localeCompare(b.fechaContable))) {
     const b = closest(booked.filter((x) => !taken.has(x) && samePurchase(p, x)), p)
     if (!b) continue
     taken.add(b)

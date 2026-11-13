@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.10.4] — 2026-11-13
+
+### Corregido
+- **Pendientes antiguos duplicados** — los pendientes guardados por versiones anteriores a la 0.8.0 (con saldo 0 en vez de vacío y sin marca de pendiente) no aparecían en Cuentas → «Movimientos duplicados» aunque el banco ya los hubiera contabilizado. Ahora sí, con el movimiento con el que casa cada uno, para revisarlos y borrarlos
+
 ## [0.10.3] — 2026-11-13
 
 ### Corregido

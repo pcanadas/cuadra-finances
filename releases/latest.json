@@ -1,11 +1,11 @@
 {
-  "version": "0.10.3",
-  "notes": "Corregido: los movimientos pendientes del banco ya no se duplican al importar el siguiente extracto, y en Cuentas puedes revisar y borrar los que se duplicaron. Los movimientos del mismo día se muestran en el orden del banco, para que el saldo de cada uno siga al anterior.",
+  "version": "0.10.4",
+  "notes": "Corregido: en Cuentas → Movimientos duplicados aparecen también los pendientes antiguos (de versiones anteriores a la 0.8.0, guardados con saldo 0) que el banco ya contabilizó, para revisarlos y borrarlos.",
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUNuTnNXWTlTSVVnNlE1dVRnemhkeXhSSDdUa2NzVm4xUmxxREZqT0JMK2x0YUtWNmVhb1RsbTRPTVRLdURPK21EUGtCdGhwcnJrOUlQbmFtbGhhQVFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTkyMjMyCWZpbGU6WmVuaXRfMC4xMC4zX3g2NC1zZXR1cC5leGUKV2FhQTVRdlorZTBKb2NqZ1dUMkxwTS9WKzR1Vm14cUtkeU95N3Nteit3R0VDM2lnZDhLKzJMT29WOFNtekZWeW5URkw3Z2x0ZVV3UlFsb0xCWVEvREE9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.3/Zenit_0.10.3_x64-setup.exe"
+      "signature": "RELLENAR_TRAS_BUILD",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.4/Zenit_0.10.4_x64-setup.exe"
     }
   }
 }
