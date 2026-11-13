@@ -7,6 +7,36 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
+## [1.3.0] — 2026-11-13
+
+versionCode 1003000. Recoge lo de escritorio 0.10.0–0.10.2 que aplica al móvil.
+
+### Añadido
+- **Aviso de nueva versión** — al abrir Zenit, si Google Play tiene una versión nueva aparece un aviso sobre la barra inferior; «Actualizar» abre la pantalla de actualización de Play (descarga, instala y vuelve a abrir Zenit). En Más → Acerca, «Comprobar actualizaciones». Usa las actualizaciones integradas de Google Play (`app-update`, `MainActivity.kt` → `window.CuadraUpdate`); solo responde si la app se instaló desde Play (en un APK de pruebas no avisa)
+- **Desglosar un movimiento en partidas** — en Registros, toca el movimiento → «Desglosar en varias categorías»: reparte el importe (Amazon, PayPal, la tarjeta…) en partidas con su categoría, subcategoría y nota. En la lista se ve «Desglosado: …» con sus categorías; Inicio, presupuestos, gastos fijos y metas cuentan cada partida en su categoría
+- **Notas en los movimientos** — campo «Nota» al tocar un movimiento (p. ej. «Pago muebles»); se ve en cursiva bajo la descripción y el buscador la encuentra
+- **Separar impuestos** (Más → Ajustes, opcional) — la renta o el IBI no inflan los gastos, el balance ni el gasto diario de Inicio; se muestran aparte (y una devolución, en verde)
+- **Previsión del mes** — cuánto has cobrado de los ingresos fijos y si es más o menos de lo previsto
+
+### Cambiado
+- **Gastos fijos: estado del mes más claro** — resumen de lo cobrado y lo pagado, y cada fijo con su estado (pendiente, en parte, pagado), barra de progreso y lo que falta; pensado para letra grande
+
+### Corregido
+- **Ingresos devueltos** (p. ej. una nómina) — ahora restan de los ingresos, de su subcategoría y de lo cobrado del ingreso fijo, sin esperarlos de vuelta
+
+### Notas para Google Play («Novedades»)
+```
+• Zenit te avisa cuando hay una versión nueva y se actualiza desde la propia app.
+• Desglosa un cargo (Amazon, PayPal, la tarjeta…) en varias categorías.
+• Añade notas a tus movimientos, como «Pago muebles».
+• Opción para separar los impuestos (la renta, el IBI) de tus gastos del mes.
+• La previsión del mes muestra cuánto has cobrado de tus ingresos fijos.
+• Gastos fijos: el estado del mes, más claro.
+• Corregido: un ingreso devuelto ahora resta de los ingresos.
+```
+
+---
+
 ## [1.2.0] — 2026-10-29
 
 versionCode 1002000.

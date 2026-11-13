@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { balanceHistory, checkBalances, findDuplicates, planImport } from './bankBalance'
+import { balanceHistory, checkBalances, findDuplicates, findStalePending, planImport } from './bankBalance'
 
 // Extracto encadenado: cada movimiento parte del saldo del anterior
 function statement(importId, start, moves, firstIndex = 0) {
@@ -113,6 +113,45 @@ describe('planImport', () => {
     expect(update[0].changes.categoria).toBeUndefined() // conserva su categoría
   })
 
+  // Pendiente con la fecha en el concepto; contabilizado días después con una referencia
+  const pend = (id, fecha, descripcion, importe) => ({ id, fechaContable: fecha, descripcion, importe, saldo: null, pendiente: true, accountId: 'acc-1' })
+  const book = (id, fecha, descripcion, importe, saldo) => ({ id, fechaContable: fecha, descripcion, importe, saldo, accountId: 'acc-1' })
+
+  it('completes a pending whose text only shares the merchant (date vs. reference)', () => {
+    const pending = pend('p1', '2026-11-09', 'WWW.TIENDA           08/11/26', -66.93)
+    const booked = book('b1', '2026-11-12', 'WWW.TIENDA*AB6WF8XY4', -66.93, 900)
+    const { add, update } = planImport([pending], [booked], 'acc-1')
+    expect(add).toEqual([])
+    expect(update[0]).toMatchObject({ id: 'p1', changes: { saldo: 900, descripcion: 'WWW.TIENDA*AB6WF8XY4', pendiente: false } })
+  })
+
+  it('does not add again a pending the bank keeps listing after booking it', () => {
+    const pending = pend('p1', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9)
+    // El extracto nuevo trae el contabilizado y, en pendientes, la misma compra todavía
+    const incoming = [pend('n0', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9), book('n1', '2026-11-13', 'CAFETERIA LUNA', -1.9, 500)]
+    const { add, update } = planImport([pending], incoming, 'acc-1')
+    expect(add).toEqual([])
+    expect(update).toHaveLength(1)
+    // Y en una importación posterior, con el contabilizado ya guardado, tampoco
+    const saved = [{ ...pending, ...update[0].changes }]
+    expect(planImport(saved, [pend('m0', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9)], 'acc-1').add).toEqual([])
+  })
+
+  it('still adds a genuinely new pending', () => {
+    const booked = book('b1', '2026-11-10', 'CAFETERIA LUNA', -1.9, 500) // anterior: no puede ser el mismo
+    const fresh = pend('n0', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9)
+    expect(planImport([booked], [fresh], 'acc-1').add).toEqual([fresh])
+    // Dos pendientes iguales y un solo contabilizado: uno queda pendiente
+    const two = [pend('n1', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9), pend('n2', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9)]
+    expect(planImport([book('b2', '2026-11-13', 'CAFETERIA LUNA', -1.9, 400)], two, 'acc-1').add).toHaveLength(1)
+  })
+
+  it('never matches a booked movement dated before the pending one', () => {
+    const pending = pend('p1', '2026-11-12', 'WWW.TIENDA 12/11/26', -20)
+    const earlier = book('b1', '2026-11-10', 'WWW.TIENDA*AB12', -20, 300)
+    expect(planImport([pending], [earlier], 'acc-1').update).toEqual([])
+  })
+
   it('does not merge different movements just because they look alike', () => {
     const pending = { id: 'tx-1000-0-x', fechaContable: '2026-10-01', descripcion: 'BIZUM ANA', importe: -10, saldo: null, pendiente: true, accountId: 'acc-1' }
     const later = { id: 'tx-90000-0-x', fechaContable: '2026-10-20', descripcion: 'BIZUM ANA', importe: -10, saldo: 90, accountId: 'acc-1' }
@@ -150,5 +189,39 @@ describe('balanceHistory', () => {
   it('is empty without bank balances', () => {
     const all = [manual('2026-09-10', 30, 1)]
     expect(balanceHistory(all, checkBalances(all).withBalance)).toEqual({ series: [], calculated: 0 })
+  })
+})
+
+describe('findStalePending', () => {
+  const pend = (id, fecha, descripcion, importe) => ({ id, fechaContable: fecha, descripcion, importe, saldo: null, pendiente: true, accountId: 'acc-1' })
+  const book = (id, fecha, descripcion, importe, saldo) => ({ id, fechaContable: fecha, descripcion, importe, saldo, accountId: 'acc-1' })
+
+  it('finds pendings that were already booked (duplicates from earlier imports)', () => {
+    const txs = [
+      pend('p1', '2026-11-09', 'WWW.TIENDA           08/11/26', -66.93),
+      book('b1', '2026-11-12', 'WWW.TIENDA*AB6WF8XY4', -66.93, 900),
+      pend('p2', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9),
+      book('b2', '2026-11-13', 'CAFETERIA LUNA', -1.9, 898.1),
+      pend('p3', '2026-11-13', 'OTRA TIENDA 13/11/26', -5), // aún pendiente de verdad
+    ]
+    const groups = findStalePending(txs)
+    expect(groups.map((g) => [g.remove[0].id, g.keep[0].id])).toEqual([['p1', 'b1'], ['p2', 'b2']])
+  })
+})
+
+describe('pending matching with repeated purchases', () => {
+  const pend = (id, fecha, descripcion, importe) => ({ id, fechaContable: fecha, descripcion, importe, saldo: null, pendiente: true, accountId: 'acc-1' })
+  const book = (id, fecha, descripcion, importe, saldo) => ({ id, fechaContable: fecha, descripcion, importe, saldo, accountId: 'acc-1' })
+
+  it('pairs each booked movement with the closest pending (daily coffee)', () => {
+    const pendings = [pend('p10', '2026-11-10', 'CAFETERIA LUNA 10/11/26', -1.9), pend('p12', '2026-11-12', 'CAFETERIA LUNA 12/11/26', -1.9)]
+    const { add, update } = planImport(pendings, [book('b13', '2026-11-13', 'CAFETERIA LUNA', -1.9, 500)], 'acc-1')
+    expect(add).toEqual([])
+    expect(update.map((u) => u.id)).toEqual(['p12'])
+  })
+
+  it('matches a booking up to 10 days later, not more', () => {
+    expect(planImport([pend('p', '2026-11-06', 'WWW.TIENDA 06/11/26', -84.95)], [book('b', '2026-11-12', 'WWW.TIENDA* XY44469X4', -84.95, 1)], 'acc-1').add).toEqual([])
+    expect(planImport([pend('p', '2026-11-01', 'WWW.TIENDA 01/11/26', -84.95)], [book('b', '2026-11-12', 'WWW.TIENDA*XY4', -84.95, 1)], 'acc-1').add).toHaveLength(1)
   })
 })

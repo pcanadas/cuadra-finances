@@ -1,11 +1,11 @@
 {
-  "version": "0.10.2",
-  "notes": "Corregido: al actualizar desde la app ya no aparece «No se ha podido cerrar Zenit» cuando un antivirus (p. ej. McAfee) tiene abierto el programa.",
+  "version": "0.10.3",
+  "notes": "Corregido: los movimientos pendientes del banco ya no se duplican al importar el siguiente extracto, y en Cuentas puedes revisar y borrar los que se duplicaron. Los movimientos del mismo día se muestran en el orden del banco, para que el saldo de cada uno siga al anterior.",
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUVuWjczRDVZMnhFVG5pL2VOWURMYUp5ZTRWSnMrb2RQbVhDb3pRWS9nOFhGakdJVXBGWnJkNFF4YllKOUpmclgySitSb1ZxOUdBYWdRNHg5WWd5akFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg3NzYwCWZpbGU6WmVuaXRfMC4xMC4yX3g2NC1zZXR1cC5leGUKaVYvRHJpaVMzbU5LTDBzTDRrQ1lBZVoxNjJvZGhodGh0cU00U0MzRzc5ZDN4VWR0R2JibmNVeFNUMU16Lzg1SWJXaURLWm1Ud2hJRnl1RW5SOHlwQ0E9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.2/Zenit_0.10.2_x64-setup.exe"
+      "signature": "RELLENAR_TRAS_BUILD",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.3/Zenit_0.10.3_x64-setup.exe"
     }
   }
 }

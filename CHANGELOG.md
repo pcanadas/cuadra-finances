@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.10.3] — 2026-11-13
+
+### Corregido
+- **Pendientes del banco duplicados al importar** — el banco lista una compra con tarjeta como pendiente (sin saldo, con la fecha en el concepto: «WWW.AMAZON 08/11/26») y días después la contabiliza con otro concepto («WWW.AMAZON*BI6WF8UB4»). Al importar el siguiente extracto no siempre se reconocía como el mismo movimiento y quedaba duplicado. Ahora: los conceptos se comparan sin las fechas que añade el banco, palabra a palabra; el contabilizado puede llegar hasta 10 días después (Amazon cobra al enviar), nunca antes; con compras repetidas (un café diario) se empareja con el de fecha más cercana; y un pendiente que el banco sigue listando cuando ya está contabilizado no se vuelve a añadir
+- **Limpiar los pendientes ya duplicados** — Cuentas los muestra en «Movimientos duplicados», cada uno con el movimiento contabilizado con el que casa («Es el mismo que»), para comprobarlo y borrarlos (con copia de seguridad antes). Nunca se borran solos
+- **Orden de los movimientos del mismo día** — ahora es el del banco: se sigue la cadena de saldos (cada movimiento parte del saldo del anterior) y, si no hay saldo, la posición en el extracto según su sentido (Bankinter da primero lo más reciente). Los pendientes van al final de su día. En Movimientos y en Cuentas
+- **Gastos fijos en ventanas estrechas** — en el estado del mes, los nombres largos empujaban los importes fuera de la tarjeta; ahora el nombre se recorta y lo pagado y lo previsto van en dos líneas
+
+### Cambiado
+- El editor de desglose pasa a `src/components/SplitEditor.jsx` (compartido con Android)
+
 ## [0.10.2] — 2026-11-13
 
 ### Corregido

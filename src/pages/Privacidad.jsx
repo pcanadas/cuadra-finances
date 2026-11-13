@@ -6,7 +6,7 @@ export default function Privacidad() {
   const email = <span className="font-medium text-indigo-600">{SUPPORT_EMAIL}</span>
 
   return (
-    <InfoPage title="Política de privacidad" updated="29 de octubre de 2026">
+    <InfoPage title="Política de privacidad" updated="13 de noviembre de 2026">
       <InfoSection>
         <p>Zenit (antes llamada Cuadra) es una aplicación gratuita para llevar las finanzas personales, para Android y Windows, diseñada para que tus datos sean solo tuyos.</p>
       </InfoSection>
@@ -33,7 +33,7 @@ export default function Privacidad() {
         <p>Si consideras que no hemos atendido bien tu solicitud, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</p>
       </InfoSection>
       <InfoSection title="Permisos">
-        <p>La app solo accede a los archivos que eliges expresamente para importar o exportar, y a internet únicamente para enviar los comentarios y, en la versión de escritorio, para comprobar si hay actualizaciones (consulta un archivo público en GitHub, sin enviar ningún dato tuyo).</p>
+        <p>La app solo accede a los archivos que eliges expresamente para importar o exportar, y a internet únicamente para enviar los comentarios y para comprobar si hay una versión nueva: la versión de escritorio descargada de la web consulta un archivo público en GitHub, y las instaladas desde Microsoft Store o Google Play preguntan a su tienda. En ningún caso se envía ningún dato tuyo.</p>
         <p>En Android, si activas el bloqueo de la app, Zenit usa tu huella, tu cara o el bloqueo de pantalla del móvil a través del propio sistema: Android solo le indica si te has identificado, y Zenit no accede a tus datos biométricos ni a tu PIN ni los guarda. Si activas los botones en la barra de notificaciones, te pide permiso para mostrar notificaciones.</p>
       </InfoSection>
       <InfoSection title="Menores">

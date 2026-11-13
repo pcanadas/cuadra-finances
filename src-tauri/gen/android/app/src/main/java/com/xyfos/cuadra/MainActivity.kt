@@ -10,9 +10,16 @@ import android.webkit.JavascriptInterface
 import android.webkit.WebView
 import androidx.activity.SystemBarStyle
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.IntentSenderRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.google.android.play.core.appupdate.AppUpdateInfo
+import com.google.android.play.core.appupdate.AppUpdateManagerFactory
+import com.google.android.play.core.appupdate.AppUpdateOptions
+import com.google.android.play.core.install.model.AppUpdateType
+import com.google.android.play.core.install.model.UpdateAvailability
 
 class MainActivity : TauriActivity() {
   // Márgenes de las barras del sistema (estado, navegación, recortes) en dp = px CSS.
@@ -25,6 +32,14 @@ class MainActivity : TauriActivity() {
   // Alta rápida pedida desde la notificación o un acceso directo ("gasto" | "ingreso").
   // La web la recoge con window.CuadraQuickAdd.consume() al arrancar o al recibir "cuadra-native-quick-add".
   @Volatile private var pendingQuickAdd: String? = null
+
+  // Versión nueva en Google Play (in-app updates). Solo funciona si la app se instaló desde Play;
+  // si no (APK de pruebas), la comprobación falla y no se avisa. La web pregunta con
+  // window.CuadraUpdate.check() y recibe el resultado con el evento "cuadra-update".
+  private val appUpdateManager by lazy { AppUpdateManagerFactory.create(this) }
+  @Volatile private var updateInfo: AppUpdateInfo? = null
+  @Volatile private var updateJson = """{"checked":false,"available":false}"""
+  private val updateLauncher = registerForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     applySystemBars(isDark = false)
@@ -41,6 +56,12 @@ class MainActivity : TauriActivity() {
 
   override fun onResume() {
     super.onResume()
+    // Una actualización inmediata que se interrumpió (p. ej. al salir de la app) se retoma
+    appUpdateManager.appUpdateInfo.addOnSuccessListener { info ->
+      if (info.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+        appUpdateManager.startUpdateFlowForResult(info, updateLauncher, AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build())
+      }
+    }
     // Android 14+ deja quitar las notificaciones fijas deslizando: al volver a la app se repone
     QuickAddNotification.refresh(this)
   }
@@ -50,6 +71,40 @@ class MainActivity : TauriActivity() {
     pendingQuickAdd = intent.getStringExtra(QuickAddNotification.EXTRA_TIPO) ?: "gasto"
     intent.action = null // que no se repita al recrear la actividad
     return true
+  }
+
+  private fun checkForUpdate() {
+    appUpdateManager.appUpdateInfo
+      .addOnSuccessListener { info ->
+        val available = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+        updateInfo = if (available) info else null
+        updateJson = """{"checked":true,"available":$available,"versionCode":${if (available) info.availableVersionCode() else 0}}"""
+        dispatchUpdateState()
+      }
+      .addOnFailureListener {
+        updateInfo = null
+        updateJson = """{"checked":true,"available":false,"error":true}"""
+        dispatchUpdateState()
+      }
+  }
+
+  private fun dispatchUpdateState() {
+    webView?.post { webView?.evaluateJavascript("window.dispatchEvent(new Event('cuadra-update'))", null) }
+  }
+
+  // Pantalla de actualización de Google Play (descarga, instala y vuelve a abrir Zenit);
+  // si no se puede desde la app, la ficha de Zenit en Play Store
+  private fun startUpdate() {
+    val info = updateInfo
+    if (info != null && info.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
+      appUpdateManager.startUpdateFlowForResult(info, updateLauncher, AppUpdateOptions.newBuilder(AppUpdateType.IMMEDIATE).build())
+      return
+    }
+    try {
+      startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$packageName")))
+    } catch (e: Exception) {
+      startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$packageName")))
+    }
   }
 
   private fun notifyStateJson(): String =
@@ -132,6 +187,17 @@ class MainActivity : TauriActivity() {
       @JavascriptInterface
       fun get(): String = insetsJson
     }, "CuadraInsets")
+
+    webView.addJavascriptInterface(object {
+      @JavascriptInterface
+      fun check() { runOnUiThread { checkForUpdate() } }
+
+      @JavascriptInterface
+      fun state(): String = updateJson
+
+      @JavascriptInterface
+      fun start() { runOnUiThread { startUpdate() } }
+    }, "CuadraUpdate")
 
     // Menú "Compartir" de Android (el WebView no implementa navigator.share)
     webView.addJavascriptInterface(object {

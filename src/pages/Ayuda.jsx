@@ -27,20 +27,20 @@ const FAQ = [
       ? 'En Registros, mantén pulsado uno para empezar a seleccionar y toca los demás. Abajo aparecerá una barra para elegir la nueva categoría.'
       : 'En Movimientos, marca sus casillas. Aparecerá una barra para elegir la nueva categoría y subcategoría.',
   },
-  ...(isMobile ? [] : [
-    {
-      q: 'Un cargo de Amazon, PayPal o la tarjeta incluye cosas de varias categorías',
-      a: 'En Movimientos, pulsa el icono de desglosar (las flechas que se separan) a la derecha del movimiento. Reparte el importe en partidas, cada una con su categoría, subcategoría y una nota opcional (p. ej. «Pienso»); las partidas deben sumar el total. El Dashboard, los presupuestos y los gastos fijos cuentan cada partida en su categoría. Para cambiarlo o quitarlo, pulsa «Desglosado en N partidas».',
-    },
-    {
-      q: 'El pago de la renta dispara mis gastos del mes',
-      a: 'En Más → Ajustes, activa «Separar impuestos» y marca tus categorías de impuestos (la categoría Impuestos ya viene marcada). El Dashboard deja fuera los impuestos de los gastos, el balance y el gasto diario, y los muestra debajo: «+ Impuestos» si pagas, «Devolución de impuestos» en verde si te devuelven, y el balance con impuestos. «Disponible para gastar» sigue contándolos, porque es dinero que sale de tu cuenta.',
-    },
-    {
-      q: '¿Puedo añadir una nota a un movimiento?',
-      a: 'Sí: pulsa el icono del bocadillo a la derecha del movimiento y escribe, por ejemplo, «Pago muebles» para una transferencia que en el banco solo dice «Transferencia a otras entidades». La nota se ve debajo de la descripción y también se busca con el buscador.',
-    },
-  ]),
+  {
+    q: 'Un cargo de Amazon, PayPal o la tarjeta incluye cosas de varias categorías',
+    a: isMobile
+      ? 'En Registros, toca el movimiento y pulsa «Desglosar en varias categorías». Reparte el importe en partidas, cada una con su categoría, subcategoría y una nota opcional (p. ej. «Pienso»); las partidas deben sumar el total. Inicio, los presupuestos y los gastos fijos cuentan cada partida en su categoría. Para cambiarlo o quitarlo, toca el movimiento y pulsa «Editar desglose».'
+      : 'En Movimientos, pulsa el icono de desglosar (las flechas que se separan) a la derecha del movimiento. Reparte el importe en partidas, cada una con su categoría, subcategoría y una nota opcional (p. ej. «Pienso»); las partidas deben sumar el total. El Dashboard, los presupuestos y los gastos fijos cuentan cada partida en su categoría. Para cambiarlo o quitarlo, pulsa «Desglosado en N partidas».',
+  },
+  {
+    q: 'El pago de la renta dispara mis gastos del mes',
+    a: `En Más → Ajustes, activa «Separar impuestos» y marca tus categorías de impuestos (la categoría Impuestos ya viene marcada). ${isMobile ? 'Inicio' : 'El Dashboard'} deja fuera los impuestos de los gastos, el balance y el gasto diario, y los muestra debajo: «+ Impuestos» si pagas, «Devolución de impuestos» en verde si te devuelven, y el balance con impuestos. «Disponible para gastar» sigue contándolos, porque es dinero que sale de tu cuenta.`,
+  },
+  {
+    q: '¿Puedo añadir una nota a un movimiento?',
+    a: `Sí: ${isMobile ? 'en Registros, toca el movimiento y escribe en «Nota»' : 'pulsa el icono del bocadillo a la derecha del movimiento y escríbela'}, por ejemplo «Pago muebles» para una transferencia que en el banco solo dice «Transferencia a otras entidades». La nota se ve debajo de la descripción y también se busca con el buscador.`,
+  },
   {
     q: '¿Cómo reflejo el dinero que saco del cajero?',
     a: 'En Categorías, marca la categoría (p. ej. Cajero) como transferencia interna y elige Efectivo como cuenta destino. Cada retirada aparecerá también como entrada en Efectivo, sin contar como ingreso ni como gasto. Sirve igual para traspasos a otra cuenta tuya.',

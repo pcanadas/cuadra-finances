@@ -15,7 +15,8 @@ import useAccountStore from '../store/useAccountStore'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { isMobile } from '../platform'
-import { balanceHistory, checkBalances, findDuplicates } from '../utils/bankBalance'
+import { balanceHistory, checkBalances, findDuplicates, findStalePending } from '../utils/bankBalance'
+import { sortChrono } from '../utils/txOrder'
 import { createBackup } from '../utils/backupManager'
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
@@ -118,9 +119,11 @@ function Section({ tone, icon, title, children, aside }) {
   )
 }
 
-// Mismo movimiento importado dos veces (extractos que se solapan): se propone borrar las copias de más
+// Mismo movimiento importado dos veces (extractos que se solapan, o un pendiente que el banco ya
+// contabilizó): se propone borrar las copias de más; de cada pendiente se ve con qué movimiento casa
 function DuplicatesSection({ groups, onDelete }) {
   const copies = groups.flatMap((g) => g.remove)
+  const bookedAs = new Map(groups.filter((g) => g.pending).flatMap((g) => g.remove.map((t) => [t.id, g.keep[0]])))
   const [selected, setSelected] = useState(() => new Set(copies.map((t) => t.id)))
   const [busy, setBusy] = useState(false)
   const chosen = copies.filter((t) => selected.has(t.id))
@@ -144,10 +147,11 @@ function DuplicatesSection({ groups, onDelete }) {
 
   return (
     <Section tone="rose" icon="⧉"
-      title={`${copies.length} movimiento${copies.length !== 1 ? 's' : ''} importado${copies.length !== 1 ? 's' : ''} dos veces`}>
+      title={`${copies.length} movimiento${copies.length !== 1 ? 's' : ''} duplicado${copies.length !== 1 ? 's' : ''}`}>
       <p className="px-4 pt-3 text-xs text-slate-500">
-        Vienen en dos extractos que se solapan y se importaron otra vez (versiones anteriores de la app).
-        Cuentan doble en los totales. Se conserva la copia del extracto más reciente.
+        Cuentan doble en los totales. Pueden ser copias de dos extractos que se solapan (se conserva la del más reciente)
+        o pendientes del banco (sin saldo) que ya están contabilizados: comprueba en «Es el mismo que» que se trata del
+        mismo gasto y desmarca los que no lo sean.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-xs mt-2">
@@ -158,6 +162,7 @@ function DuplicatesSection({ groups, onDelete }) {
               <th className={`${thClass} text-left`}>Descripción</th>
               <th className={`${thClass} text-right`}>Importe</th>
               <th className={`${thClass} text-right`}>Saldo de la copia</th>
+              <th className={`${thClass} text-left`}>Es el mismo que</th>
             </tr>
           </thead>
           <tbody>
@@ -168,6 +173,11 @@ function DuplicatesSection({ groups, onDelete }) {
                 <td className="px-4 py-2 text-slate-700 max-w-xs truncate" title={t.descripcion}>{t.descripcion || '—'}</td>
                 <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${t.importe >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatEur(t.importe)}</td>
                 <td className="px-4 py-2 text-right text-slate-500 whitespace-nowrap">{t.saldo != null ? formatEur(t.saldo) : '—'}</td>
+                <td className="px-4 py-2 text-slate-500 max-w-xs truncate">
+                  {bookedAs.has(t.id)
+                    ? <>⏳→ {format(new Date(bookedAs.get(t.id).fechaContable), 'dd/MM/yyyy')} · {bookedAs.get(t.id).descripcion} · saldo {formatEur(bookedAs.get(t.id).saldo)}</>
+                    : 'Otra copia del mismo movimiento'}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -306,15 +316,15 @@ export default function Cuentas() {
 
   // Coherencia con el saldo del banco y duplicados entre extractos
   const check = useMemo(() => checkBalances(allAccountTxs), [allAccountTxs])
-  const duplicates = useMemo(() => findDuplicates(allAccountTxs), [allAccountTxs])
+  // Copias de extractos que se solapan y pendientes que el banco ya contabilizó (ver bankBalance.js)
+  const duplicates = useMemo(
+    () => [...findDuplicates(allAccountTxs), ...findStalePending(allAccountTxs).map((g) => ({ ...g, pending: true }))],
+    [allAccountTxs],
+  )
 
   // Date-sorted transactions (for chart and stats — preserves chronological order)
-  const allAccountTxsDateSorted = useMemo(() => {
-    return [...allAccountTxs].sort((a, b) => {
-      const d = new Date(a.fechaContable) - new Date(b.fechaContable)
-      return d !== 0 ? d : (a.id < b.id ? -1 : 1)
-    })
-  }, [allAccountTxs])
+  // (el mismo día, en el orden del banco: utils/txOrder.js)
+  const allAccountTxsDateSorted = useMemo(() => sortChrono(allAccountTxs, defaultAccountId), [allAccountTxs, defaultAccountId])
 
   // Movimientos con saldo del banco (sin pendientes) y los anteriores al primer extracto,
   // con el saldo calculado hacia atrás — orden de fecha para gráfico y estadísticas

@@ -8,10 +8,12 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import { extractKeyword } from '../utils/categorize'
 import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
 import { exportTransactionsToExcel } from '../utils/exportData'
-import { hasSplit, splitRemainder } from '../utils/splits'
+import { hasSplit } from '../utils/splits'
+import { chronoComparator } from '../utils/txOrder'
 import { useBackHandler } from '../platform/back'
 import SelectSheet from '../components/SelectSheet'
 import { TransactionCardList, TransactionSheet } from '../components/TransactionList.mobile'
+import SplitEditor from '../components/SplitEditor'
 
 const PAGE_SIZE = 20
 
@@ -150,127 +152,6 @@ function NoteModal({ transaction, onSave, onClose }) {
               <button type="button" onClick={() => onSave('')}
                 className="px-4 py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50">
                 Quitar
-              </button>
-            )}
-            <button type="button" onClick={onClose}
-              className="px-4 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-// ─── Modal: desglosar un movimiento en partidas ──────────────────────────────
-
-const parseAmount = (v) => parseFloat(String(v).replace(',', '.'))
-const amountText = (n) => n.toFixed(2).replace('.', ',')
-
-function SplitModal({ transaction, categories, subcategories, onSave, onClose }) {
-  const sign = transaction.importe < 0 ? -1 : 1
-  const total = Math.abs(transaction.importe)
-  // En el formulario los importes van sin signo; se guardan con el del movimiento
-  const [parts, setParts] = useState(() => hasSplit(transaction)
-    ? transaction.desglose.map((p) => ({ ...p, importe: amountText(Math.abs(p.importe)), subcategoria: p.subcategoria ?? '', notas: p.notas ?? '' }))
-    : [
-        { importe: amountText(total), categoria: transaction.categoria ?? '', subcategoria: transaction.subcategoria ?? '', notas: '' },
-        { importe: '', categoria: '', subcategoria: '', notas: '' },
-      ])
-  const [error, setError] = useState('')
-  useBackHandler(true, onClose)
-
-  // Un traspaso no se reparte: sus categorías no se ofrecen
-  const options = useMemo(
-    () => categories.filter((c) => !c.esTransferencia).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')),
-    [categories]
-  )
-  const remainder = splitRemainder(total, parts.map((p) => ({ importe: parseAmount(p.importe) || 0 })))
-
-  const setPart = (i, changes) => setParts((ps) => ps.map((p, j) => (j === i ? { ...p, ...changes } : p)))
-  const addPart = () => setParts((ps) => [...ps, { importe: remainder > 0 ? amountText(remainder) : '', categoria: '', subcategoria: '', notas: '' }])
-  const removePart = (i) => setParts((ps) => ps.filter((_, j) => j !== i))
-  function fillRemainder() {
-    const last = parts.length - 1
-    setPart(last, { importe: amountText((parseAmount(parts[last].importe) || 0) + remainder) })
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault()
-    const filled = parts.filter((p) => p.importe !== '' || p.categoria)
-    if (filled.length < 2) return setError('Un desglose necesita al menos dos partidas')
-    if (filled.some((p) => !(parseAmount(p.importe) > 0))) return setError('Cada partida necesita un importe mayor que cero')
-    if (filled.some((p) => !p.categoria)) return setError('Cada partida necesita una categoría')
-    if (remainder !== 0) return setError(`Las partidas deben sumar ${formatEur(total)}`)
-    onSave(filled.map((p) => ({
-      importe: sign * Math.round(parseAmount(p.importe) * 100) / 100,
-      categoria: p.categoria,
-      subcategoria: p.subcategoria || null,
-      notas: p.notas.trim(),
-    })))
-  }
-
-  const inputCls = 'w-full border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300'
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40" style={{ paddingBottom: 'var(--sab)' }} onClick={onClose}>
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6 w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-bold text-slate-800 mb-1">Desglosar movimiento</h2>
-        <p className="text-xs text-slate-500 mb-4">
-          {transaction.descripcion} · {format(new Date(transaction.fechaContable), 'dd/MM/yyyy')} ·{' '}
-          <span className={`font-semibold ${sign < 0 ? 'text-red-600' : 'text-green-600'}`}>{formatEur(transaction.importe)}</span>
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <div className="grid grid-cols-[6rem_1fr_1fr_1fr_1.5rem] gap-2 text-xs font-medium text-slate-500">
-            <span>Importe</span><span>Categoría</span><span>Subcategoría</span><span>Nota</span><span />
-          </div>
-          {parts.map((p, i) => {
-            const subs = p.categoria ? subcategories.filter((s) => s.categoriaId === p.categoria) : []
-            return (
-              <div key={i} className="grid grid-cols-[6rem_1fr_1fr_1fr_1.5rem] gap-2 items-center">
-                <input type="text" inputMode="decimal" placeholder="0,00" value={p.importe}
-                  onChange={(e) => setPart(i, { importe: e.target.value })} className={`${inputCls} text-right`} />
-                <select value={p.categoria} onChange={(e) => setPart(i, { categoria: e.target.value, subcategoria: '' })} className={inputCls}>
-                  <option value="">Categoría…</option>
-                  {options.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-                </select>
-                <select value={p.subcategoria} onChange={(e) => setPart(i, { subcategoria: e.target.value })}
-                  disabled={!subs.length} className={`${inputCls} disabled:opacity-40`}>
-                  <option value="">—</option>
-                  {subs.map((s) => <option key={s.id} value={s.id}>{s.nombre}</option>)}
-                </select>
-                <input type="text" placeholder="Ej: Pienso" value={p.notas}
-                  onChange={(e) => setPart(i, { notas: e.target.value })} className={inputCls} />
-                <button type="button" onClick={() => removePart(i)} disabled={parts.length <= 2}
-                  className="text-red-400 hover:text-red-600 disabled:opacity-20 text-sm" title="Quitar partida">✕</button>
-              </div>
-            )
-          })}
-          <div className="flex flex-wrap items-center gap-3 pt-1">
-            <button type="button" onClick={addPart} className="text-sm text-indigo-600 hover:text-indigo-800">＋ Añadir partida</button>
-            <span className={`ml-auto text-sm ${remainder === 0 ? 'text-green-600' : 'text-amber-600'}`}>
-              {remainder === 0
-                ? '✓ Cuadra con el movimiento'
-                : remainder > 0 ? `Falta por repartir: ${formatEur(remainder)}` : `Te pasas en ${formatEur(-remainder)}`}
-            </span>
-            {remainder !== 0 && (
-              <button type="button" onClick={fillRemainder} className="text-xs text-indigo-600 hover:text-indigo-800 underline">
-                Ajustar la última partida
-              </button>
-            )}
-          </div>
-          {error && <p className="text-xs text-red-600">{error}</p>}
-          <div className="flex gap-2 pt-1">
-            <button type="submit"
-              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm px-4 py-2 rounded-lg transition-colors">
-              Guardar desglose
-            </button>
-            {hasSplit(transaction) && (
-              <button type="button" onClick={() => onSave(null)}
-                className="px-4 py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50">
-                Quitar desglose
               </button>
             )}
             <button type="button" onClick={onClose}
@@ -468,6 +349,9 @@ export default function Movimientos() {
 
   const defaultAccountId = accounts[0]?.id ?? null
 
+  // Mismo día: el orden del banco, siguiendo la cadena de saldos (utils/txOrder.js)
+  const chrono = useMemo(() => chronoComparator(transactions, defaultAccountId), [transactions, defaultAccountId])
+
   const filtered = useMemo(() => {
     let result = [...transactions]
     if (activeAccountId !== '__all__') {
@@ -499,8 +383,7 @@ export default function Movimientos() {
     result.sort((a, b) => {
       let av, bv
       if (sortCol === 'fechaContable') {
-        av = new Date(a.fechaContable || 0).getTime()
-        bv = new Date(b.fechaContable || 0).getTime()
+        return sortDir === 'asc' ? chrono(a, b) : chrono(b, a)
       } else if (sortCol === 'descripcion') {
         av = (a.descripcion || '').toLowerCase()
         bv = (b.descripcion || '').toLowerCase()
@@ -512,7 +395,7 @@ export default function Movimientos() {
       return sortDir === 'asc' ? av - bv : bv - av
     })
     return result
-  }, [transactions, activeAccountId, filterAccount, filterMonth, filterCategory, filterSubcategory, filterType, filterText, sortCol, sortDir])
+  }, [transactions, activeAccountId, filterAccount, filterMonth, filterCategory, filterSubcategory, filterType, filterText, sortCol, sortDir, chrono])
 
   const totalPages    = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const paginated     = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
@@ -992,8 +875,11 @@ export default function Movimientos() {
           categories={sortedCategories}
           subcategories={subcategories}
           accounts={accounts}
+          canSplit={!transferCatIds.has(openTx.categoria) && !openTx.transferPairId}
           onChangeCategory={changeCategory}
           onChangeSubcategory={changeSubcategory}
+          onChangeNote={(t, notas) => trackAndUpdate(t.id, { notas })}
+          onSplit={(t) => setSplitTx(t)}
           onEdit={(t) => { setOpenTxId(null); setEditingTx(t) }}
           onDelete={async (t) => {
             if (window.confirm('¿Eliminar este movimiento?')) { await deleteTransaction(t.id); setOpenTxId(null) }
@@ -1039,7 +925,7 @@ export default function Movimientos() {
         />
       )}
       {splitTx && (
-        <SplitModal
+        <SplitEditor
           transaction={splitTx}
           categories={categories}
           subcategories={subcategories}

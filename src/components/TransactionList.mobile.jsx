@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBackHandler } from '../platform/back'
 import { getCategoryIcon } from '../utils/categoryIcons'
 import SelectSheet from './SelectSheet'
+import { hasSplit } from '../utils/splits'
 
 function formatEur(amount) {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(amount)
@@ -17,6 +18,9 @@ function dayLabel(iso) {
     return iso
   }
 }
+
+// La nota se muestra salvo que repita la descripción (el alta rápida usa la nota como descripción)
+const noteOf = (t) => (t.notas && t.notas !== t.descripcion ? t.notas : '')
 
 // Agrupa movimientos consecutivos con la misma fecha (respeta el orden actual)
 function groupByDay(transactions) {
@@ -64,11 +68,12 @@ function useLongPress(onLongPress, onTap) {
   }
 }
 
-function TransactionCard({ t, cat, sub, acc, showAccount, selected, selectionMode, onOpen, onToggleSelect }) {
+function TransactionCard({ t, cat, sub, acc, catMap, showAccount, selected, selectionMode, onOpen, onToggleSelect }) {
   const press = useLongPress(
     () => onToggleSelect(t.id),
     () => (selectionMode ? onToggleSelect(t.id) : onOpen(t)),
   )
+  const split = hasSplit(t)
 
   return (
     <li>
@@ -84,6 +89,8 @@ function TransactionCard({ t, cat, sub, acc, showAccount, selected, selectionMod
           }`}>
             {selected && '✓'}
           </span>
+        ) : split ? (
+          <span className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-lg bg-indigo-500/15">🧾</span>
         ) : (
           <span className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-lg"
             style={{ backgroundColor: (cat?.color || '#cbd5e1') + '26' }}>
@@ -92,9 +99,12 @@ function TransactionCard({ t, cat, sub, acc, showAccount, selected, selectionMod
         )}
         <span className="flex-1 min-w-0">
           <span className="block text-sm text-slate-800 truncate">{t.descripcion || '—'}</span>
+          {noteOf(t) && <span className="block text-xs italic text-slate-500 truncate">{noteOf(t)}</span>}
           <span className="block text-xs text-slate-400 truncate">
-            {cat ? cat.nombre : 'Sin categoría'}
-            {sub && ` · ${sub.nombre}`}
+            {split
+              ? `Desglosado: ${[...new Set(t.desglose.map((p) => catMap[p.categoria]?.nombre ?? 'Sin categoría'))].join(', ')}`
+              : cat ? cat.nombre : 'Sin categoría'}
+            {!split && sub && ` · ${sub.nombre}`}
             {showAccount && acc && ` · ${acc.nombre}`}
             {t.esManual && ' · manual'}
           </span>
@@ -136,6 +146,7 @@ export function TransactionCardList({ transactions, categories, subcategories, a
                   cat={catMap[t.categoria]}
                   sub={subMap[t.subcategoria]}
                   acc={accMap[t.accountId]}
+                  catMap={catMap}
                   showAccount={showAccount}
                   selected={selected.has(t.id)}
                   selectionMode={selectionMode}
@@ -153,11 +164,19 @@ export function TransactionCardList({ transactions, categories, subcategories, a
 
 // ─── Bottom sheet de detalle / edición ──────────────────────────────────────
 
-export function TransactionSheet({ transaction: t, categories, subcategories, accounts, onChangeCategory, onChangeSubcategory, onEdit, onDelete, onClose }) {
+export function TransactionSheet({ transaction: t, categories, subcategories, accounts, canSplit, onChangeCategory, onChangeSubcategory, onChangeNote, onSplit, onEdit, onDelete, onClose }) {
   useBackHandler(true, onClose)
+  const [nota, setNota] = useState(t.notas ?? '')
 
   const acc = accounts.find((a) => a.id === t.accountId)
   const subs = t.categoria ? subcategories.filter((s) => s.categoriaId === t.categoria) : []
+  const split = hasSplit(t)
+
+  // La nota se guarda al salir del campo (o con Intro)
+  function saveNote() {
+    const v = nota.trim()
+    if (v !== (t.notas ?? '')) onChangeNote(t, v)
+  }
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/40 flex items-end" onClick={onClose}>
@@ -181,19 +200,60 @@ export function TransactionSheet({ transaction: t, categories, subcategories, ac
         </div>
 
         <div>
+          <label className="text-xs font-medium text-slate-500 block mb-1">Nota</label>
+          <input type="text" value={nota} placeholder="Ej: Pago muebles"
+            onChange={(e) => setNota(e.target.value)} onBlur={saveNote}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur() }}
+            className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-base bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+        </div>
+
+        {split ? (
+          <div>
+            <p className="text-xs font-medium text-slate-500 mb-1">Desglosado en {t.desglose.length} partidas</p>
+            <ul className="rounded-xl border border-slate-200 divide-y divide-slate-100">
+              {t.desglose.map((p, i) => {
+                const cat = categories.find((c) => c.id === p.categoria)
+                const sub = subcategories.find((s) => s.id === p.subcategoria)
+                return (
+                  <li key={i} className="flex items-center gap-2 px-3 py-2">
+                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat?.color || '#cbd5e1' }} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm text-slate-700 truncate">{cat?.nombre ?? 'Sin categoría'}{sub && ` · ${sub.nombre}`}</span>
+                      {p.notas && <span className="block text-xs italic text-slate-500 truncate">{p.notas}</span>}
+                    </span>
+                    <span className="text-sm font-medium tabular-nums text-slate-700">{formatEur(p.importe)}</span>
+                  </li>
+                )
+              })}
+            </ul>
+            <button onClick={() => onSplit(t)}
+              className="mt-2 w-full py-2.5 text-sm font-medium rounded-xl border border-indigo-200 text-indigo-600 active:bg-indigo-50">
+              Editar desglose
+            </button>
+          </div>
+        ) : (
+        <div>
           <label className="text-xs font-medium text-slate-500 block mb-1">Categoría</label>
           <SelectSheet title="Categoría" className="w-full py-2.5 text-base rounded-xl"
             value={t.categoria || ''} onChange={(v) => onChangeCategory(t, v)}
             options={[{ value: '', label: 'Sin categoría' }, ...categories.map((c) => ({ value: c.id, label: c.nombre, color: c.color }))]} />
         </div>
+        )}
 
-        {t.categoria && (
+        {!split && t.categoria && (
           <div>
             <label className="text-xs font-medium text-slate-500 block mb-1">Subcategoría</label>
             <SelectSheet title="Subcategoría" className="w-full py-2.5 text-base rounded-xl"
               value={t.subcategoria || ''} onChange={(v) => onChangeSubcategory(t, v)}
               options={[{ value: '', label: '—' }, ...subs.map((s) => ({ value: s.id, label: s.nombre })), { value: '__new__', label: '＋ Nueva…' }]} />
           </div>
+        )}
+
+        {!split && canSplit && (
+          <button onClick={() => onSplit(t)}
+            className="w-full py-2.5 text-sm font-medium rounded-xl border border-slate-200 text-slate-600 active:bg-slate-50">
+            🧾 Desglosar en varias categorías
+          </button>
         )}
 
         <div className="flex gap-2 pt-1">

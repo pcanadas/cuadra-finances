@@ -4,6 +4,7 @@ import { version as APP_VERSION } from '../../package.json'
 import { Link } from 'react-router-dom'
 import { isTauri as IS_TAURI, isMobile, isStore, deviceName } from '../platform'
 import { SUPPORT_EMAIL, DEVELOPER } from '../platform/share'
+import { canPlayUpdate, checkPlayUpdate, startPlayUpdate } from '../platform/playUpdate'
 
 export default function Acerca() {
   // Escritorio y Android llevan versiones distintas (tauri.android.conf.json):
@@ -14,7 +15,7 @@ export default function Acerca() {
     import('@tauri-apps/api/app').then(({ getVersion }) => getVersion()).then(setVersion).catch(() => {})
   }, [])
   const [checking, setChecking] = useState(false)
-  const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'store' | 'error' | 'notauri'
+  const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'store' | 'play' | 'noplay' | 'error' | 'notauri'
   const [updateInfo, setUpdateInfo] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
   const [installing, setInstalling] = useState(false)
@@ -29,6 +30,12 @@ export default function Acerca() {
     setUpdateInfo(null)
     setErrorMsg(null)
     try {
+      // Android: Google Play (platform/playUpdate.js); solo si la app se instaló desde Play
+      if (canPlayUpdate) {
+        const r = await checkPlayUpdate()
+        setResult(r.available ? 'play' : r.error ? 'noplay' : 'uptodate')
+        return
+      }
       // En la Store se pregunta a la Store (src-tauri/src/store.rs); actualiza ella
       if (isStore) {
         const { invoke } = await tauriImport('@tauri-apps/api/core')
@@ -79,7 +86,7 @@ export default function Acerca() {
 
         <div className="border-t border-slate-100" />
 
-        {isMobile ? (
+        {isMobile && !canPlayUpdate ? (
           <p className="text-center text-sm text-slate-500">Las actualizaciones llegan a través de Google Play.</p>
         ) : (
         <div className="flex flex-col gap-2">
@@ -105,6 +112,18 @@ export default function Acerca() {
           )}
           {isStore && !result && (
             <p className="text-center text-xs text-slate-400">Las actualizaciones las instala Microsoft Store.</p>
+          )}
+          {result === 'noplay' && (
+            <p className="text-center text-sm text-slate-500">No se ha podido consultar Google Play. Comprueba la conexión, o busca Zenit en Play Store.</p>
+          )}
+          {result === 'play' && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-col gap-2">
+              <p className="text-sm font-semibold text-indigo-800">Hay una versión nueva en Google Play</p>
+              <button onClick={startPlayUpdate}
+                className="mt-1 bg-indigo-600 active:bg-indigo-700 text-white text-sm font-medium px-4 py-2.5 rounded-lg">
+                Actualizar
+              </button>
+            </div>
           )}
           {result === 'store' && (
             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-col gap-2">

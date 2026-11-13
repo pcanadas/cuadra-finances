@@ -414,35 +414,38 @@ function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
   const months = r.periodicidad !== 'mensual' ? getDueMonths(r).map((m) => MONTH_SHORT[m]).join(', ') : null
   const paid = r.paidAmount ?? 0
   const over = Math.round((paid - r.importe) * 100) / 100
+  // Pensado para el móvil con letra grande: nombre y estado a la izquierda (se recortan o bajan de
+  // línea), lo pagado y lo previsto a la derecha en dos líneas, la barra a lo ancho
   return (
-    <div className="group flex items-center gap-3 py-2.5 px-1 border-b border-slate-100 last:border-b-0">
-      <button onClick={onEdit} className="flex-1 min-w-0 text-left">
-        <span className="flex items-center gap-2">
-          {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
-          <span className="text-sm text-slate-800 truncate">{r.nombre}</span>
-          <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap ${st.pill}`}>{st.label}</span>
-        </span>
-        <span className="flex flex-wrap items-center gap-x-2 mt-0.5 text-[11px] text-slate-400">
-          {subcat && <span>{subcat.nombre}</span>}
-          <span>{PERIOD_LABELS[r.periodicidad] || r.periodicidad}{months && ` · ${months}`}</span>
-          {r.fechaFin && <span className="text-amber-500">hasta {r.fechaFin}</span>}
-        </span>
-        <span className="block mt-1.5 max-w-xs"><ProgressBar value={paid} total={r.importe} className={st.bar} /></span>
-      </button>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-semibold tabular-nums text-slate-700">
-          {r.paid || r.partial ? formatEur(paid) : '—'}
-          <span className="font-normal text-slate-400"> / {formatEur(r.importe)}</span>
-        </p>
-        {r.paid && Math.abs(over) >= 0.01 && (
+    <div className="group py-2.5 px-1 border-b border-slate-100 last:border-b-0">
+      <div className="flex items-start gap-3">
+        <button onClick={onEdit} className="flex-1 min-w-0 text-left">
+          <span className="flex items-center gap-2 min-w-0">
+            {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
+            <span className="min-w-0 text-sm text-slate-800 truncate">{r.nombre}</span>
+          </span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-[11px] text-slate-400">
+            <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap ${st.pill}`}>{st.label}</span>
+            {subcat && <span>{subcat.nombre}</span>}
+            <span>{PERIOD_LABELS[r.periodicidad] || r.periodicidad}{months && ` · ${months}`}</span>
+            {r.fechaFin && <span className="text-amber-500">hasta {r.fechaFin}</span>}
+          </span>
+        </button>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-semibold tabular-nums text-slate-700">{r.paid || r.partial ? formatEur(paid) : '—'}</p>
+          <p className="text-[11px] tabular-nums text-slate-400">de {formatEur(r.importe)}</p>
+        </div>
+      </div>
+      <div className="mt-1.5"><ProgressBar value={paid} total={r.importe} className={st.bar} /></div>
+      <div className="flex items-center justify-between gap-2 mt-1 min-h-[1rem]">
+        {r.paid && Math.abs(over) >= 0.01 ? (
           <p className={`text-[11px] ${(over > 0) === r.isIncome ? 'text-emerald-600' : 'text-amber-600'}`}>
             {formatEur(Math.abs(over))} {over > 0 ? 'más' : 'menos'} de lo previsto
           </p>
-        )}
-        {!r.paid && (
-          <p className="text-[11px] text-slate-400">falta {formatEur(r.importe - paid)}</p>
-        )}
-        <div className="hidden lg:flex gap-2 justify-end mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        ) : !r.paid ? (
+          <p className="text-[11px] text-slate-400">Falta {formatEur(r.importe - paid)}</p>
+        ) : <span />}
+        <div className="hidden lg:flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={onEdit} className="text-[10px] text-slate-400 hover:text-slate-600">editar</button>
           <button onClick={onDelete} className="text-[10px] text-red-400 hover:text-red-600">quitar</button>
         </div>

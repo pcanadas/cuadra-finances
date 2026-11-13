@@ -15,7 +15,7 @@ const DAY = 86_400_000
 export const WINDOW_DAYS = 31     // el banco puede anotar un movimiento con fecha bastante anterior
 const WINDOW_COUNT = 50           // o entre los 50 movimientos más cercanos por fecha (cuentas con poco movimiento)
 const TOLERANCE_CENTS = 2         // redondeos de céntimos en algunos extractos
-const PENDING_MATCH_DAYS = 5      // un pendiente se contabiliza unos días después
+const PENDING_MATCH_DAYS = 10     // un pendiente se contabiliza días después (Amazon cobra al enviar: a veces casi una semana)
 
 const cents = (n) => Math.round(n * 100)
 const daysBetween = (a, b) => Math.abs(new Date(a.fechaContable) - new Date(b.fechaContable)) / DAY
@@ -140,10 +140,36 @@ export function findDuplicates(txs) {
   return groups.sort((a, b) => a.keep[0].fechaContable.localeCompare(b.keep[0].fechaContable))
 }
 
-const similarText = (a, b) => {
+// Fechas que el banco añade al concepto de un pendiente («WWW.AMAZON 08/11/26»)
+const DATE_IN_TEXT = /\b\d{1,2}[/.-]\d{1,2}(?:[/.-]\d{2,4})?\b/g
+const words = (s) => String(s ?? '').toUpperCase().replace(DATE_IN_TEXT, ' ').split(/[^A-Z0-9]+/).filter((w) => w && !/^\d+$/.test(w))
+
+/**
+ * ¿El mismo comercio? El pendiente suele llevar la fecha de la compra y el contabilizado una
+ * referencia («WWW.AMAZON 08/11/26» → «WWW.AMAZON*BI6WF8UB4»): sin fechas ni números sueltos,
+ * las palabras de uno empiezan como las del otro.
+ */
+export const similarText = (a, b) => {
   const x = normalize(a), y = normalize(b)
-  return !!x && !!y && (x === y || x.includes(y) || y.includes(x) || x.slice(0, 12) === y.slice(0, 12))
+  if (!x || !y) return false
+  if (x === y || x.includes(y) || y.includes(x) || x.slice(0, 12) === y.slice(0, 12)) return true
+  const wa = words(a), wb = words(b)
+  const [short, long] = wa.length <= wb.length ? [wa, wb] : [wb, wa]
+  return short.join('').length >= 6 && short.every((w, i) => w === long[i])
 }
+
+/** El contabilizado llega el mismo día que el pendiente o pocos días después, nunca antes. */
+const bookedAfter = (pending, booked) => {
+  const d = (new Date(booked.fechaContable) - new Date(pending.fechaContable)) / DAY
+  return d >= 0 && d <= PENDING_MATCH_DAYS
+}
+const samePurchase = (pending, booked) =>
+  pending.importe === booked.importe && bookedAfter(pending, booked) && similarText(pending.descripcion, booked.descripcion)
+
+/** De los candidatos, el de fecha más cercana (con compras repetidas, como un café diario, no se cruzan). */
+const closest = (candidates, ref) => candidates.reduce((best, x) => (
+  !best || Math.abs(new Date(x.fechaContable) - new Date(ref.fechaContable)) < Math.abs(new Date(best.fechaContable) - new Date(ref.fechaContable)) ? x : best
+), null)
 
 /**
  * Qué hacer con las filas de un extracto frente a lo que ya hay:
@@ -151,8 +177,12 @@ const similarText = (a, b) => {
  *   las copias, así que dos movimientos iguales del extracto siguen siendo dos,
  * - si llega con otro saldo, se queda el nuevo: completa un pendiente o corrige el saldo
  *   provisional de un extracto descargado ese mismo día,
- * - un pendiente que el banco ya ha contabilizado (con otra fecha o concepto parecido, mismo
- *   importe, pocos días después) se actualiza en vez de duplicarse; conserva categoría y notas.
+ * - un pendiente que el banco ya ha contabilizado (mismo importe, concepto parecido, el mismo día
+ *   o hasta 10 días después; el de fecha más cercana) se actualiza en vez de duplicarse; conserva
+ *   categoría y notas,
+ * - el banco sigue listando a veces como pendiente lo que ya ha contabilizado: un pendiente del
+ *   extracto con su contabilizado (ya guardado o en este extracto) no se añade.
+ * Primero las filas contabilizadas y después las pendientes, sea cual sea su orden en el extracto.
  * @returns {{ add: object[], update: { id: string, changes: object }[] }}
  */
 export function planImport(existing, incoming, defaultAccountId = null) {
@@ -163,27 +193,67 @@ export function planImport(existing, incoming, defaultAccountId = null) {
   const used = new Set()
   const add = []
   const update = []
+  const completed = [] // pendientes guardados que este extracto contabiliza, con sus datos nuevos
 
   const complete = (e, r, extra = {}) => {
     used.add(e)
-    update.push({ id: e.id, changes: { saldo: r.saldo, fechaValor: r.fechaValor, bankRowIndex: r.bankRowIndex, pendiente: false, ...extra } })
+    const changes = { saldo: r.saldo, fechaValor: r.fechaValor, bankRowIndex: r.bankRowIndex, pendiente: false, ...(r.importId != null ? { importId: r.importId } : {}), ...extra }
+    update.push({ id: e.id, changes })
+    return { ...e, ...changes }
   }
 
-  for (const r of incoming) {
+  const rowIsPending = (r) => !!r.pendiente
+  for (const r of incoming.filter((r) => !rowIsPending(r))) {
     const pool = (pools.get(`${accountOf(r)}|${movementKey(r)}`) ?? []).filter((e) => !used.has(e))
     if (pool.length) {
       const e = pool.find((x) => x.saldo === r.saldo) ?? pool[0]
       // Con saldo nuevo: completa un pendiente o corrige el saldo provisional del día de la descarga
-      if (r.saldo != null && !r.pendiente && e.saldo !== r.saldo) complete(e, r)
+      if (r.saldo != null && e.saldo !== r.saldo) completed.push(complete(e, r))
       else used.add(e)
       continue
     }
-    if (r.saldo != null && !r.pendiente) {
-      const e = pendingPool.find((p) => !used.has(p) && accountOf(p) === accountOf(r) && p.importe === r.importe &&
-        daysBetween(p, r) <= PENDING_MATCH_DAYS && similarText(p.descripcion, r.descripcion))
-      if (e) { complete(e, r, { fechaContable: r.fechaContable, descripcion: r.descripcion }); continue }
+    if (r.saldo != null) {
+      const e = closest(pendingPool.filter((p) => !used.has(p) && accountOf(p) === accountOf(r) && samePurchase(p, r)), r)
+      if (e) { completed.push(complete(e, r, { fechaContable: r.fechaContable, descripcion: r.descripcion })); continue }
     }
     add.push(r)
   }
+
+  // Contabilizados que pueden «cubrir» un pendiente que el banco aún lista: los ya guardados, los
+  // completados ahora y los nuevos de este extracto. Cada uno cubre como mucho un pendiente.
+  const completedIds = new Set(completed.map((t) => t.id))
+  const booked = [
+    ...imported.filter((t) => !isPending(t) && t.saldo != null && !completedIds.has(t.id)),
+    ...completed,
+    ...add.filter((t) => t.saldo != null),
+  ]
+  const covered = new Set()
+  for (const r of incoming.filter(rowIsPending)) {
+    const pool = (pools.get(`${accountOf(r)}|${movementKey(r)}`) ?? []).filter((e) => !used.has(e))
+    if (pool.length) { used.add(pool[0]); continue } // el mismo pendiente que ya teníamos
+    const b = closest(booked.filter((x) => !covered.has(x) && accountOf(x) === accountOf(r) && samePurchase(r, x)), r)
+    if (b) { covered.add(b); continue }
+    add.push(r)
+  }
   return { add, update }
+}
+
+/**
+ * Pendientes guardados que el banco ya contabilizó y quedaron duplicados (versiones anteriores, o
+ * cuando el extracto seguía listándolo como pendiente): mismo importe, concepto parecido y un
+ * contabilizado el mismo día o pocos días después. Mismo formato que findDuplicates.
+ * @returns {{ keep: object[], remove: object[] }[]}
+ */
+export function findStalePending(txs) {
+  const imported = txs.filter(isImported)
+  const booked = imported.filter((t) => !isPending(t) && t.saldo != null)
+  const taken = new Set()
+  const groups = []
+  for (const p of imported.filter(isPending).sort((a, b) => a.fechaContable.localeCompare(b.fechaContable))) {
+    const b = closest(booked.filter((x) => !taken.has(x) && samePurchase(p, x)), p)
+    if (!b) continue
+    taken.add(b)
+    groups.push({ keep: [b], remove: [p] })
+  }
+  return groups
 }

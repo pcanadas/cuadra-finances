@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { tauriImport } from '../utils/tauriImport'
+import { checkPlayUpdate, startPlayUpdate } from '../platform/playUpdate'
 
 // Only runs inside Tauri — gracefully does nothing in browser
 export default function UpdateChecker() {
@@ -111,6 +112,40 @@ export function StoreUpdateNotice() {
         </button>
         <button onClick={() => setDismissed(true)}
           className="text-xs text-slate-400 hover:text-slate-600 px-2">
+          Más tarde
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Android: aviso cuando Google Play tiene una versión nueva (platform/playUpdate.js). «Actualizar»
+ * abre la pantalla de actualización de Play, que la instala y vuelve a abrir Zenit.
+ */
+export function PlayUpdateNotice() {
+  const [available, setAvailable] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    checkPlayUpdate().then((r) => { if (!cancelled && r.available) setAvailable(true) })
+    return () => { cancelled = true }
+  }, [])
+
+  if (!available || dismissed) return null
+
+  return (
+    <div className="fixed left-2 right-2 z-50 bg-white border border-indigo-200 rounded-2xl shadow-lg p-4"
+      style={{ bottom: 'calc(4.75rem + var(--sab))' }}>
+      <p className="text-sm font-semibold text-slate-800 mb-1">Nueva versión disponible</p>
+      <p className="text-xs text-slate-500 mb-3">Hay una versión nueva de Zenit en Google Play.</p>
+      <div className="flex gap-2">
+        <button onClick={() => { setDismissed(true); startPlayUpdate() }}
+          className="flex-1 bg-indigo-600 active:bg-indigo-700 text-white text-sm px-3 py-2.5 rounded-xl">
+          Actualizar
+        </button>
+        <button onClick={() => setDismissed(true)} className="text-sm text-slate-500 px-3">
           Más tarde
         </button>
       </div>
