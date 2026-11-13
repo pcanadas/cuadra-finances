@@ -9,7 +9,7 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ## [1.3.0] — 2026-11-13
 
-versionCode 1003000. Recoge lo de escritorio 0.10.0–0.10.2 que aplica al móvil.
+versionCode 1003000. Recoge lo de escritorio 0.10.0–0.10.4 que aplica al móvil.
 
 ### Añadido
 - **Aviso de nueva versión** — al abrir Zenit, si Google Play tiene una versión nueva aparece un aviso sobre la barra inferior; «Actualizar» abre la pantalla de actualización de Play (descarga, instala y vuelve a abrir Zenit). En Más → Acerca, «Comprobar actualizaciones». Usa las actualizaciones integradas de Google Play (`app-update`, `MainActivity.kt` → `window.CuadraUpdate`); solo responde si la app se instaló desde Play (en un APK de pruebas no avisa)
@@ -20,19 +20,23 @@ versionCode 1003000. Recoge lo de escritorio 0.10.0–0.10.2 que aplica al móvi
 
 ### Cambiado
 - **Gastos fijos: estado del mes más claro** — resumen de lo cobrado y lo pagado, y cada fijo con su estado (pendiente, en parte, pagado), barra de progreso y lo que falta; pensado para letra grande
+- **Orden del mismo día** — los movimientos de un día se muestran en el orden del banco, siguiendo la cadena de saldos (`src/utils/txOrder.js`), para que el saldo de cada uno siga al anterior
 
 ### Corregido
 - **Ingresos devueltos** (p. ej. una nómina) — ahora restan de los ingresos, de su subcategoría y de lo cobrado del ingreso fijo, sin esperarlos de vuelta
+- **Pendientes del banco duplicados** — al importar, un movimiento ya contabilizado completa su pendiente aunque el texto o la fecha cambien (mismo importe, comercio y hasta 10 días después), y un pendiente que el banco sigue listando no se vuelve a añadir. Los duplicados que ya existían, también los antiguos con saldo 0, salen en «Movimientos duplicados» de la cuenta para revisarlos y borrarlos
 
 ### Notas para Google Play («Novedades»)
 ```
-• Zenit te avisa cuando hay una versión nueva y se actualiza desde la propia app.
+• Zenit te avisa cuando hay una versión nueva.
 • Desglosa un cargo (Amazon, PayPal, la tarjeta…) en varias categorías.
 • Añade notas a tus movimientos, como «Pago muebles».
-• Opción para separar los impuestos (la renta, el IBI) de tus gastos del mes.
-• La previsión del mes muestra cuánto has cobrado de tus ingresos fijos.
+• Opción para separar los impuestos de tus gastos del mes.
+• La previsión del mes muestra cuánto has cobrado.
 • Gastos fijos: el estado del mes, más claro.
-• Corregido: un ingreso devuelto ahora resta de los ingresos.
+• Los movimientos de un día siguen el orden del banco.
+• Corregido: los pendientes del banco ya no se duplican.
+• Corregido: un ingreso devuelto resta de los ingresos.
 ```
 
 ---
