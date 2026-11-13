@@ -36,7 +36,7 @@ function monthStatus(quota, contributed) {
  *                 meta?: { objetivo, remaining, reached, overdue, monthsLeft } }
  *   pendingThisMonth: lo que aún hay que apartar este mes entre todos (para «Disponible para gastar»)
  */
-export function evaluateGoals({ goals, transactions, transferCatIds, ingresoCatIds, defaultAccountId = null, today = new Date() }) {
+export function evaluateGoals({ goals, transactions, transferCatIds, defaultAccountId = null, today = new Date() }) {
   const current = today.getFullYear() * 12 + today.getMonth()
   const balance = new Map() // mes → ingresos − gastos
   const inflow = new Map()  // `${cuenta}|${mes}` → traspasos netos recibidos
@@ -46,7 +46,7 @@ export function evaluateGoals({ goals, transactions, transferCatIds, ingresoCatI
     const i = monthIndex(t.fechaContable)
     if (i > current) continue
     if (isTransferTx(t, transferCatIds)) add(inflow, `${t.accountId ?? defaultAccountId}|${i}`, t.importe)
-    else if (t.importe > 0 || !ingresoCatIds.has(t.categoria)) add(balance, i, t.importe)
+    else add(balance, i, t.importe) // ingresos − gastos (una devolución de ingreso también resta)
   }
 
   const ordered = [...goals].sort((a, b) => String(a.creadoEn ?? '').localeCompare(String(b.creadoEn ?? '')) || String(a.id).localeCompare(String(b.id)))

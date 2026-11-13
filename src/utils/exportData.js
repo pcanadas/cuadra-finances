@@ -2,15 +2,19 @@ import * as XLSX from 'xlsx'
 import { createBackup, readAllData } from './backupManager'
 import { saveFile, describeSavedPath } from '../platform/files'
 import { markBackupDone } from './backupReminder'
+import { expandSplits } from './splits'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
-/** Exporta movimientos a Excel. Devuelve la ruta guardada o null si se cancela. */
+/**
+ * Exporta movimientos a Excel (los desglosados, una fila por partida).
+ * Devuelve la ruta guardada o null si se cancela.
+ */
 export async function exportTransactionsToExcel(transactions, { categories, subcategories, accounts }) {
   const catMap = Object.fromEntries(categories.map((c) => [c.id, c.nombre]))
   const subMap = Object.fromEntries(subcategories.map((s) => [s.id, s.nombre]))
   const accMap = Object.fromEntries(accounts.map((a) => [a.id, a.nombre]))
-  const rows = transactions.map((t) => ({
+  const rows = expandSplits(transactions).map((t) => ({
     Fecha: t.fechaContable,
     Descripción: t.descripcion,
     Importe: t.importe,

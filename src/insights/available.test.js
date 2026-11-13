@@ -20,6 +20,12 @@ describe('availableToSpend', () => {
     expect(r.perDay).toBe(80)
   })
 
+  it('un ingreso devuelto resta de lo recibido y no cuenta como gasto', () => {
+    const r = run([...NOMINAS, tx('2026-10-01', 2500, { categoria: 'cat-ingresos' }), tx('2026-10-04', -400, { categoria: 'cat-ingresos' })])
+    expect(r.income.received).toBe(2100)
+    expect(r.spent).toBe(0)
+  })
+
   it('cuando ya se ha cobrado más que la media, usa lo recibido', () => {
     const r = run([...NOMINAS, tx('2026-10-01', 2500, { categoria: 'cat-ingresos' }), tx('2026-10-03', -500)])
     expect(r.income.basis).toBe('recibidos')
@@ -122,6 +128,19 @@ describe('fijos', () => {
       const [luz, casa] = status(items, [tx('2026-10-03', -40, { categoria: 'cat-casa', subcategoria: 'sub-luz' }), tx('2026-10-04', -50, { categoria: 'cat-casa' })])
       expect(luz).toMatchObject({ partial: true, paidAmount: 40 })
       expect(casa).toMatchObject({ partial: true, paidAmount: 50 })
+    })
+
+    it('una nómina devuelta resta de lo cobrado, pero no se espera de vuelta', () => {
+      const nomina = [fijo('Nómina', 2000, { categoriaId: 'cat-ingresos' })]
+      const ing = (fecha, importe) => tx(fecha, importe, { categoria: 'cat-ingresos' })
+      // Emitida mal por 2400, devuelta y reemitida por 2000: cobrada con 2000
+      expect(status(nomina, [ing('2026-10-01', 2400), ing('2026-10-03', -2400), ing('2026-10-05', 2000)])[0]).toMatchObject({ paid: true, paidAmount: 2000 })
+      // Devuelta entera y aún sin reemitir: pendiente
+      expect(status(nomina, [ing('2026-10-01', 2400), ing('2026-10-03', -2400)])[0]).toMatchObject({ paid: false, partial: false, paidAmount: null })
+      // Devuelta en parte: cobrada con lo neto, sin nada pendiente
+      expect(status(nomina, [ing('2026-10-01', 2000), ing('2026-10-03', -300)])[0]).toMatchObject({ paid: true, paidAmount: 1700 })
+      const r = availableToSpend({ transactions: [...NOMINAS, ing('2026-10-01', 2000), ing('2026-10-03', -300)], transferCatIds, ingresoCatIds, today: TODAY, recurringItems: nomina })
+      expect(r.income).toMatchObject({ received: 1700, pendingFixed: 0, expected: 1700 })
     })
 
     it('«Disponible para gastar» solo descuenta lo que falta de cada fijo', () => {

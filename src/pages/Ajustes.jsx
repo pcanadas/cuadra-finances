@@ -8,6 +8,7 @@ import { NOTIFY_EVENT, hasQuickAddNotification, getQuickAddNotification, setQuic
 import { TEXT_SIZE_MIN, TEXT_SIZE_MAX, TEXT_SIZE_STEP, getTextSize, getSystemTextSize, setTextSize } from '../platform/textSize'
 import { canUseAppLock, isAppLockEnabled, setAppLockEnabled, getLockDelay, setLockDelay, LOCK_DELAYS, authenticateUser, biometryName } from '../platform/appLock'
 import SelectSheet from '../components/SelectSheet'
+import { getSeparateTaxes, setSeparateTaxes } from '../utils/taxSetting'
 
 // ─── Selector de icono (hoja inferior) ──────────────────────────────────────
 
@@ -140,6 +141,58 @@ function AppLockSetting() {
   )
 }
 
+// Impuestos aparte en el Dashboard (ver utils/taxSetting.js)
+function TaxSetting({ categories, updateCategory }) {
+  const [on, setOn] = useState(getSeparateTaxes)
+  const candidates = categories
+    .filter((c) => !c.esTransferencia && !c.esIngreso)
+    .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+  const marked = candidates.filter((c) => c.esImpuesto)
+
+  function toggle() {
+    setOn(!on)
+    setSeparateTaxes(!on)
+  }
+
+  return (
+    <section className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-700">Separar impuestos</h2>
+          <p className="text-xs text-slate-500 mt-1">
+            El pago de la renta, el IBI… no cuenta en los gastos, el balance ni el gasto diario del Dashboard: se muestra aparte, debajo de los gastos (y una devolución, en verde). Siguen restando en «Disponible para gastar» y en ahorro y metas, porque es dinero que sale de tu cuenta.
+          </p>
+        </div>
+        <button role="switch" aria-checked={on} onClick={toggle} aria-label="Separar impuestos"
+          className={`relative w-12 h-7 shrink-0 rounded-full transition-colors ${on ? 'bg-indigo-600' : 'bg-slate-300'}`}>
+          <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
+        </button>
+      </div>
+      {on && (
+        <div className="mt-3">
+          <p className="text-xs text-slate-500 mb-2">
+            Categorías de impuestos{marked.length === 0 && <span className="text-amber-600"> — marca al menos una</span>}:
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {candidates.map((c) => (
+              <button key={c.id} onClick={() => updateCategory(c.id, { esImpuesto: !c.esImpuesto })}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-colors ${
+                  c.esImpuesto ? 'border-indigo-300 bg-indigo-50 text-indigo-700 font-medium' : 'border-slate-200 text-slate-500 hover:bg-slate-50'
+                }`}>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
+                {c.esImpuesto && '✓ '}{c.nombre}
+              </button>
+            ))}
+          </div>
+          {marked.length === 0 && (
+            <p className="text-[11px] text-slate-400 mt-2">Si no tienes una categoría para impuestos, créala en Categorías (p. ej. «Impuestos», con la palabra clave «AEAT»).</p>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
 export default function Ajustes() {
   const { dark, setDark } = useTheme()
   const categories = useCategoryStore((s) => s.categories)
@@ -203,6 +256,8 @@ export default function Ajustes() {
           )}
         </div>
       </section>
+
+      <TaxSetting categories={categories} updateCategory={updateCategory} />
 
       {hasQuickAddNotification() && <QuickAddNotificationSetting />}
 

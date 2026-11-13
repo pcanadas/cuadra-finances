@@ -1,3 +1,6 @@
+#[cfg(windows)]
+mod store;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
   #[allow(unused_mut)]
@@ -16,6 +19,11 @@ pub fn run() {
     builder = builder
       .plugin(tauri_plugin_updater::Builder::new().build())
       .plugin(tauri_plugin_process::init());
+  }
+
+  #[cfg(windows)]
+  {
+    builder = builder.invoke_handler(tauri::generate_handler![store::store_update_available, store::open_store_page]);
   }
 
   builder

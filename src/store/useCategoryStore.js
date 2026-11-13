@@ -26,7 +26,7 @@ const DEFAULT_CATEGORIES = [
   { id: 'cat-17', nombre: 'SS / Autónomos',          palabrasClave: ['COTIZACION', 'TESORERIA', 'SEG SOCIAL', 'SEGURIDAD SOCIAL'], color: '#78716c' },
   { id: 'cat-18', nombre: 'Transportes',             palabrasClave: ['TAXI', 'RENFE', ' TREN ', 'AUTOBUS', 'METRO', 'CABIFY'], color: '#0ea5e9' },
   { id: 'cat-19', nombre: 'Vivienda',                palabrasClave: ['ALQUILER', 'HIPOTECA', 'PRESTAMO HIPOT', 'COMUNIDAD DE PROPIETARIOS', 'COMUNIDAD PROP', 'CDAD PROP', 'CC.PP', 'CCPP'], color: '#a16207' },
-  { id: 'cat-20', nombre: 'Impuestos',               palabrasClave: ['AGENCIA TRIBUTARIA', 'AEAT', 'HACIENDA', 'DECLARACION RENTA', 'IRPF', 'IMPUESTO', 'I.B.I', ' IBI ', 'CIRCULACION', 'IVTM'], color: '#475569' },
+  { id: 'cat-20', nombre: 'Impuestos',               palabrasClave: ['AGENCIA TRIBUTARIA', 'AEAT', 'HACIENDA', 'DECLARACION RENTA', 'IRPF', 'IMPUESTO', 'I.B.I', ' IBI ', 'CIRCULACION', 'IVTM'], color: '#475569', esImpuesto: true },
   { id: 'cat-21', nombre: 'Coche',                   palabrasClave: ['ITV', 'TALLER', 'NEUMATIC'],                    color: '#84cc16' },
   { id: 'cat-22', nombre: 'Mascotas',                palabrasClave: ['VETERINARI', 'CLINICA VET', 'TIENDANIMAL', 'KIWOKO', 'MASCOTA'], color: '#d946ef' },
 ]
@@ -47,6 +47,8 @@ const useCategoryStore = create((set, get) => ({
         const updated = { ...c }
         if (c.id === 'cat-14' && !c.esIngreso) updated.esIngreso = true
         if (c.id === 'cat-16' && !c.esTransferencia) updated.esTransferencia = true
+        // Impuestos marcada como tal (Ajustes → Separar impuestos); si se desmarca queda en false
+        if (c.id === 'cat-20' && c.esImpuesto === undefined && !c.esTransferencia && !c.esIngreso) updated.esImpuesto = true
         return updated
       })
       // If anything changed, persist migrations

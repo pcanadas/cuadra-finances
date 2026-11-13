@@ -6,12 +6,14 @@ import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
 import SelectSheet from '../components/SelectSheet'
 import { isTransferTx } from '../utils/transferPairing'
+import { expandSplits } from '../utils/splits'
 import { fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
 
 const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 const PERIOD_LABELS = { mensual: 'Mensual', bimestral: 'Bimestral', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+const MONTH_LONG = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
 
 /** Returns the list of month indices (0-11) when the item is due */
 function getDueMonths(item) {
@@ -77,9 +79,10 @@ export default function GastosFijos() {
     [incomeItems],
   )
 
-  // Month status: which fixed expenses already paid? (los traspasos entre cuentas no son pagos ni cobros)
+  // Month status: which fixed expenses already paid? (los traspasos entre cuentas no son pagos ni cobros;
+  // los movimientos desglosados cuentan por partidas)
   const monthTx = useMemo(
-    () => transactions.filter((t) => {
+    () => expandSplits(transactions).filter((t) => {
       const d = new Date(t.fechaContable)
       return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !isTransferTx(t, transferCatIds)
     }),
@@ -251,34 +254,23 @@ export default function GastosFijos() {
       {/* ── Status this month ── */}
       {fixedStatus.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
-          <p className="text-sm font-semibold text-slate-700 mb-1">Estado del mes actual</p>
-          <p className="text-xs text-slate-400 mb-3">
-            {fixedStatus.filter((r) => r.paid).length} de {fixedStatus.length} cobrados/pagados{fixedStatus.some((r) => r.partial) && ` · ${fixedStatus.filter((r) => r.partial).length} en parte`}
-          </p>
-
-          {/* Income items */}
-          {fixedStatus.filter((r) => r.isIncome).length > 0 && (
-            <>
-              <p className="text-[11px] text-emerald-500 uppercase font-semibold mb-1">Ingresos fijos</p>
-              <div className="lg:space-y-1 mb-3">
-                {fixedStatus.filter((r) => r.isIncome).map((r) => (
-                  <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* Expense items */}
-          {fixedStatus.filter((r) => !r.isIncome).length > 0 && (
-            <>
-              <p className="text-[11px] text-rose-500 uppercase font-semibold mb-1">Gastos fijos</p>
-              <div className="lg:space-y-1">
-                {fixedStatus.filter((r) => !r.isIncome).map((r) => (
-                  <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => openForm(r)} onDelete={() => deleteRecurring(r.id)} />
-                ))}
-              </div>
-            </>
-          )}
+          <div className="flex items-baseline justify-between gap-2 mb-4">
+            <p className="text-sm font-semibold text-slate-700">Estado de {MONTH_LONG[currentMonth]}</p>
+            <p className="text-xs text-slate-400">
+              {fixedStatus.filter((r) => r.paid).length} de {fixedStatus.length} al día
+            </p>
+          </div>
+          <div className="grid lg:grid-cols-2 gap-5">
+            {[true, false].map((isIncome) => {
+              const list = fixedStatus.filter((r) => r.isIncome === isIncome)
+              if (!list.length) return null
+              return (
+                <StatusGroup key={String(isIncome)} isIncome={isIncome} items={list}
+                  categories={categories} subcategories={subcategories}
+                  onEdit={openForm} onDelete={(r) => deleteRecurring(r.id)} />
+              )
+            })}
+          </div>
         </div>
       )}
 
@@ -366,53 +358,95 @@ export default function GastosFijos() {
   )
 }
 
-// ── Item row component ──
-/** ✓ pagado/cobrado, ◐ en parte, ○ nada todavía. */
-const paidMark = (r) => (r.paid ? { icon: '✓', className: 'text-emerald-500' } : r.partial ? { icon: '◐', className: 'text-amber-500' } : { icon: '○', className: 'text-slate-300' })
-const paidText = (r) => (r.paid ? `${r.isIncome ? 'cobrado' : 'pagado'} ${formatEur(r.paidAmount)}` : `${formatEur(r.paidAmount)} de ${formatEur(r.importe)}`)
+// ── Estado del mes: un grupo (ingresos o gastos) y sus filas ──
+const STATUS_ORDER = (r) => (r.paid ? 2 : r.partial ? 1 : 0) // primero lo pendiente
+
+/** Etiqueta y colores de cada estado. */
+function statusOf(r) {
+  if (r.paid) return { label: r.isIncome ? 'Cobrado' : 'Pagado', pill: 'bg-emerald-500/15 text-emerald-600', bar: 'bg-emerald-500' }
+  if (r.partial) return { label: 'En parte', pill: 'bg-amber-500/15 text-amber-600', bar: 'bg-amber-500' }
+  return { label: 'Pendiente', pill: 'bg-slate-500/10 text-slate-500', bar: 'bg-slate-300' }
+}
+
+function ProgressBar({ value, total, className }) {
+  const pct = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0
+  return (
+    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full ${className}`} style={{ width: `${pct}%` }} />
+    </div>
+  )
+}
+
+function StatusGroup({ isIncome, items, categories, subcategories, onEdit, onDelete }) {
+  const expected = items.reduce((s, r) => s + r.importe, 0)
+  const done = items.reduce((s, r) => s + (r.paidAmount ?? 0), 0)
+  const pending = items.filter((r) => !r.paid).length
+  const sorted = [...items].sort((a, b) => STATUS_ORDER(a) - STATUS_ORDER(b))
+  const color = isIncome ? 'text-emerald-600' : 'text-rose-500'
+  return (
+    <div>
+      <div className="rounded-xl bg-slate-50 p-3 mb-2">
+        <div className="flex items-baseline justify-between gap-2 mb-1.5">
+          <p className={`text-[11px] uppercase font-semibold ${color}`}>{isIncome ? 'Ingresos fijos' : 'Gastos fijos'}</p>
+          <p className="text-[11px] text-slate-500">
+            {pending ? `${pending} pendiente${pending !== 1 ? 's' : ''}` : '✓ Todo al día'}
+          </p>
+        </div>
+        <p className="text-sm text-slate-600 mb-1.5">
+          {isIncome ? 'Cobrado' : 'Pagado'} <span className={`font-bold ${color}`}>{formatEur(done)}</span>
+          <span className="text-slate-400"> de {formatEur(expected)}</span>
+        </p>
+        <ProgressBar value={done} total={expected} className={isIncome ? 'bg-emerald-500' : 'bg-rose-400'} />
+      </div>
+      <div>
+        {sorted.map((r) => (
+          <ItemRow key={r.id} r={r} categories={categories} subcategories={subcategories} onEdit={() => onEdit(r)} onDelete={() => onDelete(r)} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 function ItemRow({ r, categories, subcategories, onEdit, onDelete }) {
-  const mark = paidMark(r)
+  const st = statusOf(r)
   const cat = categories.find((c) => c.id === r.categoriaId)
   const subcat = subcategories?.find((s) => s.id === r.subcategoriaId)
   const months = r.periodicidad !== 'mensual' ? getDueMonths(r).map((m) => MONTH_SHORT[m]).join(', ') : null
+  const paid = r.paidAmount ?? 0
+  const over = Math.round((paid - r.importe) * 100) / 100
   return (
-    <>
-      {/* Móvil: dos líneas, tocar para editar (eliminar desde el formulario) */}
-      <button onClick={onEdit} className="lg:hidden w-full flex items-start gap-3 py-2.5 px-1 text-left border-b border-slate-100 last:border-b-0 active:bg-slate-50">
-        <span className={`mt-0.5 text-base ${mark.className}`}>{mark.icon}</span>
-        <span className="flex-1 min-w-0">
-          <span className="flex items-baseline gap-2">
-            <span className="flex-1 min-w-0 text-sm text-slate-800 truncate">{r.nombre}</span>
-            <span className={`text-sm font-semibold tabular-nums whitespace-nowrap ${r.paid ? 'text-slate-400 line-through' : 'text-slate-700'}`}>{formatEur(r.importe)}</span>
-          </span>
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5 text-xs text-slate-400">
-            {cat && <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />{subcat ? subcat.nombre : cat.nombre}</span>}
-            <span>{PERIOD_LABELS[r.periodicidad] || r.periodicidad}{months && ` · ${months}`}</span>
-            {r.fechaFin && <span className="text-amber-500">hasta {r.fechaFin}</span>}
-            {r.paidAmount != null && <span className={r.paid ? 'text-emerald-600' : 'text-amber-600'}>{paidText(r)}</span>}
-          </span>
-        </span>
-      </button>
-
-      {/* Escritorio */}
-      <div className="hidden lg:flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-slate-50">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className={`text-sm ${mark.className}`}>{mark.icon}</span>
-          <span className="text-sm text-slate-700 truncate">{r.nombre}</span>
+    <div className="group flex items-center gap-3 py-2.5 px-1 border-b border-slate-100 last:border-b-0">
+      <button onClick={onEdit} className="flex-1 min-w-0 text-left">
+        <span className="flex items-center gap-2">
           {cat && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cat.color }} />}
-          {subcat && <span className="text-[10px] text-slate-500">{subcat.nombre}</span>}
-          <span className="text-[10px] text-slate-400">{PERIOD_LABELS[r.periodicidad] || r.periodicidad}</span>
-          {months && <span className="text-[10px] text-indigo-400" title="Meses de cobro">{months}</span>}
-          {r.fechaFin && <span className="text-[10px] text-amber-500">hasta {r.fechaFin}</span>}
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {r.paidAmount != null && <span className={`text-[11px] ${r.paid ? 'text-emerald-500' : 'text-amber-600'}`}>{paidText(r)}</span>}
-          <span className={`text-xs font-semibold ${r.paid ? 'text-slate-400 line-through' : 'text-slate-600'}`}>{formatEur(r.importe)}</span>
+          <span className="text-sm text-slate-800 truncate">{r.nombre}</span>
+          <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded-full whitespace-nowrap ${st.pill}`}>{st.label}</span>
+        </span>
+        <span className="flex flex-wrap items-center gap-x-2 mt-0.5 text-[11px] text-slate-400">
+          {subcat && <span>{subcat.nombre}</span>}
+          <span>{PERIOD_LABELS[r.periodicidad] || r.periodicidad}{months && ` · ${months}`}</span>
+          {r.fechaFin && <span className="text-amber-500">hasta {r.fechaFin}</span>}
+        </span>
+        <span className="block mt-1.5 max-w-xs"><ProgressBar value={paid} total={r.importe} className={st.bar} /></span>
+      </button>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-semibold tabular-nums text-slate-700">
+          {r.paid || r.partial ? formatEur(paid) : '—'}
+          <span className="font-normal text-slate-400"> / {formatEur(r.importe)}</span>
+        </p>
+        {r.paid && Math.abs(over) >= 0.01 && (
+          <p className={`text-[11px] ${(over > 0) === r.isIncome ? 'text-emerald-600' : 'text-amber-600'}`}>
+            {formatEur(Math.abs(over))} {over > 0 ? 'más' : 'menos'} de lo previsto
+          </p>
+        )}
+        {!r.paid && (
+          <p className="text-[11px] text-slate-400">falta {formatEur(r.importe - paid)}</p>
+        )}
+        <div className="hidden lg:flex gap-2 justify-end mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <button onClick={onEdit} className="text-[10px] text-slate-400 hover:text-slate-600">editar</button>
           <button onClick={onDelete} className="text-[10px] text-red-400 hover:text-red-600">quitar</button>
         </div>
       </div>
-    </>
+    </div>
   )
 }

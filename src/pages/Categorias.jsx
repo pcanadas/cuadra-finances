@@ -6,6 +6,7 @@ import { categorizeTransaction } from '../utils/categorize'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import { handleTransferPairing, undoTransferPairing, describeTransferSync } from '../utils/transferPairing'
 import SelectSheet from '../components/SelectSheet'
+import { expandSplits } from '../utils/splits'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -25,6 +26,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
       setNombre(category.nombre)
       setColor(category.color)
       setEsTransferencia(category.esTransferencia || false)
+      setEsImpuesto(category.esImpuesto || false)
       setCuentaDestinoId(category.cuentaDestinoId || '')
     }
   }, [category])
@@ -33,6 +35,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
   const [exclusions, setExclusions] = useState([...(category.palabrasExcluidas || [])])
   const [color, setColor] = useState(category.color)
   const [esTransferencia, setEsTransferencia] = useState(category.esTransferencia || false)
+  const [esImpuesto, setEsImpuesto] = useState(category.esImpuesto || false)
   const [cuentaDestinoId, setCuentaDestinoId] = useState(category.cuentaDestinoId || '')
   const [newKw, setNewKw] = useState('')
   const [newEx, setNewEx] = useState('')
@@ -77,7 +80,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
   }
 
   const handleSave = async () => {
-    await onUpdate(category.id, { nombre, palabrasClave: keywords, palabrasExcluidas: exclusions, color, esTransferencia, cuentaDestinoId: esTransferencia ? (cuentaDestinoId || null) : null })
+    await onUpdate(category.id, { nombre, palabrasClave: keywords, palabrasExcluidas: exclusions, color, esTransferencia, esImpuesto: !esTransferencia && esImpuesto, cuentaDestinoId: esTransferencia ? (cuentaDestinoId || null) : null })
     setEditing(false)
   }
 
@@ -87,6 +90,7 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
     setExclusions([...(category.palabrasExcluidas || [])])
     setColor(category.color)
     setEsTransferencia(category.esTransferencia || false)
+    setEsImpuesto(category.esImpuesto || false)
     setCuentaDestinoId(category.cuentaDestinoId || '')
     setNewKw('')
     setNewEx('')
@@ -235,6 +239,17 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
                 <p className="text-xs text-slate-400 mt-1">Cada movimiento de esta categoría aparecerá también en la cuenta destino (lo que sale de una entra en la otra). No cuenta como ingreso ni como gasto.</p>
               </div>
             )}
+            {!esTransferencia && !category.esIngreso && (
+              <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={esImpuesto}
+                  onChange={(e) => setEsImpuesto(e.target.checked)}
+                  className="rounded border-slate-300"
+                />
+                Impuestos (renta, IBI…: se muestran aparte en el Dashboard si lo activas en Ajustes)
+              </label>
+            )}
           </div>
           <div className="flex gap-2 pt-1">
             <button
@@ -324,6 +339,9 @@ function CategoryCard({ category, onUpdate, onDelete, txCount, accounts }) {
 
           <div className="mt-2 flex items-center gap-2">
             <span className="text-xs text-slate-400">{txCount} movimiento{txCount !== 1 ? 's' : ''}</span>
+            {category.esImpuesto && (
+              <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-medium">Impuestos</span>
+            )}
             {category.esTransferencia && (
               <span className="text-xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 font-medium">
                 Transferencia interna{(() => {
@@ -420,7 +438,7 @@ export default function Categorias() {
   const [newColor, setNewColor] = useState(PRESET_COLORS[0])
 
   const txCountByCategory = {}
-  transactions.forEach((t) => {
+  expandSplits(transactions).forEach((t) => {
     if (t.categoria) txCountByCategory[t.categoria] = (txCountByCategory[t.categoria] || 0) + 1
   })
 

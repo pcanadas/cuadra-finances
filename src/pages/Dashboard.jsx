@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Welcome from '../components/Welcome.mobile'
 import { shouldRemindBackup, snoozeBackupReminder, daysSinceBackup } from '../utils/backupReminder'
@@ -6,6 +6,9 @@ import PeriodPicker from '../components/PeriodPicker'
 import SelectSheet from '../components/SelectSheet'
 import { periodLabel } from '../utils/period'
 import { isTransferTx } from '../utils/transferPairing'
+import { expandSplits } from '../utils/splits'
+import { isIncomeTx } from '../insights/flows'
+import { getSeparateTaxes } from '../utils/taxSetting'
 import { activeInMonth, fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
 import { availableToSpend } from '../insights/available'
 import useGoalResults from '../hooks/useGoalResults'
@@ -63,12 +66,13 @@ function toPastel(hex, amount = 0.55) {
 
 // ─── sub-components ─────────────────────────────────────────────────────────
 
-function SummaryCard({ title, value, subtitle, subtitleClass = '', valueClass = 'text-slate-800', cardClass = '', borderClass = '' }) {
+function SummaryCard({ title, value, subtitle, subtitleClass = '', valueClass = 'text-slate-800', cardClass = '', borderClass = '', note }) {
   return (
     <div className={`min-w-0 rounded-2xl p-3 lg:p-5 flex flex-col gap-0.5 lg:gap-1 border ${cardClass} ${borderClass} bg-white/70 backdrop-blur-sm`}>
       <p className="text-[10px] lg:text-xs font-semibold uppercase tracking-wide text-slate-400 leading-tight">{title}</p>
       <p className={`text-base sm:text-xl lg:text-2xl font-bold leading-tight tabular-nums break-words ${valueClass}`}>{value}</p>
       {subtitle && <p className={`text-[11px] lg:text-xs text-slate-400 leading-tight ${subtitleClass}`}>{subtitle}</p>}
+      {note && <div className="text-[11px] lg:text-xs leading-tight mt-0.5">{note}</div>}
     </div>
   )
 }
@@ -209,6 +213,12 @@ function CustomPieTooltip({ active, payload }) {
 
 // ─── monthly table helper ────────────────────────────────────────────────────
 
+// Importe de una celda: «—» si es cero; en rojo si es negativo (p. ej. una nómina devuelta)
+function Amount({ val, className = 'text-slate-700' }) {
+  if (Math.abs(val) < 0.005) return <span className="text-slate-300">—</span>
+  return <span className={val < 0 ? 'text-red-500' : className}>{formatEur(val)}</span>
+}
+
 function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
   // Only highlight if the max value is unique in that column (not all rows equal)
   const colMaxIsUnique = cols.map((_, ci) => {
@@ -254,9 +264,7 @@ function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
                     ? { backgroundColor: cols[ci].color + '33', color: cols[ci].color }
                     : undefined}
                 >
-                  <span className={val > 0 ? (val === colMaxima.cats[ci] && colMaxIsUnique[ci] ? '' : 'text-slate-700') : 'text-slate-300'}>
-                    {val > 0 ? formatEur(val) : '—'}
-                  </span>
+                  <Amount val={val} className={val === colMaxima.cats[ci] && colMaxIsUnique[ci] ? '' : 'text-slate-700'} />
                 </td>
               ))}
               <td
@@ -265,16 +273,14 @@ function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
                   ? { backgroundColor: '#94a3b833', color: '#64748b' }
                   : undefined}
               >
-                <span className={row.otros > 0 ? 'text-slate-700' : 'text-slate-300'}>
-                  {row.otros > 0 ? formatEur(row.otros) : '—'}
-                </span>
+                <Amount val={row.otros} />
               </td>
               <td className={`py-2 text-right pl-2 font-bold whitespace-nowrap ${
                 row.total > 0 && row.total === colMaxima.total && totalMaxIsUnique
                   ? (isIncome ? 'text-emerald-600' : 'text-rose-500')
                   : 'text-slate-800'
               }`}>
-                {row.total > 0 ? formatEur(row.total) : '—'}
+                <Amount val={row.total} className="" />
               </td>
             </tr>
           ))}
@@ -287,7 +293,9 @@ function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
 // ─── main component ──────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  const transactions  = useTransactionStore((s) => s.transactions)
+  // Los movimientos desglosados cuentan por partidas (ver utils/splits.js)
+  const storedTransactions = useTransactionStore((s) => s.transactions)
+  const transactions  = useMemo(() => expandSplits(storedTransactions), [storedTransactions])
   const categories    = useCategoryStore((s) => s.categories)
   const subcategories = useSubcategoryStore((s) => s.subcategories)
   const budgets       = useBudgetStore((s) => s.budgets)
@@ -342,16 +350,27 @@ export default function Dashboard() {
     [transactions, selectedYear, transferCatIds]
   )
 
+  // Impuestos aparte (opcional, Ajustes → Separar impuestos): ni gasto ni ingreso en el Dashboard;
+  // se muestran netos (pagado − devuelto) bajo Gastos y Balance. Ver utils/taxSetting.js
+  const [separateTaxes] = useState(getSeparateTaxes)
+  const taxCatIds = useMemo(
+    () => new Set(separateTaxes ? categories.filter((c) => c.esImpuesto && !c.esTransferencia && !c.esIngreso).map((c) => c.id) : []),
+    [categories, separateTaxes]
+  )
+  const taxTx  = useMemo(() => yearTx.filter((t) => taxCatIds.has(t.categoria)), [yearTx, taxCatIds])
+  const flowTx = useMemo(() => yearTx.filter((t) => !taxCatIds.has(t.categoria)), [yearTx, taxCatIds])
+
   // Expense transactions: negative AND not in an ingreso category
   const gastosTx = useMemo(
-    () => yearTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)),
-    [yearTx, ingresoCatIds]
+    () => flowTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)),
+    [flowTx, ingresoCatIds]
   )
 
-  // Income transactions: positive (regardless of category)
+  // Income transactions: positive (regardless of category) and negative ones of an ingreso
+  // category, which subtract (e.g. a payroll returned) — see insights/flows.js
   const ingresosTx = useMemo(
-    () => yearTx.filter((t) => t.importe > 0),
-    [yearTx]
+    () => flowTx.filter((t) => isIncomeTx(t, ingresoCatIds)),
+    [flowTx, ingresoCatIds]
   )
 
   // Movimientos del periodo elegido (mes o año completo)
@@ -363,6 +382,9 @@ export default function Dashboard() {
   const totalGastos   = useMemo(() => periodGastosTx.reduce((s, t) => s + Math.abs(t.importe), 0), [periodGastosTx])
   const totalIngresos = useMemo(() => periodIngresosTx.reduce((s, t) => s + t.importe, 0), [periodIngresosTx])
   const balance = totalIngresos - totalGastos
+  // Impuestos netos del periodo: negativo = pagado, positivo = devuelto
+  const periodTaxNet = useMemo(() => Math.round(taxTx.filter(inPeriod).reduce((s, t) => s + t.importe, 0) * 100) / 100, [taxTx, selectedMonth]) // eslint-disable-line react-hooks/exhaustive-deps
+  const showTaxes = taxCatIds.size > 0 && periodTaxNet !== 0
 
   // Gasto diario medio del mes (si es el mes en curso, sobre los días transcurridos)
   const gastoDiario = useMemo(() => {
@@ -412,8 +434,10 @@ export default function Dashboard() {
       mes: MONTH_LABELS[i],
       gastos:   gastosTx .filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + Math.abs(t.importe), 0),
       ingresos: ingresosTx.filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + t.importe, 0),
+      // Pagado neto (las devoluciones se ven en los KPI)
+      impuestos: Math.max(0, -taxTx.filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + t.importe, 0)),
     })),
-    [gastosTx, ingresosTx]
+    [gastosTx, ingresosTx, taxTx]
   )
 
   // ── gastos category breakdown ──
@@ -519,10 +543,10 @@ export default function Dashboard() {
       const bySubcat = {}
       monthTx.forEach((t) => {
         const key = t.subcategoria || '__sin__'
-        bySubcat[key] = (bySubcat[key] || 0) + Math.abs(t.importe)
+        bySubcat[key] = (bySubcat[key] || 0) + t.importe // con signo: una devolución resta
       })
       const subcatTotal = ingresoSubcats.reduce((s, sc) => s + (bySubcat[sc.id] || 0), 0)
-      const monthTotal  = monthTx.reduce((s, t) => s + Math.abs(t.importe), 0)
+      const monthTotal  = monthTx.reduce((s, t) => s + t.importe, 0)
       return {
         month: MONTH_NAMES[i],
         cats: ingresoSubcats.map((sc) => bySubcat[sc.id] || 0),
@@ -568,7 +592,7 @@ export default function Dashboard() {
     total: Math.max(...ingresosMonthlySummaryFinal.map((r) => r.total)),
   }), [ingresosMonthlySummaryFinal, ingresoColDefs])
 
-  const hasIngresoData = ingresosMonthlySummaryFinal.some((r) => r.total > 0)
+  const hasIngresoData = ingresosMonthlySummaryFinal.some((r) => Math.abs(r.total) >= 0.005)
 
   // ── month-by-month year comparison ──
   const prevYear = selectedYear - 1
@@ -578,13 +602,13 @@ export default function Dashboard() {
     const prevYearTx = transactions.filter((t) =>
       new Date(t.fechaContable).getFullYear() === prevYear && !isTransferTx(t, transferCatIds)
     )
-    const prevGastos = prevYearTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria))
+    const prevGastos = prevYearTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria) && !taxCatIds.has(t.categoria))
     return Array.from({ length: 12 }, (_, i) => ({
       mes: MONTH_LABELS[i],
       [`gastos_${selectedYear}`]: gastosTx.filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + Math.abs(t.importe), 0),
       [`gastos_${prevYear}`]: prevGastos.filter((t) => new Date(t.fechaContable).getMonth() === i).reduce((s, t) => s + Math.abs(t.importe), 0),
     }))
-  }, [gastosTx, transactions, selectedYear, prevYear, hasPrevYear, transferCatIds, ingresoCatIds])
+  }, [gastosTx, transactions, selectedYear, prevYear, hasPrevYear, transferCatIds, ingresoCatIds, taxCatIds])
 
   // ── multi-category line comparison ──
   const COMPARE_COLORS = ['#8b5cf6', '#ef4444', '#3b82f6', '#f59e0b', '#10b981', '#ec4899']
@@ -607,11 +631,13 @@ export default function Dashboard() {
       const txYear = transactions.filter((t) =>
         new Date(t.fechaContable).getFullYear() === year && !isTransferTx(t, transferCatIds)
       )
-      const gastos   = txYear.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)).reduce((s, t) => s + Math.abs(t.importe), 0)
-      const ingresos = txYear.filter((t) => t.importe > 0).reduce((s, t) => s + t.importe, 0)
-      return { year, gastos, ingresos, balance: ingresos - gastos }
+      const flows    = txYear.filter((t) => !taxCatIds.has(t.categoria))
+      const gastos   = flows.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)).reduce((s, t) => s + Math.abs(t.importe), 0)
+      const ingresos = flows.filter((t) => isIncomeTx(t, ingresoCatIds)).reduce((s, t) => s + t.importe, 0)
+      const impuestos = -txYear.filter((t) => taxCatIds.has(t.categoria)).reduce((s, t) => s + t.importe, 0) // neto pagado
+      return { year, gastos, ingresos, impuestos, balance: ingresos - gastos }
     })
-  }, [availableYears, transactions, transferCatIds, ingresoCatIds])
+  }, [availableYears, transactions, transferCatIds, ingresoCatIds, taxCatIds])
 
   // ── recurring / fixed expenses (compact) ──
   const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
@@ -650,6 +676,17 @@ export default function Dashboard() {
     })
     return fixedStatusForMonth(dueThisMonth, monthTx, ingresoCatIds)
   }, [dueThisMonth, transactions, currentMonth, currentYear, ingresoCatIds, transferCatIds])
+
+  // Lo cobrado de los ingresos fijos del mes (con lo que sobre en su categoría y restando devoluciones)
+  const fixedIncomeReceived = useMemo(
+    () => fixedStatus.filter((r) => r.isIncome).reduce((s, r) => s + (r.paidAmount ?? 0), 0),
+    [fixedStatus],
+  )
+  // Lo que aún se espera cobrar (lo devuelto no se espera de vuelta: ver insights/fixedItems.js)
+  const fixedIncomePending = useMemo(
+    () => fixedStatus.filter((r) => r.isIncome && !r.paid).reduce((s, r) => s + Math.max(0, r.importe - (r.paidAmount ?? 0)), 0),
+    [fixedStatus],
+  )
 
   // Total expenses this month minus what's been identified as fixed payments = variable
   const fixedPaidTotal = useMemo(
@@ -698,12 +735,18 @@ export default function Dashboard() {
           />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
-          <SummaryCard title="Gastos" value={formatEur(totalGastos)} subtitle={`${periodGastosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20" />
+          <SummaryCard title="Gastos" value={formatEur(totalGastos)} subtitle={`${periodGastosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20"
+            note={showTaxes && (periodTaxNet < 0
+              ? <span className="text-slate-500">+ Impuestos <span className="font-semibold text-amber-600 tabular-nums">{formatEur(-periodTaxNet)}</span></span>
+              : <span className="text-slate-500">Devolución de impuestos <span className="font-semibold text-emerald-600 tabular-nums">+{formatEur(periodTaxNet)}</span></span>)} />
           <SummaryCard title="Ingresos" value={formatEur(totalIngresos)} subtitle={`${periodIngresosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
-          <SummaryCard title="Balance" value={formatEur(balance)} subtitle="Ingresos − Gastos" subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20" />
+          <SummaryCard title="Balance" value={formatEur(balance)} subtitle={showTaxes ? 'Ingresos − Gastos, sin impuestos' : 'Ingresos − Gastos'} subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20"
+            note={showTaxes && (
+              <span className="text-slate-500">Con impuestos: <span className={`font-semibold tabular-nums ${balance + periodTaxNet >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(balance + periodTaxNet)}</span></span>
+            )} />
           {selectedMonth == null
             ? <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
-            : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle="Media por día" subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
+            : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle={showTaxes ? 'Media por día, sin impuestos' : 'Media por día'} subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
         </div>
       </div>
 
@@ -747,6 +790,28 @@ export default function Dashboard() {
               <div className="bg-emerald-500/10 rounded-xl p-3">
                 <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos</p>
                 <p className="text-lg font-bold text-emerald-600">{formatEur(fixedIncomeMonthly)}</p>
+                {fixedIncomeMonthly > 0 && forecastWhen <= 0 && (() => {
+                  // Mes en curso con algo por cobrar: lo que falta; si no, la diferencia con lo previsto
+                  const pendingNow = forecastWhen === 0 && fixedIncomePending > 0.005
+                  const diff = Math.round((fixedIncomeReceived - fixedIncomeMonthly) * 100) / 100
+                  const pct = Math.max(0, Math.min(100, (fixedIncomeReceived / fixedIncomeMonthly) * 100))
+                  return (
+                    <>
+                      <div className="mt-1.5 h-1.5 bg-emerald-500/15 rounded-full overflow-hidden">
+                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
+                      </div>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Recibido <span className="font-semibold text-slate-700">{formatEur(fixedIncomeReceived)}</span>
+                      </p>
+                      <p className={`text-[11px] font-medium ${pendingNow ? 'text-slate-500' : diff < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {pendingNow ? `Falta por cobrar ${formatEur(fixedIncomePending)}`
+                          : diff === 0 ? '✓ Lo previsto'
+                          : diff > 0 ? `+${formatEur(diff)} más de lo previsto`
+                          : `${formatEur(-diff)} menos de lo previsto`}
+                      </p>
+                    </>
+                  )
+                })()}
               </div>
               <div className="bg-rose-500/10 rounded-xl p-3">
                 <p className="text-[11px] text-rose-500 uppercase font-semibold">Gastos fijos</p>
@@ -829,6 +894,7 @@ export default function Dashboard() {
             <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
             <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
             <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
+            {taxTx.length > 0 && <Bar dataKey="impuestos" name="Impuestos" fill="#fcd34d" radius={[4, 4, 0, 0]} />}
           </BarChart>
         </ResponsiveContainer>
         </div>
@@ -1003,6 +1069,7 @@ export default function Dashboard() {
               <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
               <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
               <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
+              {taxCatIds.size > 0 && <Bar dataKey="impuestos" name="Impuestos" fill="#fcd34d" radius={[4, 4, 0, 0]} />}
             </BarChart>
           </ResponsiveContainer>
           </div>
@@ -1017,6 +1084,7 @@ export default function Dashboard() {
                   <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">vs anterior</th>
                   <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Ingresos</th>
                   <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">vs anterior</th>
+                  {taxCatIds.size > 0 && <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Impuestos</th>}
                   <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Balance</th>
                 </tr>
               </thead>
@@ -1042,6 +1110,12 @@ export default function Dashboard() {
                       <td className="py-2.5 text-right"><Diff val={gastoDiff} positiveIsGood={false} /></td>
                       <td className="py-2.5 text-right text-emerald-600 font-medium whitespace-nowrap">{formatEur(row.ingresos)}</td>
                       <td className="py-2.5 text-right"><Diff val={ingresoDiff} positiveIsGood={true} /></td>
+                      {taxCatIds.size > 0 && (
+                        <td className={`py-2.5 text-right font-medium whitespace-nowrap ${row.impuestos < 0 ? 'text-emerald-600' : 'text-amber-600'}`}
+                          title={row.impuestos < 0 ? 'Devuelto' : 'Pagado'}>
+                          {Math.abs(row.impuestos) < 0.005 ? '—' : row.impuestos < 0 ? `+${formatEur(-row.impuestos)}` : formatEur(row.impuestos)}
+                        </td>
+                      )}
                       <td className={`py-2.5 text-right font-bold whitespace-nowrap ${row.balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(row.balance)}</td>
                     </tr>
                   )
@@ -1093,9 +1167,9 @@ export default function Dashboard() {
                     const sinSubcatTotal = cat.total - catSubcats.reduce((s, sc) => s + (subcatSpend[sc.id] || 0), 0)
                     const isExpanded = expandedCategories.has(cat.id)
                     return (
-                      <>
+                      <Fragment key={cat.id}>
                         {/* Category row */}
-                        <tr key={cat.id} className="border-b border-slate-100 bg-slate-50/50">
+                        <tr className="border-b border-slate-100 bg-slate-50/50">
                           <td className="py-2.5">
                             <button
                               onClick={() => hasSubcatData && toggleCategoryExpand(cat.id)}
@@ -1148,7 +1222,7 @@ export default function Dashboard() {
                             <td className="hidden sm:table-cell" />
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     )
                   })}
                 </tbody>

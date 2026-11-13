@@ -1,11 +1,11 @@
 {
-  "version": "0.9.0",
-  "notes": "Nuevo: Ahorro y metas (guarda una cantidad cada mes o reúne una cantidad para una fecha, con seguimiento mes a mes) y Disponible para gastar en el Dashboard (cuánto te queda hasta fin de mes y cuánto al día). Aviso al superar un presupuesto. Gastos fijos muestra lo pagado o cobrado aunque sea en varios movimientos, y Cuentas incluye los movimientos anteriores al primer extracto. La primera vez que abras esta versión, la base de datos se actualiza sola (con copia de seguridad antes).",
-  "pub_date": "2026-10-29T00:00:00Z",
+  "version": "0.10.0",
+  "notes": "Nuevo: desglosa un movimiento (Amazon, PayPal, la tarjeta…) en varias partidas con su categoría, y añade notas a los movimientos. Opción en Ajustes para separar los impuestos (la renta, el IBI…) de los gastos del Dashboard. La previsión del mes muestra cuánto has cobrado de los ingresos fijos y el estado del mes en Gastos fijos es más claro. Corregido: un ingreso devuelto (p. ej. una nómina) ahora resta de los ingresos.",
+  "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUFvQ04zL201NlRaWWpPT0pnWGNaN1oxUHRQYXFocVFKL3lnQkwzOGlncTRmOEtNVDY1UjVJdzdZN0p1VldLQ3B5Ujh0eE90NHMydXJ5L3RsT09ZNGdNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzMjkwOTkyCWZpbGU6WmVuaXRfMC45LjBfeDY0LXNldHVwLmV4ZQpGUlk5ODh4UWs2bjFoWE1aTWIxeGFXV0gvME5xY3NWMldhZ3hzdXFlVFl0enlHNTJ5cXJEdVEvM3lFQW5CenJISEl5QTZRNEN1RGtRVzdHZkQwQmhEdz09Cg==",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.9.0/Zenit_0.9.0_x64-setup.exe"
+      "signature": "RELLENAR_TRAS_BUILD",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.0/Zenit_0.10.0_x64-setup.exe"
     }
   }
 }

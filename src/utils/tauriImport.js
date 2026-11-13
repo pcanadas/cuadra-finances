@@ -8,6 +8,7 @@ const PLUGINS = {
   '@tauri-apps/plugin-fs':      () => import('@tauri-apps/plugin-fs'),
   '@tauri-apps/plugin-updater': () => import('@tauri-apps/plugin-updater'),
   '@tauri-apps/plugin-process': () => import('@tauri-apps/plugin-process'),
+  '@tauri-apps/api/core':       () => import('@tauri-apps/api/core'),
 }
 
 export function tauriImport(pkg) {

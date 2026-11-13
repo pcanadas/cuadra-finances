@@ -18,6 +18,8 @@ export function activeInMonth(items, year, month) {
   return items.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= monthStart))
 }
 
+const MATCH_TOLERANCE = 0.3
+
 /**
  * Movimiento del mes que corresponde a un fijo: por subcategoría, por categoría o, sin
  * ninguna, por las palabras de su nombre; con un importe parecido (±30 %).
@@ -25,7 +27,7 @@ export function activeInMonth(items, year, month) {
  */
 export function findFixedPayment(item, monthTx, isIncome) {
   const pool = monthTx.filter((t) => (isIncome ? t.importe > 0 : t.importe < 0))
-  const tolerant = (t) => Math.abs(Math.abs(t.importe) - item.importe) < item.importe * 0.3
+  const tolerant = (t) => Math.abs(Math.abs(t.importe) - item.importe) < item.importe * MATCH_TOLERANCE
   if (item.subcategoriaId) return pool.find((t) => t.subcategoria === item.subcategoriaId && tolerant(t)) ?? null
   if (item.categoriaId) return pool.find((t) => t.categoria === item.categoriaId && tolerant(t)) ?? null
   const words = item.nombre.toUpperCase().split(/\s+/).filter((w) => w.length >= 4)
@@ -46,7 +48,9 @@ const PAID_RATIO = 0.97 // sumando varios movimientos, se da por pagado al llega
  *    nómina en dos partes, la compra del súper en muchas veces). Si varios fijos comparten
  *    categoría, se reparte por orden.
  * El último fijo de cada categoría se queda además con lo que sobre (se ve si te has pasado).
- * Cada movimiento cuenta para un solo fijo.
+ * Cada movimiento cuenta para un solo fijo. En los ingresos, lo negativo de su categoría resta de
+ * lo cobrado, pero no se espera de vuelta: una nómina de 2400 devuelta y reemitida por 2000 queda
+ * cobrada con 2000; una devuelta en parte, cobrada con lo neto; devuelta entera, pendiente.
  * @param monthTx movimientos del mes, sin traspasos
  */
 export function fixedStatusForMonth(dueItems, monthTx, ingresoCatIds) {
@@ -70,8 +74,8 @@ export function fixedStatusForMonth(dueItems, monthTx, ingresoCatIds) {
     if (remaining.has(key)) continue
     const inPool = (t) => r.subcategoriaId ? t.subcategoria === r.subcategoriaId : t.categoria === r.categoriaId && !ownSubcats.has(t.subcategoria)
     const total = monthTx
-      .filter((t) => !claimed.has(t) && (isIncome ? t.importe > 0 : t.importe < 0) && inPool(t))
-      .reduce((s, t) => s + Math.abs(t.importe), 0)
+      .filter((t) => !claimed.has(t) && (isIncome || t.importe < 0) && inPool(t))
+      .reduce((s, t) => s + (isIncome ? t.importe : -t.importe), 0)
     remaining.set(key, round2(total))
   }
 
@@ -87,7 +91,8 @@ export function fixedStatusForMonth(dueItems, monthTx, ingresoCatIds) {
     const fromPool = round2(last ? avail : match ? 0 : Math.min(avail, r.importe))
     remaining.set(key, round2(avail - fromPool))
     const amount = round2((match ? Math.abs(match.importe) : 0) + fromPool)
-    const paid = !!match || amount >= r.importe * PAID_RATIO
+    // Con un movimiento que encaja (±30 %), lo neto tras devoluciones debe seguir en ese margen
+    const paid = amount >= r.importe * (match ? 1 - MATCH_TOLERANCE : PAID_RATIO)
     return { ...r, isIncome, paid, partial: !paid && amount > 0, paidAmount: amount > 0 ? amount : null }
   })
 }

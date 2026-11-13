@@ -3,7 +3,6 @@ import { evaluateGoals } from './goals'
 
 const TODAY = new Date(2026, 9, 15) // octubre de 2026
 const transferCatIds = new Set(['cat-transf'])
-const ingresoCatIds = new Set(['cat-ingresos'])
 let n = 0
 const tx = (fecha, importe, extra = {}) => ({ id: `t${n++}`, fechaContable: fecha, importe, accountId: 'acc-1', ...extra })
 // Traspaso del banco a la cuenta de ahorro: salida en el banco y entrada en la de ahorro
@@ -12,7 +11,7 @@ const toSavings = (fecha, importe, cuenta = 'acc-ahorro') => [
   tx(fecha, importe, { accountId: cuenta, categoria: 'cat-transf', transferPairId: `p${n}`, esContrapartida: true }),
 ]
 const month = (ingresos, gastos, m) => [tx(`2026-${m}-01`, ingresos, { categoria: 'cat-ingresos' }), tx(`2026-${m}-10`, -gastos)]
-const run = (goals, transactions) => evaluateGoals({ goals, transactions, transferCatIds, ingresoCatIds, today: TODAY })
+const run = (goals, transactions) => evaluateGoals({ goals, transactions, transferCatIds, today: TODAY })
 const statuses = (r) => r.months.map((m) => m.status)
 
 describe('ahorro a una cuenta', () => {
@@ -49,6 +48,11 @@ describe('ahorro apartado (sin traspaso)', () => {
     expect(statuses(results[0])).toEqual(['conseguido', 'parcial', 'no conseguido', 'en curso'])
     expect(results[0].months.map((m) => m.contributed)).toEqual([300, 100, 0, null])
     expect(results[0].accumulated).toBe(400)
+  })
+
+  it('una nómina devuelta reduce lo que sobra del mes', () => {
+    const txs = [...month(2000, 1500, '07'), tx('2026-07-20', -300, { categoria: 'cat-ingresos' })]
+    expect(run([plan], txs).results[0].months[0]).toMatchObject({ contributed: 200, status: 'parcial' })
   })
 
   it('el mes en curso se reserva entero', () => {

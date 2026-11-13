@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.10.0] — 2026-11-13
+
+### Añadido
+- **Desglosar un movimiento en partidas** — para cargos que reúnen cosas distintas (Amazon, PayPal, la tarjeta…): en Movimientos, el icono de desglosar reparte el importe en varias partidas, cada una con su categoría, subcategoría y nota opcional. Las partidas deben sumar el total (se indica lo que falta por repartir y se puede ajustar la última). El movimiento sigue igual que en el extracto, con sus partidas debajo; el Dashboard, los presupuestos, los gastos fijos, ahorro y metas, el recuento de Categorías y la exportación a Excel (una fila por partida) cuentan cada partida en su categoría. Los filtros de categoría y subcategoría lo encuentran por cualquiera de sus partidas. No se pueden desglosar traspasos entre cuentas. Se puede editar o quitar el desglose («Desglosado en N partidas») y deshacer
+- **Notas en los movimientos** — una aclaración para cualquier movimiento, importado o manual (p. ej. «Pago muebles» en una «Transferencia a otras entidades»), con el icono del bocadillo o al añadir/editar uno manual. Se ve debajo de la descripción, en pequeño y en cursiva; el buscador busca también en las notas y se exportan a Excel
+- **Previsión del mes: cuánto has cobrado de los ingresos fijos** — bajo «Ingresos fijos», una barra con lo recibido y si es más o menos de lo previsto, o lo que falta por cobrar si alguno aún no ha llegado
+- **Aviso de nueva versión en la versión de Microsoft Store** — como en la de GitHub: al abrir Zenit, si la Store ya tiene una versión nueva aparece un aviso con un botón para abrir la Store (la Store la instala igualmente sola). En Acerca, «Comprobar actualizaciones» también pregunta a la Store
+- **Separar impuestos (opcional, en Ajustes)** — el pago de la renta, el IBI… ya no dispara los gastos del mes: con la opción activada, los movimientos de las categorías marcadas como impuestos no cuentan en los gastos, el balance ni el gasto diario del Dashboard. Debajo de Gastos se ve «+ Impuestos» (o «Devolución de impuestos» en verde si la renta sale a devolver) y debajo de Balance, el balance con impuestos. La evolución mensual y la comparativa anual los muestran como serie aparte (la comparativa, con su columna). Siguen restando en «Disponible para gastar» y en ahorro y metas, porque es dinero que sale de tu cuenta. Las categorías se marcan en Ajustes o al editar la categoría; la categoría Impuestos viene marcada
+
+### Cambiado
+- **Gastos fijos: estado del mes más claro** — «Estado de noviembre» con un resumen de ingresos y de gastos (cobrado/pagado de lo previsto, con barra y cuántos quedan pendientes). Cada fijo muestra su estado («Pendiente», «En parte», «Cobrado»/«Pagado»), su barra de progreso, lo pagado de lo previsto y cuánto falta o cuánto más/menos de lo previsto. Primero lo pendiente
+
+### Corregido
+- **Ingresos negativos** — un movimiento negativo en una categoría de ingreso (p. ej. devolver una nómina cobrada de más) no contaba en ninguna parte. Ahora resta: de los ingresos del Dashboard (resumen, evolución mensual, comparativa anual), de su subcategoría en «Ingresos mensuales por subcategoría» (en rojo si el mes queda en negativo), de lo cobrado del ingreso fijo (sin esperarlo de vuelta: una nómina de 2400 € devuelta y reemitida por 2000 € queda cobrada con 2000 €; si se devuelve entera y aún no ha llegado la nueva, queda pendiente), de «Disponible para gastar» y del sobrante del mes en ahorro y metas
+
 ## [0.9.0] — 2026-10-29
 
 ### Añadido

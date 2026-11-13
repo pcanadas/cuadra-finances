@@ -67,3 +67,53 @@ export default function UpdateChecker() {
     </div>
   )
 }
+
+/**
+ * Versión de Microsoft Store: la Store instala las actualizaciones, pero avisamos igual que en la
+ * de GitHub cuando ya hay una versión nueva en la Store (src-tauri/src/store.rs) y llevamos a su ficha.
+ */
+export function StoreUpdateNotice() {
+  const [available, setAvailable] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    tauriImport('@tauri-apps/api/core')
+      .then(({ invoke }) => invoke('store_update_available'))
+      .then((found) => { if (!cancelled && found) setAvailable(true) })
+      .catch(() => {}) // sin identidad de paquete o sin conexión: no se avisa
+    return () => { cancelled = true }
+  }, [])
+
+  if (!available || dismissed) return null
+
+  async function openStore() {
+    try {
+      const { invoke } = await tauriImport('@tauri-apps/api/core')
+      await invoke('open_store_page')
+    } catch {
+      // Si no se puede abrir, el aviso sigue ahí
+      return
+    }
+    setDismissed(true)
+  }
+
+  return (
+    <div className="fixed bottom-4 right-4 z-50 bg-white border border-indigo-200 rounded-2xl shadow-lg p-4 max-w-sm">
+      <p className="text-sm font-semibold text-slate-800 mb-1">Nueva versión disponible</p>
+      <p className="text-xs text-slate-500 mb-3">
+        Hay una versión nueva de Zenit en Microsoft Store. Se instalará sola, o puedes actualizar ahora desde la Store.
+      </p>
+      <div className="flex gap-2">
+        <button onClick={openStore}
+          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors">
+          Abrir Microsoft Store
+        </button>
+        <button onClick={() => setDismissed(true)}
+          className="text-xs text-slate-400 hover:text-slate-600 px-2">
+          Más tarde
+        </button>
+      </div>
+    </div>
+  )
+}

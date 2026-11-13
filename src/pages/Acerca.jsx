@@ -14,7 +14,7 @@ export default function Acerca() {
     import('@tauri-apps/api/app').then(({ getVersion }) => getVersion()).then(setVersion).catch(() => {})
   }, [])
   const [checking, setChecking] = useState(false)
-  const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'error' | 'notauri'
+  const [result, setResult] = useState(null) // null | 'uptodate' | 'available' | 'store' | 'error' | 'notauri'
   const [updateInfo, setUpdateInfo] = useState(null)
   const [errorMsg, setErrorMsg] = useState(null)
   const [installing, setInstalling] = useState(false)
@@ -29,6 +29,12 @@ export default function Acerca() {
     setUpdateInfo(null)
     setErrorMsg(null)
     try {
+      // En la Store se pregunta a la Store (src-tauri/src/store.rs); actualiza ella
+      if (isStore) {
+        const { invoke } = await tauriImport('@tauri-apps/api/core')
+        setResult((await invoke('store_update_available')) ? 'store' : 'uptodate')
+        return
+      }
       const { check } = await tauriImport('@tauri-apps/plugin-updater')
       const upd = await check()
       if (upd?.available) {
@@ -73,8 +79,8 @@ export default function Acerca() {
 
         <div className="border-t border-slate-100" />
 
-        {isMobile || isStore ? (
-          <p className="text-center text-sm text-slate-500">Las actualizaciones llegan a través de {isMobile ? 'Google Play' : 'Microsoft Store'}.</p>
+        {isMobile ? (
+          <p className="text-center text-sm text-slate-500">Las actualizaciones llegan a través de Google Play.</p>
         ) : (
         <div className="flex flex-col gap-2">
           <button
@@ -95,6 +101,21 @@ export default function Acerca() {
             <div className="text-center">
               <p className="text-sm text-red-500">No se pudo comprobar actualizaciones.</p>
               {errorMsg && <p className="text-xs text-red-400 mt-1 font-mono break-all">{errorMsg}</p>}
+            </div>
+          )}
+          {isStore && !result && (
+            <p className="text-center text-xs text-slate-400">Las actualizaciones las instala Microsoft Store.</p>
+          )}
+          {result === 'store' && (
+            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-col gap-2">
+              <p className="text-sm font-semibold text-indigo-800">Hay una versión nueva en Microsoft Store</p>
+              <p className="text-xs text-indigo-600">Se instalará sola, o puedes actualizar ahora desde la Store.</p>
+              <button
+                onClick={() => tauriImport('@tauri-apps/api/core').then(({ invoke }) => invoke('open_store_page')).catch(() => {})}
+                className="mt-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-4 py-2 rounded-lg transition-colors"
+              >
+                Abrir Microsoft Store
+              </button>
             </div>
           )}
           {result === 'available' && updateInfo && (

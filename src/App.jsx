@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { HashRouter as BrowserRouter, Routes, Route } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import Layout from './components/Layout'
-import UpdateChecker from './components/UpdateChecker'
-import { canAutoUpdate } from './platform'
+import UpdateChecker, { StoreUpdateNotice } from './components/UpdateChecker'
+import { canAutoUpdate, isStore, isTauri } from './platform'
 import Dashboard from './pages/Dashboard'
 import Movimientos from './pages/Movimientos'
 import Importar from './pages/Importar'
@@ -70,6 +70,7 @@ export default function App() {
   return (
     <ThemeProvider>
     {canAutoUpdate && <UpdateChecker />}
+    {isTauri && isStore && <StoreUpdateNotice />}
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Layout />}>

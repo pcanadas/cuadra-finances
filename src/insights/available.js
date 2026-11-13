@@ -1,5 +1,6 @@
 import { isTransferTx } from '../utils/transferPairing'
 import { activeInMonth, fixedStatusForMonth, isDueInMonth } from './fixedItems'
+import { isExpenseTx, isIncomeTx } from './flows'
 
 const sum = (list) => list.reduce((s, x) => s + x, 0)
 const round2 = (n) => Math.round(n * 100) / 100
@@ -40,10 +41,10 @@ export function availableToSpend({ transactions, transferCatIds, ingresoCatIds, 
     byMonth.get(k).push(t)
   }
   const monthTx = byMonth.get(current) ?? []
-  const incomeOf = (list) => sum(list.filter((t) => t.importe > 0).map((t) => t.importe))
+  const incomeOf = (list) => sum(list.filter((t) => isIncomeTx(t, ingresoCatIds)).map((t) => t.importe))
 
   const received = incomeOf(monthTx)
-  const spent = sum(monthTx.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)).map((t) => -t.importe))
+  const spent = sum(monthTx.filter((t) => isExpenseTx(t, ingresoCatIds)).map((t) => -t.importe))
 
   const due = activeInMonth(recurringItems, year, month).filter((r) => isDueInMonth(r, month))
   const status = fixedStatusForMonth(due, monthTx, ingresoCatIds)

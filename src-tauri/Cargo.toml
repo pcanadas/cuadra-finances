@@ -32,3 +32,7 @@ tauri-plugin-process = "2"
 
 [target.'cfg(target_os = "android")'.dependencies]
 tauri-plugin-biometric = "2"
+
+# Versión de Microsoft Store: consultar actualizaciones a la Store (src/store.rs)
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = ["Services_Store", "Foundation", "Foundation_Collections", "System"] }
