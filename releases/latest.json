@@ -4,7 +4,7 @@
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "RELLENAR_TRAS_BUILD",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQURDbWR2dFF4NDFsUXhKcGlVZ1VpOGN1Q0d6YU5ZRzNmck5oWVJFZnZjclpLV1dtNHo2R2QwOTdNUmhiOXl6YjNXbFlETDBkMHNkYlJEelhhdERVQndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg1MTg1CWZpbGU6WmVuaXRfMC4xMC4wX3g2NC1zZXR1cC5leGUKY3pQaHdWaFE3VCtETVV5anVtKzJtVkhqbmJwVWJWSFlVYTVxM1JzN2hxdnUzdlJiU1RyVmg3RW1oR2N4S0NSWWZxK3lWa2ZNdGlxanpHdVlQakoxQ0E9PQo=",
       "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.0/Zenit_0.10.0_x64-setup.exe"
     }
   }
