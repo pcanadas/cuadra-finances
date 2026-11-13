@@ -1,11 +1,11 @@
 {
-  "version": "0.10.0",
-  "notes": "Nuevo: desglosa un movimiento (Amazon, PayPal, la tarjeta…) en varias partidas con su categoría, y añade notas a los movimientos. Opción en Ajustes para separar los impuestos (la renta, el IBI…) de los gastos del Dashboard. La previsión del mes muestra cuánto has cobrado de los ingresos fijos y el estado del mes en Gastos fijos es más claro. Corregido: un ingreso devuelto (p. ej. una nómina) ahora resta de los ingresos.",
+  "version": "0.10.1",
+  "notes": "Corregido: al actualizar desde la app ya no aparece «No se ha podido cerrar Zenit»; el instalador espera a que Zenit termine de cerrarse.",
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQURDbWR2dFF4NDFsUXhKcGlVZ1VpOGN1Q0d6YU5ZRzNmck5oWVJFZnZjclpLV1dtNHo2R2QwOTdNUmhiOXl6YjNXbFlETDBkMHNkYlJEelhhdERVQndvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg1MTg1CWZpbGU6WmVuaXRfMC4xMC4wX3g2NC1zZXR1cC5leGUKY3pQaHdWaFE3VCtETVV5anVtKzJtVkhqbmJwVWJWSFlVYTVxM1JzN2hxdnUzdlJiU1RyVmg3RW1oR2N4S0NSWWZxK3lWa2ZNdGlxanpHdVlQakoxQ0E9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.0/Zenit_0.10.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUVMU3pnUWpoVXNmaXZYampQTllhV2JiRnUxVDlaeGhPMWhYQlo2ZGNQRmxXczh2Vk0yMU9mU0JxM2lPajJETWdhNHN2YS9ZNUc4Znp2NTR2TlRoWlFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg1OTAxCWZpbGU6WmVuaXRfMC4xMC4xX3g2NC1zZXR1cC5leGUKVVI0RjFuWFgxbGZjYzR0K01iS21hYllibjhhZ1JrZVd3dmUvWmkwWUo1MVlTRHpCam5wMTg0RjN3SFhuY2hnN05QVlRHYmU2OUNLL1c4c2t2RWk3QkE9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.1/Zenit_0.10.1_x64-setup.exe"
     }
   }
 }

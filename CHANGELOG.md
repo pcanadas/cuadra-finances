@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.10.1] — 2026-11-13
+
+### Corregido
+- **«No se ha podido cerrar Zenit» al actualizar** — al pulsar «Actualizar ahora», el actualizador abre el instalador y a continuación cierra Zenit; el instalador comprobaba enseguida si Zenit seguía abierto y, si aún se estaba cerrando, Windows no le dejaba forzar el cierre y la actualización se cancelaba. Ahora, en una actualización, el instalador espera (hasta 30 s) a que Zenit termine de cerrarse. Como el arreglo va en el instalador nuevo, se nota ya al actualizar a esta versión
+
 ## [0.10.0] — 2026-11-13
 
 ### Añadido
