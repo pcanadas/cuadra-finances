@@ -1,11 +1,11 @@
 {
-  "version": "0.10.1",
-  "notes": "Corregido: al actualizar desde la app ya no aparece «No se ha podido cerrar Zenit»; el instalador espera a que Zenit termine de cerrarse.",
+  "version": "0.10.2",
+  "notes": "Corregido: al actualizar desde la app ya no aparece «No se ha podido cerrar Zenit» cuando un antivirus (p. ej. McAfee) tiene abierto el programa.",
   "pub_date": "2026-11-13T00:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUVMU3pnUWpoVXNmaXZYampQTllhV2JiRnUxVDlaeGhPMWhYQlo2ZGNQRmxXczh2Vk0yMU9mU0JxM2lPajJETWdhNHN2YS9ZNUc4Znp2NTR2TlRoWlFFPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg1OTAxCWZpbGU6WmVuaXRfMC4xMC4xX3g2NC1zZXR1cC5leGUKVVI0RjFuWFgxbGZjYzR0K01iS21hYllibjhhZ1JrZVd3dmUvWmkwWUo1MVlTRHpCam5wMTg0RjN3SFhuY2hnN05QVlRHYmU2OUNLL1c4c2t2RWk3QkE9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.1/Zenit_0.10.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUVuWjczRDVZMnhFVG5pL2VOWURMYUp5ZTRWSnMrb2RQbVhDb3pRWS9nOFhGakdJVXBGWnJkNFF4YllKOUpmclgySitSb1ZxOUdBYWdRNHg5WWd5akFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NTg3NzYwCWZpbGU6WmVuaXRfMC4xMC4yX3g2NC1zZXR1cC5leGUKaVYvRHJpaVMzbU5LTDBzTDRrQ1lBZVoxNjJvZGhodGh0cU00U0MzRzc5ZDN4VWR0R2JibmNVeFNUMU16Lzg1SWJXaURLWm1Ud2hJRnl1RW5SOHlwQ0E9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.10.2/Zenit_0.10.2_x64-setup.exe"
     }
   }
 }

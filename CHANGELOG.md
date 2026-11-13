@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.10.2] — 2026-11-13
+
+### Corregido
+- **«No se ha podido cerrar Zenit» al actualizar (causa real)** — la 0.10.1 no lo arreglaba. El instalador de Tauri pregunta a Windows qué procesos usan `Zenit.exe` e intenta cerrarlos todos; un antivirus que tiene el archivo abierto para analizarlo (p. ej. McAfee, `mc-fw-host`, incluso con Zenit cerrado) es un servicio protegido que no se puede cerrar, y la instalación se cancelaba (y lo mismo al desinstalar). Ahora el instalador solo busca y cierra Zenit, por su nombre, y aparta el `Zenit.exe` antiguo antes de copiar el nuevo para que el antivirus no impida sobrescribirlo. Al actualizar desde la app sigue esperando unos segundos a que Zenit termine de cerrarse. Probado con McAfee teniendo abierto el programa: la actualización termina en unos 2 s y Zenit se vuelve a abrir solo
+
 ## [0.10.1] — 2026-11-13
 
 ### Corregido
