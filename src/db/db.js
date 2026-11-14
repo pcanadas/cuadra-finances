@@ -61,6 +61,11 @@ db.version(5).stores({
   goals: 'id, hlc',
 })
 
+// v6: apuntes de gastos compartidos sin movimiento en tus cuentas (ver utils/shared.js)
+db.version(6).stores({
+  apuntes: 'id, hlc',
+})
+
 // Cada escritura en una tabla sincronizable lleva su marca de tiempo; los movimientos, además,
 // su origen e importHash al día.
 for (const name of SYNCED_TABLES) {

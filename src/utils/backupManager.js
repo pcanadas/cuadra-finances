@@ -62,7 +62,7 @@ export async function deleteBackup(backupId) {
 export function backupToJson(backup) {
   return {
     version: 1,
-    schemaVersion: 5,
+    schemaVersion: 6,
     exportedAt: backup.createdAt,
     transactions: backup.data.transactions,
     categories: backup.data.categories,
@@ -71,5 +71,6 @@ export function backupToJson(backup) {
     budgets: backup.data.budgets,
     recurringExpenses: backup.data.recurringExpenses,
     goals: backup.data.goals ?? [],
+    apuntes: backup.data.apuntes ?? [],
   }
 }

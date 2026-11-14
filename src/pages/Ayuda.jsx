@@ -46,8 +46,8 @@ const FAQ = [
     a: 'Sí: al final de la pantalla, pulsa «Ordenar tarjetas» y sube o baja cada una con las flechas. El orden se guarda en este dispositivo; «Restablecer» vuelve al orden original.',
   },
   {
-    q: 'Pago gastos que en parte son de otra persona (mi pareja, el piso, un viaje)',
-    a: `Ve a ${isMobile ? 'Más → Gastos compartidos' : 'Compartidos'} y pulsa «Compartir un gasto»: elige el movimiento y di qué parte es tuya (a medias, otro porcentaje, un importe o nada si todo es de la otra persona). ${isMobile ? 'Inicio' : 'El Dashboard'}, los presupuestos y los gastos fijos cuentan solo tu parte; el movimiento y el saldo de la cuenta no cambian. Cuando te devuelvan su parte (un Bizum, una transferencia), márcalo con «Marcar un reembolso» para que no cuente como ingreso. También se puede compartir una partida de un desglose. Quién debe a quién lo puedes seguir llevando en Splitwise o como lo hagáis; la sección te da una orientación por persona.`,
+    q: 'Comparto gastos con otras personas (pareja, piso, un viaje)',
+    a: `En ${isMobile ? 'Más → Gastos compartidos' : 'Compartidos'} llevas las cuentas con cada persona. «Gasto compartido»: un gasto de tu banco que en parte es de otras personas; dices qué parte es tuya y la de cada una (a partes iguales, por porcentaje, por importe o a mano). «Apunte sin movimiento»: algo que pagó otra persona por ti (le debes tu parte) o que pagaste tú en efectivo. «Pago recibido» y «Pago que haces»: los Bizum o transferencias entre vosotros para ir saldando; no cuentan como ingreso ni como gasto. Cada apunte puede ir en una partida (un viaje, un regalo…) y llevar una nota. Cada persona tiene su tarjeta con lo que te debe o le debes, por partidas, y sus detalles: los apuntes, el saldo mes a mes y los gastos por categoría. ${isMobile ? 'Inicio' : 'El Dashboard'}, los presupuestos y los gastos fijos cuentan solo tu parte; tus cuentas no cambian.`,
   },
   {
     q: '¿Puedo añadir una nota a un movimiento?',

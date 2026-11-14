@@ -83,9 +83,10 @@ describe('migración a v4', () => {
     expect(await importId('tx-1700001000000-0-dd')).toBe(1700001000000)
   })
 
-  it('crea la tabla de ahorro y metas (v5)', async () => {
-    expect(db.verno).toBe(5)
+  it('crea las tablas de ahorro y metas (v5) y de apuntes compartidos (v6)', async () => {
+    expect(db.verno).toBe(6)
     expect(await db.goals.count()).toBe(0)
+    expect(await db.apuntes.count()).toBe(0)
   })
 
   it('crea los índices nuevos', async () => {

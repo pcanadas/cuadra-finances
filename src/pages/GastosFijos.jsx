@@ -5,6 +5,7 @@ import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
+import useApunteStore from '../store/useApunteStore'
 import SelectSheet from '../components/SelectSheet'
 import { isTransferTx } from '../utils/transferPairing'
 import { forStats } from '../utils/shared'
@@ -24,6 +25,7 @@ function getDueMonths(item) {
 
 export default function GastosFijos() {
   const transactions = useTransactionStore((s) => s.transactions)
+  const apuntes      = useApunteStore((s) => s.apuntes)
   const categories   = useCategoryStore((s) => s.categories)
   const subcategories = useSubcategoryStore((s) => s.subcategories)
   const budgets      = useBudgetStore((s) => s.budgets)
@@ -97,11 +99,11 @@ export default function GastosFijos() {
   // Month status: which fixed expenses already paid? (los traspasos entre cuentas no son pagos ni cobros;
   // los movimientos desglosados cuentan por partidas)
   const monthTx = useMemo(
-    () => forStats(transactions).filter((t) => {
+    () => forStats(transactions, apuntes).filter((t) => {
       const d = new Date(t.fechaContable)
       return d.getMonth() === view.month && d.getFullYear() === view.year && !isTransferTx(t, transferCatIds)
     }),
-    [transactions, view, transferCatIds],
+    [transactions, apuntes, view, transferCatIds],
   )
 
   // Only items due this month

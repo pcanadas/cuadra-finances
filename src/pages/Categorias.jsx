@@ -7,6 +7,7 @@ import useSubcategoryStore from '../store/useSubcategoryStore'
 import { handleTransferPairing, undoTransferPairing, describeTransferSync } from '../utils/transferPairing'
 import SelectSheet from '../components/SelectSheet'
 import { forStats } from '../utils/shared'
+import useApunteStore from '../store/useApunteStore'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -438,7 +439,7 @@ export default function Categorias() {
   const [newColor, setNewColor] = useState(PRESET_COLORS[0])
 
   const txCountByCategory = {}
-  forStats(transactions).forEach((t) => {
+  forStats(transactions, useApunteStore.getState().apuntes).forEach((t) => {
     if (t.categoria) txCountByCategory[t.categoria] = (txCountByCategory[t.categoria] || 0) + 1
   })
 

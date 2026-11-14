@@ -28,6 +28,7 @@ import useAccountStore from './store/useAccountStore'
 import useBudgetStore from './store/useBudgetStore'
 import useRecurringStore from './store/useRecurringStore'
 import useGoalStore from './store/useGoalStore'
+import useApunteStore from './store/useApunteStore'
 
 export default function App() {
   const loadTransactions  = useTransactionStore((s) => s.loadFromDB)
@@ -37,12 +38,13 @@ export default function App() {
   const loadBudgets       = useBudgetStore((s) => s.loadFromDB)
   const loadRecurring     = useRecurringStore((s) => s.loadFromDB)
   const loadGoals         = useGoalStore((s) => s.loadFromDB)
+  const loadApuntes       = useApunteStore((s) => s.loadFromDB)
 
   const [ready, setReady] = useState(false)
   const [error, setError]  = useState(null)
 
   useEffect(() => {
-    Promise.all([loadTransactions(), loadCategories(), loadSubcategories(), loadAccounts(), loadBudgets(), loadRecurring(), loadGoals()])
+    Promise.all([loadTransactions(), loadCategories(), loadSubcategories(), loadAccounts(), loadBudgets(), loadRecurring(), loadGoals(), loadApuntes()])
       .then(() => setReady(true))
       .catch((err) => {
         console.error('Error loading data from database:', err)

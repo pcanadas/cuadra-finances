@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { sharedLabel } from '../utils/shared'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { useBackHandler } from '../platform/back'
@@ -21,15 +22,8 @@ function dayLabel(iso) {
 
 // La nota se muestra salvo que repita la descripción (el alta rápida usa la nota como descripción)
 const noteOf = (t) => (t.notas && t.notas !== t.descripcion ? t.notas : '')
-// Gasto compartido o reembolso (se gestionan en Más → Gastos compartidos)
-const sharedLine = (t) => {
-  if (t.reembolso) return `↩️ Reembolso${t.reembolso.de ? ` de ${t.reembolso.de}` : ''}`
-  const parts = t.compartido ? [t.compartido] : (t.desglose ?? []).map((p) => p.compartido).filter(Boolean)
-  if (!parts.length) return ''
-  const mine = parts.reduce((s, c) => s + Math.abs(c.miParte), 0)
-  const con = [...new Set(parts.map((c) => c.con).filter(Boolean))].join(', ')
-  return `👥 Tu parte ${formatEur(mine)}${t.desglose && !t.compartido ? ' de lo compartido' : ''}${con ? ` · con ${con}` : ''}`
-}
+// Gasto compartido o pago entre personas (se gestionan en Más → Gastos compartidos)
+const sharedLine = (t) => sharedLabel(t, formatEur)
 
 // Agrupa movimientos consecutivos con la misma fecha (respeta el orden actual)
 function groupByDay(transactions) {

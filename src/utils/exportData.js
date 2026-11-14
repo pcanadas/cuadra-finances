@@ -3,6 +3,7 @@ import { createBackup, readAllData } from './backupManager'
 import { saveFile, describeSavedPath } from '../platform/files'
 import { markBackupDone } from './backupReminder'
 import { expandSplits } from './splits'
+import { paymentOf, shareOf } from './shared'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -23,8 +24,9 @@ export async function exportTransactionsToExcel(transactions, { categories, subc
     Cuenta: accMap[t.accountId] || '',
     Notas: t.notas || '',
     'Tu parte (compartido)': t.compartido ? t.compartido.miParte : '',
-    'Compartido con': t.compartido?.con || '',
-    'Reembolso de': t.reembolso ? (t.reembolso.de || 'sí') : '',
+    'Compartido con': shareOf(t)?.personas.map((p) => `${p.nombre} ${p.importe}`).join(', ') || '',
+    'Pago entre personas': paymentOf(t) ? `${paymentOf(t).sentido === 'recibido' ? 'de' : 'a'} ${paymentOf(t).persona}` : '',
+    'Partida compartida': shareOf(t)?.partida || paymentOf(t)?.partida || '',
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()
@@ -55,6 +57,6 @@ export async function saveBackupJson(filename, json) {
 /** Copia de seguridad completa (todas las tablas) a un archivo JSON. */
 export async function exportFullBackup() {
   await createBackup('manual: exportación')
-  const payload = { version: 1, schemaVersion: 5, exportedAt: new Date().toISOString(), ...(await readAllData()) }
+  const payload = { version: 1, schemaVersion: 6, exportedAt: new Date().toISOString(), ...(await readAllData()) }
   await saveBackupJson(`zenit-backup-${today()}.json`, JSON.stringify(payload, null, 2))
 }

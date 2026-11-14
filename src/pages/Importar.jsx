@@ -13,6 +13,7 @@ import { createBackup, listBackups, restoreBackup, deleteBackup, backupToJson } 
 import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
 import useGoalStore from '../store/useGoalStore'
+import useApunteStore from '../store/useApunteStore'
 import SelectSheet from '../components/SelectSheet'
 import { TransactionCardList } from '../components/TransactionList.mobile'
 
@@ -25,7 +26,7 @@ function formatEur(amount) {
 
 /** Tras restaurar una copia: todos los datos vuelven a leerse de la base de datos. */
 const reloadAllStores = () => Promise.all(
-  [useTransactionStore, useCategoryStore, useSubcategoryStore, useAccountStore, useBudgetStore, useRecurringStore, useGoalStore]
+  [useTransactionStore, useCategoryStore, useSubcategoryStore, useAccountStore, useBudgetStore, useRecurringStore, useGoalStore, useApunteStore]
     .map((store) => store.getState().loadFromDB()),
 )
 

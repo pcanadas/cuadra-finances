@@ -10,6 +10,7 @@ import { extractKeyword } from '../utils/categorize'
 import { handleTransferPairing, undoTransferPairing } from '../utils/transferPairing'
 import { exportTransactionsToExcel } from '../utils/exportData'
 import { hasSplit } from '../utils/splits'
+import { sharedLabel } from '../utils/shared'
 import { chronoComparator } from '../utils/txOrder'
 import { useBackHandler } from '../platform/back'
 import SelectSheet from '../components/SelectSheet'
@@ -230,13 +231,10 @@ function AccountsModal({ accounts, onAdd, onUpdate, onDelete, onClose }) {
 
 const formatEurBadge = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 
-/** «👥 Compartido…» o «↩️ Reembolso…» (se gestionan en Gastos compartidos, ver utils/shared.js). */
+/** «👥 Tu parte…», «🟢 Pago de…», «🔵 Pago a…» (se gestionan en Compartidos, ver utils/shared.js). */
 function SharedBadge({ t, inline = false }) {
-  const c = t.compartido
-  if (!c && !t.reembolso) return null
-  const text = c
-    ? `👥 Tu parte ${formatEurBadge(Math.abs(c.miParte))}${c.con ? ` · con ${c.con}` : ''}`
-    : `↩️ Reembolso${t.reembolso.de ? ` de ${t.reembolso.de}` : ''}`
+  const text = sharedLabel(t, formatEurBadge)
+  if (!text) return null
   return (
     <Link to="/compartidos" title="Ver en Gastos compartidos"
       className={`${inline ? 'ml-2' : 'block'} text-xs text-indigo-500 hover:text-indigo-700 truncate`}>{text}</Link>
