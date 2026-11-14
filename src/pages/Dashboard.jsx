@@ -114,7 +114,7 @@ function ProjectionText({ p }) {
     <>
       🔮 Al ritmo actual ({formatEur(p.perDay)} al día{p.kind === 'mes' ? ' de gasto variable' : ' de gasto'}), terminarás {p.until} con
       {deficit ? ' un déficit de ' : ' un ahorro de '}
-      <strong className={`tabular-nums ${deficit ? 'text-rose-500' : 'text-emerald-600'}`}>{formatEur(Math.abs(p.savings))}</strong>.
+      <strong className={`tabular-nums ${deficit ? 'text-rose-500' : 'text-emerald-600'}`}>{formatEur(Math.abs(p.savings))}</strong>{p.noTaxes && ', sin impuestos'}.
     </>
   )
 }
@@ -749,26 +749,46 @@ export default function Dashboard() {
   const netWithTaxes = balance + periodTaxNet
   const rate = savingsRate(totalIngresos + Math.max(0, periodTaxNet), netWithTaxes)
   const isCurrentYearView = selectedMonth == null && selectedYear === today.getFullYear()
+  // Impuestos pagados y devueltos (con «Separar impuestos» o sin él): en la predicción son pagos
+  // puntuales, nunca parte del ritmo diario (ver insights/projection.js)
+  const allTaxCatIds = useMemo(
+    () => new Set(categories.filter((c) => c.esImpuesto && !c.esTransferencia && !c.esIngreso).map((c) => c.id)),
+    [categories],
+  )
+  const taxesOf = (list) => list.reduce((acc, t) => {
+    if (!allTaxCatIds.has(t.categoria)) return acc
+    if (t.importe < 0) acc.paid -= t.importe
+    else acc.refund += t.importe
+    return acc
+  }, { paid: 0, refund: 0 })
   const projection = useMemo(() => {
+    const separated = taxCatIds.size > 0 // los KPI ya los dejan fuera: la predicción también
     if (isCurrentMonthView && available) {
+      const tax = taxesOf(transactions.filter((t) => {
+        const d = new Date(t.fechaContable)
+        return d.getFullYear() === selectedYear && d.getMonth() === selectedMonth && !isTransferTx(t, transferCatIds)
+      }))
       const p = projectMonth({
-        incomeExpected: available.income.expected,
-        spent: available.spent,
+        incomeExpected: available.income.expected - (separated ? tax.refund : 0),
+        spent: available.spent - (separated ? tax.paid : 0),
         fixedPaid: fixedPaidTotal,
+        oneOff: separated ? 0 : tax.paid,
         pendingFixed: available.pendingFixed,
         day: today.getDate(),
         daysInMonth: new Date(selectedYear, selectedMonth + 1, 0).getDate(),
       })
-      return p && { ...p, kind: 'mes', until: MONTH_LONG[selectedMonth] }
+      return p && { ...p, kind: 'mes', until: MONTH_LONG[selectedMonth], noTaxes: separated }
     }
     if (isCurrentYearView) {
       const day = Math.floor((today - new Date(selectedYear, 0, 1)) / 86400000) + 1
       const daysInYear = new Date(selectedYear, 1, 29).getMonth() === 1 ? 366 : 365
-      const p = projectYear({ income: totalIngresos + Math.max(0, periodTaxNet), spent: totalGastos + Math.max(0, -periodTaxNet), day, daysInYear })
-      return p && { ...p, kind: 'año', until: `${selectedYear}` }
+      // Sin separar, los totales del año incluyen los impuestos: se sacan del ritmo y se restan una vez
+      const tax = separated ? { paid: 0, refund: 0 } : taxesOf(yearTx)
+      const p = projectYear({ income: totalIngresos - tax.refund, spent: totalGastos - tax.paid, oneOff: tax.paid - tax.refund, day, daysInYear })
+      return p && { ...p, kind: 'año', until: `${selectedYear}`, noTaxes: separated }
     }
     return null
-  }, [isCurrentMonthView, isCurrentYearView, available, fixedPaidTotal, today, selectedYear, selectedMonth, totalIngresos, totalGastos, periodTaxNet])
+  }, [isCurrentMonthView, isCurrentYearView, available, fixedPaidTotal, today, selectedYear, selectedMonth, totalIngresos, totalGastos, taxCatIds, transactions, transferCatIds, yearTx]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── empty state ──
   if (transactions.length === 0) return <Welcome />

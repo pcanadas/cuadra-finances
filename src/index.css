@@ -78,6 +78,7 @@ html.dark .hover\:text-slate-900:hover   { color: #fafafa !important; }
 @media (min-width: 64rem) {
   html.dark .lg\:bg-white          { background-color: #262626 !important; }
   html.dark .lg\:border-slate-200  { border-color: #525252 !important; }
+  html.dark .lg\:bg-slate-50      { background-color: #171717 !important; }
 }
 
 /* Inputs & selects */

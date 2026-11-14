@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.11.1] — 2026-11-14
+
+### Corregido
+- **«Al ritmo actual…» con impuestos** — un pago de impuestos (p. ej. la renta) se repartía entre los días del mes como si fuera gasto diario y la predicción se disparaba (835,79 € al día en vez de unos 265 €). Ahora los impuestos son un pago puntual: cuentan una sola vez y nunca en el ritmo diario. Con «Separar impuestos» activado, la predicción los deja fuera, como el resto del resumen, y lo indica («…, sin impuestos»). En la vista anual, lo mismo
+- **Previsión del mes en modo oscuro** — en pantalla ancha, los recuadros de ingresos fijos, gastos fijos y gastos variables salían con fondo claro
+
 ## [0.11.0] — 2026-11-14
 
 ### Añadido

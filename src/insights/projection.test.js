@@ -24,6 +24,13 @@ describe('projectMonth', () => {
     expect(p.savings).toBe(-800)
   })
 
+  it('counts a one-off payment (taxes) once, never in the daily pace', () => {
+    // Día 13 de 30: 12.842 gastados, 1.141 de fijos y 8.254,60 de la renta
+    const p = projectMonth({ incomeExpected: 2144.17, spent: 12842.41, fixedPaid: 1141.34, oneOff: 8254.6, day: 13, daysInMonth: 30 })
+    expect(p.perDay).toBe(265.11)
+    expect(p.savings).toBeCloseTo(2144.17 - 12842.41 - ((12842.41 - 1141.34 - 8254.6) / 13) * 17, 1)
+  })
+
   it('on the last day is just what is left', () => {
     expect(projectMonth({ incomeExpected: 1500, spent: 1200, day: 30, daysInMonth: 30 }).savings).toBe(300)
   })
@@ -34,5 +41,10 @@ describe('projectYear', () => {
     const p = projectYear({ income: 20000, spent: 15000, day: 146, daysInYear: 365 })
     expect(p.savings).toBe(12500)
     expect(p.perDay).toBe(102.74)
+  })
+
+  it('subtracts one-off taxes once instead of scaling them', () => {
+    const p = projectYear({ income: 20000, spent: 15000, oneOff: 1800, day: 146, daysInYear: 365 })
+    expect(p.savings).toBe(12500 - 1800)
   })
 })
