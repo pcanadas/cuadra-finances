@@ -7,6 +7,31 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
+## [1.5.0] — 2026-11-14
+
+versionCode 1005000. Recoge lo de escritorio 0.12.0.
+
+### Añadido
+- **Gastos compartidos** (Más → Gastos compartidos) — las cuentas con cada persona: gastos compartidos (entre una o varias personas, también una partida de un desglose), apuntes sin movimiento (lo que pagó otra persona por ti), pagos recibidos y pagos que haces, con partida y nota. Una tarjeta por persona con su saldo y sus partidas, y una pantalla de Detalles con los apuntes, el saldo mes a mes y los gastos por categoría. Inicio y el resto cuentan solo tu parte; tus cuentas no cambian
+- **Tarjeta «Gastos compartidos» en Inicio** y marca en cada movimiento compartido o pago de la lista de Registros
+- **Gastos fijos: elegir el mes** — ‹ › para ver el estado de cualquier mes
+
+### Corregido
+- **Notas en Subcategorías** — también en los movimientos sin desglose
+- **Líneas de separación en modo oscuro**
+
+### Notas para Google Play («Novedades»)
+```
+• Nuevo: Gastos compartidos. Lleva las cuentas con cada persona (pareja, piso, un viaje…).
+• Reparte un gasto entre varias personas y apunta lo que pagaron por ti.
+• Bizum y transferencias entre vosotros, por partidas: quién debe a quién.
+• Zenit cuenta solo tu parte de cada gasto.
+• Gastos fijos: elige el mes que quieres ver.
+• Corregido: notas en Subcategorías y líneas en modo oscuro.
+```
+
+---
+
 ## [1.4.0] — 2026-11-14
 
 versionCode 1004000. Recoge lo de escritorio 0.11.0–0.11.2.

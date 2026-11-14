@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.12.0] — 2026-11-14
+
+### Añadido
+- **Gastos compartidos** — sección nueva («Compartidos») para llevar las cuentas con cada persona: lo que pagas por otros, lo que pagan por ti y lo que os vais devolviendo. Cuatro tipos de apunte, cada uno con partida (un viaje, un regalo…) y nota opcionales:
+  - **Gasto compartido** — un gasto de tus cuentas (o una partida de su desglose) repartido entre tú y una o varias personas: a partes iguales, con tu porcentaje, con tu importe, «nada es tuyo» o a mano. Si estaba en una categoría de traspaso (p. ej. un Bizum en «Transferencias internas») o sin categoría, se pide la del gasto
+  - **Apunte sin movimiento** — algo que pagó otra persona (le debes tu parte) o que pagaste tú fuera de tus cuentas (te deben la suya). Con categoría, tu parte cuenta como gasto tuyo ese día; sin ella (un préstamo), solo cambia la deuda
+  - **Pago recibido / Pago que haces** — los Bizum o transferencias entre vosotros para ir saldando (o prestar): no cuentan como ingreso ni como gasto
+  - Una tarjeta por persona con lo que te debe o le debes, en total y por partidas, de todo el histórico (con filtro de fechas opcional). En **Detalles**: los apuntes (en rojo lo que sale, en verde lo que entra), el saldo mes a mes, los gastos por categoría y los totales
+  - El Dashboard, los presupuestos, los gastos fijos, las categorías y ahorro y metas cuentan **solo tu parte** de cada gasto, y tus apuntes sin movimiento con categoría. Los movimientos y los saldos de las cuentas no cambian: siguen cuadrando con el banco
+  - Tarjeta «Gastos compartidos» en el Dashboard (ordenable) con el saldo de cada persona y sus partidas; en Movimientos, cada movimiento compartido o pago lleva su marca («👥 Tu parte…», «🟢 Pago de…», «🔵 Pago a…»); la exportación a Excel añade tu parte, con quién, los pagos y la partida
+  - Base de datos v6 (tabla `apuntes`, incluida en las copias de seguridad); ver `src/utils/shared.js`
+- **Gastos fijos: elegir el mes** — «‹ Estado de septiembre ›» para ver qué se pagó y qué no en cualquier mes (los presupuestos siguen el mismo mes). «Ver todo →» de la previsión del Dashboard abre Gastos fijos en ese mes
+
+### Cambiado
+- **Menú de escritorio** — pestaña «Compartidos»; «Subcategorías» pasa al menú «Más» para que todo quepa en una línea
+
+### Corregido
+- **Notas en Subcategorías y en Cuentas** — los movimientos con nota la muestran bajo la descripción (antes solo las partidas de un desglose)
+- **Líneas de separación en modo oscuro** — en las listas salían casi blancas
+
 ## [0.11.2] — 2026-11-14
 
 ### Cambiado
