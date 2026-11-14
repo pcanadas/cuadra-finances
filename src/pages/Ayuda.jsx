@@ -38,6 +38,14 @@ const FAQ = [
     a: `En Más → Ajustes, activa «Separar impuestos» y marca tus categorías de impuestos (la categoría Impuestos ya viene marcada). ${isMobile ? 'Inicio' : 'El Dashboard'} deja fuera los impuestos de los gastos, el balance y el gasto diario, y los muestra debajo: «+ Impuestos» si pagas, «Devolución de impuestos» en verde si te devuelven, y el balance con impuestos. «Disponible para gastar» sigue contándolos, porque es dinero que sale de tu cuenta.`,
   },
   {
+    q: '¿Qué diferencia hay entre «Al ritmo actual…» y la previsión del mes?',
+    a: `«Al ritmo actual…», en el resumen, es una predicción: supone que sigues gastando lo mismo al día que hasta ahora (sin contar los gastos fijos, que no se repiten cada día) y calcula cuánto ahorrarás al terminar el mes o el año. La previsión del mes parte de tus gastos e ingresos fijos: cuánto te queda para gastar, qué falta por cobrar y por pagar. La tasa de ahorro es el porcentaje de tus ingresos que no has gastado.`,
+  },
+  {
+    q: `¿Puedo cambiar el orden de las tarjetas de ${isMobile ? 'Inicio' : 'el Dashboard'}?`,
+    a: 'Sí: al final de la pantalla, pulsa «Ordenar tarjetas» y sube o baja cada una con las flechas. El orden se guarda en este dispositivo; «Restablecer» vuelve al orden original.',
+  },
+  {
     q: '¿Puedo añadir una nota a un movimiento?',
     a: `Sí: ${isMobile ? 'en Registros, toca el movimiento y escribe en «Nota»' : 'pulsa el icono del bocadillo a la derecha del movimiento y escríbela'}, por ejemplo «Pago muebles» para una transferencia que en el banco solo dice «Transferencia a otras entidades». La nota se ve debajo de la descripción y también se busca con el buscador.`,
   },

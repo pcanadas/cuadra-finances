@@ -7,6 +7,7 @@ import useAccountStore from '../store/useAccountStore'
 import { describeTransferSync } from '../utils/transferPairing'
 import { categorizeSubcategory, extractKeyword } from '../utils/categorize'
 import SelectSheet from '../components/SelectSheet'
+import { expandSplits } from '../utils/splits'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -254,12 +255,22 @@ export default function Subcategorias() {
     [subcategories, selectedCatId]
   )
 
+  // Los movimientos desglosados aparecen por partidas (ver utils/splits.js)
   const catTransactions = useMemo(() => {
     if (!selectedCatId) return []
-    return transactions.filter(
+    return expandSplits(transactions).filter(
       (t) => t.categoria === selectedCatId || t.categoriaManual === selectedCatId
     )
   }, [transactions, selectedCatId])
+
+  // Subcategoría de una partida: se cambia en el desglose del movimiento original
+  function setPartSubcategory(part, subcatId) {
+    const original = transactions.find((t) => t.id === part.splitOf)
+    if (!original) return
+    const i = Number(part.id.slice(part.id.lastIndexOf(':') + 1))
+    const desglose = original.desglose.map((p, j) => (j === i ? { ...p, subcategoria: subcatId || null } : p))
+    updateTransaction(original.id, { desglose })
+  }
 
   const subSuggestions = useMemo(() => {
     if (!selectedCatId || catSubcats.length === 0) return []
@@ -379,7 +390,7 @@ export default function Subcategorias() {
   async function handleAutoAssign() {
     const updatesMap = {}
     catTransactions.forEach((t) => {
-      if (t.subcategoriaManual) return
+      if (t.subcategoriaManual || t.splitOf) return
       const subcatId = categorizeSubcategory(t.descripcion, catSubcats)
       if (subcatId && subcatId !== t.subcategoria) updatesMap[t.id] = { subcategoria: subcatId }
     })
@@ -649,13 +660,17 @@ export default function Subcategorias() {
                           {pagedTransactions.map((t) => (
                             <tr key={t.id} className="border-b border-slate-50 last:border-b-0 hover:bg-slate-50 transition-colors">
                               <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{formatDate(t.fechaContable)}</td>
-                              <td className="px-4 py-2 text-slate-700 max-w-xs truncate">{t.descripcion}</td>
+                              <td className="px-4 py-2 text-slate-700 max-w-xs">
+                                <p className="truncate">{t.descripcion}</p>
+                                {t.splitOf && <p className="text-xs text-slate-400 italic truncate">🧾 Partida{t.notas ? ` · ${t.notas}` : ''}</p>}
+                              </td>
                               <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${Number(t.importe) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                                 {formatAmount(t.importe)}
                               </td>
                               <td className="px-4 py-2">
                                 <SelectSheet title="Subcategoría" value={t.subcategoria || ''} className="text-xs"
                                   onChange={(val) => {
+                                    if (t.splitOf) return setPartSubcategory(t, val)
                                     updateTransaction(t.id, {
                                       subcategoria: val || null,
                                       subcategoriaManual: val ? true : false,
@@ -677,7 +692,7 @@ export default function Subcategorias() {
                                     }
                                   }}
                                   options={[{ value: '', label: '— Sin subcategoría —' }, ...catSubcats.map((sub) => ({ value: sub.id, label: sub.nombre }))]} />
-                                {t.subcategoria && !t.subcategoriaManual && (
+                                {t.subcategoria && !t.subcategoriaManual && !t.splitOf && (
                                   <span className="ml-1 text-xs text-slate-400 italic">auto</span>
                                 )}
                               </td>

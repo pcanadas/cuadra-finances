@@ -13,6 +13,7 @@ const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', cur
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 const PERIOD_LABELS = { mensual: 'Mensual', bimestral: 'Bimestral', trimestral: 'Trimestral', semestral: 'Semestral', anual: 'Anual' }
 const MONTH_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+const SUGGESTIONS_SHOWN = 8
 const MONTH_LONG = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
 
 /** Returns the list of month indices (0-11) when the item is due */
@@ -43,6 +44,7 @@ export default function GastosFijos() {
   const [editBudgetVal, setEditBudgetVal] = useState('')
 
   // ── dismissed suggestions ──
+  const [showAllSuggestions, setShowAllSuggestions] = useState(false)
   const [dismissed, setDismissed] = useState(() => {
     try { return new Set(JSON.parse(localStorage.getItem('cuadra-dismissed-recurring') || '[]')) }
     catch { return new Set() }
@@ -117,7 +119,6 @@ export default function GastosFijos() {
       .map(([key, g]) => ({ key, nombre: g.desc, media: g.total / g.count, catId: g.catId, subcatId: g.subcatId, isIncome: g.isIncome }))
       .filter((s) => !existingNames.has(normalize(s.nombre)) && !dismissed.has(s.key))
       .sort((a, b) => b.media - a.media)
-      .slice(0, 12)
   }, [transactions, recurringItems, dismissed, transferCatIds, currentYear])
 
   // Budget progress (current month)
@@ -186,31 +187,31 @@ export default function GastosFijos() {
 
       {/* ── Summary cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
-        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4">
-          <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos / mes</p>
-          <p className="text-lg font-bold text-emerald-600">{formatEur(totalFixedIncome)}</p>
+        <div className="min-w-0 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 lg:p-4">
+          <p className="text-[11px] text-emerald-600 uppercase font-semibold leading-tight">Ingresos fijos / mes</p>
+          <p className="text-base lg:text-lg font-bold tabular-nums break-words text-emerald-600">{formatEur(totalFixedIncome)}</p>
           <p className="text-[11px] text-emerald-500/60">{incomeItems.length} concepto{incomeItems.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="bg-rose-500/10 border border-rose-500/20 rounded-xl p-4">
+        <div className="min-w-0 bg-rose-500/10 border border-rose-500/20 rounded-xl p-3 lg:p-4">
           <p className="text-[11px] text-rose-500 uppercase font-semibold">Gastos fijos / mes</p>
-          <p className="text-lg font-bold text-rose-500">{formatEur(totalFixedExpenses)}</p>
+          <p className="text-base lg:text-lg font-bold tabular-nums break-words text-rose-500">{formatEur(totalFixedExpenses)}</p>
           <p className="text-[11px] text-rose-500/60">{expenseItems.length} concepto{expenseItems.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className={`border rounded-xl p-4 ${totalFixedIncome - totalFixedExpenses >= 0 ? 'bg-violet-500/10 border-violet-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
+        <div className={`min-w-0 border rounded-xl p-3 lg:p-4 ${totalFixedIncome - totalFixedExpenses >= 0 ? 'bg-violet-500/10 border-violet-500/20' : 'bg-amber-500/10 border-amber-500/20'}`}>
           <p className={`text-[11px] uppercase font-semibold ${totalFixedIncome - totalFixedExpenses >= 0 ? 'text-violet-600' : 'text-amber-600'}`}>Disponible tras fijos</p>
-          <p className={`text-lg font-bold ${totalFixedIncome - totalFixedExpenses >= 0 ? 'text-violet-600' : 'text-amber-600'}`}>{formatEur(totalFixedIncome - totalFixedExpenses)}</p>
+          <p className={`text-base lg:text-lg font-bold tabular-nums break-words ${totalFixedIncome - totalFixedExpenses >= 0 ? 'text-violet-600' : 'text-amber-600'}`}>{formatEur(totalFixedIncome - totalFixedExpenses)}</p>
           <p className="text-[11px] text-slate-400">Ingresos − gastos fijos</p>
         </div>
-        <div className="bg-slate-500/10 border border-slate-500/20 rounded-xl p-4">
+        <div className="min-w-0 bg-slate-500/10 border border-slate-500/20 rounded-xl p-3 lg:p-4">
           <p className="text-[11px] text-slate-500 uppercase font-semibold">Gastos fijos anuales</p>
-          <p className="text-lg font-bold text-slate-600">{formatEur(totalFixedExpenses * 12)}</p>
+          <p className="text-base lg:text-lg font-bold tabular-nums break-words text-slate-600">{formatEur(totalFixedExpenses * 12)}</p>
           <p className="text-[11px] text-slate-400">Proyección anual</p>
         </div>
       </div>
 
       {/* ── Form (inline) ── */}
       {showForm && (
-        <div ref={formRef} className="scroll-mt-20 bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div ref={formRef} className="scroll-mt-20 bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-5">
           <p className="text-sm font-semibold text-slate-700 mb-3">{editingId ? 'Editar' : 'Nuevo gasto/ingreso fijo'}</p>
           <div className="flex flex-wrap gap-2 mb-3">
             <input placeholder="Nombre" value={form.nombre} onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
@@ -233,10 +234,10 @@ export default function GastosFijos() {
                 onChange={(v) => setForm((f) => ({ ...f, mesReferencia: v }))}
                 options={[{ value: '', label: 'Mes de cobro…' }, ...MONTH_SHORT.map((m, i) => ({ value: String(i), label: m }))]} />
             )}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 min-w-0">
               <label className="text-xs text-slate-400 whitespace-nowrap">Fin:</label>
               <input type="date" value={form.fechaFin} onChange={(e) => setForm((f) => ({ ...f, fechaFin: e.target.value }))}
-                className="border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
+                className="min-w-0 border border-slate-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" />
             </div>
           </div>
           <div className="flex gap-2">
@@ -253,7 +254,7 @@ export default function GastosFijos() {
 
       {/* ── Status this month ── */}
       {fixedStatus.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-5">
           <div className="flex items-baseline justify-between gap-2 mb-4">
             <p className="text-sm font-semibold text-slate-700">Estado de {MONTH_LONG[currentMonth]}</p>
             <p className="text-xs text-slate-400">
@@ -275,7 +276,7 @@ export default function GastosFijos() {
       )}
 
       {/* ── Budgets by category ── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-5">
         <p className="text-sm font-semibold text-slate-700 mb-1">Presupuestos por categoría</p>
         <p className="text-xs text-slate-400 mb-3">Límites de gasto mensual — los gastos fijos de cada categoría se muestran como referencia</p>
 
@@ -283,25 +284,28 @@ export default function GastosFijos() {
           <div className="space-y-3 mb-4">
             {budgetProgress.map((b) => (
               <div key={b.categoriaId}>
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: b.cat.color }} />
-                    <span className="text-xs font-medium text-slate-700">{b.cat.nombre}</span>
-                    {b.fixedInCat > 0 && (
-                      <span className="text-[10px] text-slate-400">({formatEur(b.fixedInCat)} fijos)</span>
-                    )}
+                {/* Nombre arriba y los importes debajo: con letra grande no caben en una línea */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: b.cat.color }} />
+                      <span className="text-sm font-medium text-slate-700 truncate">{b.cat.nombre}</span>
+                    </div>
+                    <p className="text-xs mt-0.5 pl-[1.125rem]">
+                      <span className={`font-semibold tabular-nums ${b.over ? 'text-red-500' : 'text-slate-700'}`}>{formatEur(b.spent)}</span>
+                      <span className="text-slate-500"> de {formatEur(b.limite)}</span>
+                      {b.over && <span className="text-red-500"> · superado en {formatEur(b.spent - b.limite)}</span>}
+                      {b.fixedInCat > 0 && <span className="text-slate-400"> · {formatEur(b.fixedInCat)} fijos</span>}
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-semibold ${b.over ? 'text-red-500' : 'text-slate-600'}`}>
-                      {formatEur(b.spent)} / {formatEur(b.limite)}{b.over && ` · superado en ${formatEur(b.spent - b.limite)}`}
-                    </span>
+                  <div className="flex items-center gap-1 lg:gap-2 shrink-0">
                     <button onClick={() => { setEditBudgetCat(b.categoriaId); setEditBudgetVal(String(b.limite)) }}
                       className="text-xs lg:text-[10px] px-1 py-1 lg:p-0 text-slate-400 hover:text-slate-600">editar</button>
                     <button onClick={() => setBudget(b.categoriaId, 0)}
                       className="text-xs lg:text-[10px] px-1 py-1 lg:p-0 text-red-400 hover:text-red-600">quitar</button>
                   </div>
                 </div>
-                <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div className="mt-1.5 w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all ${b.over ? 'bg-red-400' : b.pct > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
                     style={{ width: `${b.pct}%` }} />
                 </div>
@@ -336,22 +340,27 @@ export default function GastosFijos() {
 
       {/* ── Suggestions ── */}
       {suggestions.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-5">
           <p className="text-sm font-semibold text-slate-700 mb-1">Sugerencias detectadas</p>
           <p className="text-xs text-slate-400 mb-3">Gastos e ingresos que aparecen en 3 o más meses — pulsa para añadir o ✕ para descartar</p>
           <div className="flex flex-wrap gap-2">
-            {suggestions.map((s) => (
-              <div key={s.key} className={`flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border ${s.isIncome ? 'border-green-300 bg-green-100' : 'border-cyan-200 bg-cyan-50'}`}>
+            {(showAllSuggestions ? suggestions : suggestions.slice(0, SUGGESTIONS_SHOWN)).map((s) => (
+              <div key={s.key} className={`max-w-full flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-full border ${s.isIncome ? 'border-green-300 bg-green-100' : 'border-cyan-200 bg-cyan-50'}`}>
                 <button
                   onClick={() => { openForm(null); setForm({ nombre: s.nombre, importe: String(Math.round(s.media * 100) / 100), categoriaId: s.catId || '', subcategoriaId: s.subcatId || '', periodicidad: 'mensual', fechaFin: '', mesReferencia: '' }) }}
-                  className={`truncate max-w-[160px] ${s.isIncome ? 'text-green-800 hover:text-green-950' : 'text-cyan-700 hover:text-cyan-900'}`}
+                  className={`truncate max-w-[14rem] lg:max-w-[160px] ${s.isIncome ? 'text-green-800 hover:text-green-950' : 'text-cyan-700 hover:text-cyan-900'}`}
                 >
-                  + {s.nombre} <span className={s.isIncome ? 'text-green-600' : 'text-cyan-400'}>~{formatEur(s.media)}</span>
+                  + {s.nombre} <span className={s.isIncome ? 'text-green-700' : 'text-cyan-600'}>~{formatEur(s.media)}</span>
                 </button>
                 <button onClick={() => dismissSuggestion(s.key)} className={`ml-0.5 hover:text-red-500 ${s.isIncome ? 'text-green-400' : 'text-cyan-300'}`} title="Descartar sugerencia">✕</button>
               </div>
             ))}
           </div>
+          {suggestions.length > SUGGESTIONS_SHOWN && (
+            <button onClick={() => setShowAllSuggestions((v) => !v)} className="mt-3 text-xs font-medium text-indigo-500 hover:text-indigo-700 py-1">
+              {showAllSuggestions ? 'Ver menos' : `Ver más (${suggestions.length - SUGGESTIONS_SHOWN})`}
+            </button>
+          )}
         </div>
       )}
     </div>

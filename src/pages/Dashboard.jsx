@@ -13,7 +13,10 @@ import { activeInMonth, fixedStatusForMonth, isDueInMonth } from '../insights/fi
 import { availableToSpend } from '../insights/available'
 import useGoalResults from '../hooks/useGoalResults'
 import MonthChips from '../components/MonthChips'
-import { deviceName } from '../platform'
+import CardOrderSheet from '../components/CardOrderSheet'
+import { getCardOrder, setCardOrder, defaultCardOrder } from '../utils/dashboardOrder'
+import { projectMonth, projectYear, savingsRate } from '../insights/projection'
+import { deviceName, isMobile } from '../platform'
 import { useTheme } from '../context/ThemeContext'
 import {
   BarChart,
@@ -49,10 +52,16 @@ const formatYAxis = (v) => {
 }
 
 const MONTH_LABELS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const MONTH_LONG   = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
 const MONTH_NAMES  = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
 
+// Colores de las barras: pastel, pero con cuerpo suficiente para verse sobre blanco
+// En el móvil hay poco ancho para 12 meses × 2 barras: menos hueco entre meses para que se vean
+const BAR_GAP = isMobile ? { barCategoryGap: '10%', barGap: 1 } : { barCategoryGap: '28%' }
+const BAR = { gastos: '#f98f8f', ingresos: '#4fd8a4', impuestos: '#fbc93d', anterior: '#b4a3fb' }
+
 // Mix a hex color with white to produce a pastel version (amount 0–1, higher = more white)
-function toPastel(hex, amount = 0.55) {
+function toPastel(hex, amount = 0.45) {
   const n = parseInt(hex.replace('#', ''), 16)
   const r = (n >> 16) & 0xff
   const g = (n >>  8) & 0xff
@@ -85,33 +94,52 @@ const INCOME_BASIS = {
   recibidos: () => 'ya recibidos',
 }
 
-/** Disponible para gastar hasta fin de mes (ver insights/available.js). */
-function AvailableCard({ available: a }) {
-  const over = a.total < 0
+/** Una fila del resumen del móvil: etiqueta a la izquierda, importe a la derecha. */
+function SummaryRow({ label, value, valueClass, children }) {
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 ${over ? 'border-t-rose-300' : 'border-t-violet-300'} p-4 lg:p-6`}>
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-1">
-        <div>
-          <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">💶 {over ? 'Te has pasado este mes' : 'Disponible para gastar'}</p>
-          <p className={`text-3xl font-bold mt-1 ${over ? 'text-rose-500' : 'text-violet-600'}`}>{formatEur(Math.abs(a.total))}</p>
-        </div>
-        <p className="text-sm text-slate-500 pb-1">
-          {over
-            ? 'Has gastado más de lo que vas a ingresar este mes'
-            : <><strong className="text-slate-700">{formatEur(a.perDay)} al día</strong> · {a.daysLeft === 1 ? 'último día del mes' : `quedan ${a.daysLeft} días`}</>}
-        </p>
+    <div className="py-1.5">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-sm text-slate-500">{label}</p>
+        <p className={`text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
       </div>
-      <p className="text-xs text-slate-400 mt-3 leading-relaxed">
-        Ingresos {formatEur(a.income.expected)} <span className="text-slate-400">({INCOME_BASIS[a.income.basis](a.income)})</span>
-        {' '}− gastado {formatEur(a.spent)}
-        {a.pendingFixed > 0 && <> − {a.pendingFixedCount === 1 ? '1 gasto fijo pendiente' : `${a.pendingFixedCount} gastos fijos pendientes`} {formatEur(a.pendingFixed)}</>}
-        {a.savings > 0 && <> − por apartar para <Link to="/ahorro" className="text-indigo-500 hover:text-indigo-700">ahorro y metas</Link> {formatEur(a.savings)}</>}
-      </p>
-      {a.income.basis === 'media' && (
-        <p className="text-xs text-slate-400 mt-1">
-          Para afinarlo, añade tu nómina en <Link to="/gastos-fijos" className="text-indigo-500 hover:text-indigo-700 font-medium">Gastos fijos</Link>.
-        </p>
-      )}
+      {children && <div className="text-xs text-slate-500 text-right leading-tight">{children}</div>}
+    </div>
+  )
+}
+
+/** «Al ritmo actual…»: extrapolación del gasto (ver insights/projection.js). */
+function ProjectionText({ p }) {
+  const deficit = p.savings < 0
+  return (
+    <>
+      🔮 Al ritmo actual ({formatEur(p.perDay)} al día{p.kind === 'mes' ? ' de gasto variable' : ' de gasto'}), terminarás {p.until} con
+      {deficit ? ' un déficit de ' : ' un ahorro de '}
+      <strong className={`tabular-nums ${deficit ? 'text-rose-500' : 'text-emerald-600'}`}>{formatEur(Math.abs(p.savings))}</strong>.
+    </>
+  )
+}
+
+/**
+ * Un bloque de la previsión del mes (ingresos fijos, gastos fijos, variables): en el móvil, una
+ * fila con el título a la izquierda y el importe a la derecha; en pantalla ancha, un recuadro.
+ */
+function ForecastItem({ title, titleClass, value, children }) {
+  return (
+    <div className="min-w-0 py-2.5 border-t border-slate-100 lg:border-0 lg:rounded-xl lg:bg-slate-50 lg:p-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 lg:block">
+        <p className={`text-[11px] uppercase font-semibold ${titleClass}`}>{title}</p>
+        <div className="text-sm text-slate-600 lg:mt-0.5">{value}</div>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function MiniBar({ value, total, className }) {
+  const pct = total > 0 ? Math.max(0, Math.min(100, (value / total) * 100)) : 0
+  return (
+    <div className="mt-1.5 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+      <div className={`h-full rounded-full ${className}`} style={{ width: `${pct}%` }} />
     </div>
   )
 }
@@ -195,7 +223,7 @@ function CustomLineTooltip({ active, payload, label }) {
   return (
     <div style={style} className="rounded-xl shadow-lg p-3 text-sm">
       <p className="font-semibold mb-1">{MONTH_NAMES[label - 1] ?? label}</p>
-      <p style={{ color: '#c4b5fd' }}>{formatEur(payload[0]?.value ?? 0)}</p>
+      <p style={{ color: BAR.anterior }}>{formatEur(payload[0]?.value ?? 0)}</p>
     </div>
   )
 }
@@ -311,6 +339,8 @@ export default function Dashboard() {
   const [expandedCategories, setExpandedCategories] = useState(new Set())
   const [logScale,           setLogScale]           = useState(false)
   const [showCompareMonth,   setShowCompareMonth]   = useState(false)
+  const [cardOrder,          setCardOrderState]     = useState(getCardOrder)
+  const [ordering,           setOrdering]           = useState(false)
 
 
   const toggleCategoryExpand = (id) =>
@@ -640,7 +670,6 @@ export default function Dashboard() {
   }, [availableYears, transactions, transferCatIds, ingresoCatIds, taxCatIds])
 
   // ── recurring / fixed expenses (compact) ──
-  const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
 
   // Fixed items still in force during the forecast month
   const activeRecurring = useMemo(
@@ -715,154 +744,157 @@ export default function Dashboard() {
   const overBudgets = isCurrentMonthView ? budgetProgress.filter((b) => b.over) : []
   const activeGoals = isCurrentMonthView ? goals.results.filter((r) => r.current) : []
 
+  // ── resumen: tasa de ahorro y predicción al ritmo actual (ver insights/projection.js) ──
+  // Con los impuestos incluidos: es dinero que sale igual
+  const netWithTaxes = balance + periodTaxNet
+  const rate = savingsRate(totalIngresos + Math.max(0, periodTaxNet), netWithTaxes)
+  const isCurrentYearView = selectedMonth == null && selectedYear === today.getFullYear()
+  const projection = useMemo(() => {
+    if (isCurrentMonthView && available) {
+      const p = projectMonth({
+        incomeExpected: available.income.expected,
+        spent: available.spent,
+        fixedPaid: fixedPaidTotal,
+        pendingFixed: available.pendingFixed,
+        day: today.getDate(),
+        daysInMonth: new Date(selectedYear, selectedMonth + 1, 0).getDate(),
+      })
+      return p && { ...p, kind: 'mes', until: MONTH_LONG[selectedMonth] }
+    }
+    if (isCurrentYearView) {
+      const day = Math.floor((today - new Date(selectedYear, 0, 1)) / 86400000) + 1
+      const daysInYear = new Date(selectedYear, 1, 29).getMonth() === 1 ? 366 : 365
+      const p = projectYear({ income: totalIngresos + Math.max(0, periodTaxNet), spent: totalGastos + Math.max(0, -periodTaxNet), day, daysInYear })
+      return p && { ...p, kind: 'año', until: `${selectedYear}` }
+    }
+    return null
+  }, [isCurrentMonthView, isCurrentYearView, available, fixedPaidTotal, today, selectedYear, selectedMonth, totalIngresos, totalGastos, periodTaxNet])
+
   // ── empty state ──
   if (transactions.length === 0) return <Welcome />
 
-  return (
-    <div className="dashboard-bg space-y-4 lg:space-y-6 lg:p-1">
-
-      {/* ── 1. Gradient header ── */}
-      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-3 lg:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-3 lg:mb-5">
-          <div className="hidden lg:block">
-            <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
-            <p className="text-slate-400 text-sm mt-0.5">{selectedMonth == null ? 'Resumen financiero anual' : 'Resumen financiero mensual'}</p>
-          </div>
-<PeriodPicker
-            value={{ year: selectedYear, month: selectedMonth }}
-            years={availableYears}
-            onChange={({ year, month }) => { setSelectedYear(year); setSelectedMonth(month) }}
-          />
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4">
-          <SummaryCard title="Gastos" value={formatEur(totalGastos)} subtitle={`${periodGastosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20"
-            note={showTaxes && (periodTaxNet < 0
-              ? <span className="text-slate-500">+ Impuestos <span className="font-semibold text-amber-600 tabular-nums">{formatEur(-periodTaxNet)}</span></span>
-              : <span className="text-slate-500">Devolución de impuestos <span className="font-semibold text-emerald-600 tabular-nums">+{formatEur(periodTaxNet)}</span></span>)} />
-          <SummaryCard title="Ingresos" value={formatEur(totalIngresos)} subtitle={`${periodIngresosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
-          <SummaryCard title="Balance" value={formatEur(balance)} subtitle={showTaxes ? 'Ingresos − Gastos, sin impuestos' : 'Ingresos − Gastos'} subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20"
-            note={showTaxes && (
-              <span className="text-slate-500">Con impuestos: <span className={`font-semibold tabular-nums ${balance + periodTaxNet >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(balance + periodTaxNet)}</span></span>
-            )} />
-          {selectedMonth == null
-            ? <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
-            : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle={showTaxes ? 'Media por día, sin impuestos' : 'Media por día'} subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
-        </div>
+  // ── tarjetas (el orden lo elige el usuario, ver utils/dashboardOrder.js) ──
+  // Previsión del mes: lo que dicen tus fijos (cuánto queda, qué falta por cobrar y pagar)
+  const fixedExpenseItems = fixedStatus.filter((r) => !r.isIncome)
+  const fixedExpensePending = fixedExpenseItems.filter((r) => !r.paid).length
+  const showForecast = forecastMonth != null && (activeRecurring.length > 0 || budgetProgress.length > 0 || showAvailable)
+  const incomeNote = (() => {
+    if (!(fixedIncomeMonthly > 0) || forecastWhen > 0) return null
+    // Mes en curso con algo por cobrar: lo que falta; si no, la diferencia con lo previsto
+    const diff = Math.round((fixedIncomeReceived - fixedIncomeMonthly) * 100) / 100
+    if (forecastWhen === 0 && fixedIncomePending > 0.005) return <span className="text-slate-500">Falta por cobrar {formatEur(fixedIncomePending)}</span>
+    if (diff === 0) return <span className="text-emerald-600">✓ Lo previsto</span>
+    return diff > 0
+      ? <span className="text-emerald-600">+{formatEur(diff)} más de lo previsto</span>
+      : <span className="text-amber-600">{formatEur(-diff)} menos de lo previsto</span>
+  })()
+  const previsionCard = showForecast && (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-4 lg:p-6">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">
+          📋 {forecastWhen < 0 ? 'Cierre de' : 'Previsión de'} {MONTH_LONG[currentMonth]}{currentYear !== today.getFullYear() ? ` ${currentYear}` : ''}
+        </p>
+        <a href="#/gastos-fijos" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium shrink-0">Ver todo →</a>
       </div>
 
-      {showAvailable && <AvailableCard available={available} />}
-      {overBudgets.length > 0 && <BudgetAlert over={overBudgets} />}
-      {activeGoals.length > 0 && <GoalsCard results={activeGoals} />}
-
-      {/* ── Recordatorio de copia de seguridad ── */}
-      {showBackupReminder && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
-          <span className="text-2xl leading-none">💾</span>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-900">
-              {daysSinceBackup() == null ? 'Aún no has hecho ninguna copia de seguridad' : `Tu última copia es de hace ${daysSinceBackup()} días`}
-            </p>
-            <p className="text-xs text-amber-800 mt-0.5">Tus datos solo están en este {deviceName}: si lo cambias o desinstalas la app, se pierden.</p>
-            <div className="flex gap-4 mt-2">
-              <Link to="/exportar" className="text-sm font-semibold text-amber-900 underline">Hacer copia</Link>
-              <button onClick={() => { snoozeBackupReminder(); setShowBackupReminder(false) }} className="text-sm text-amber-700">Ahora no</button>
+      {/* Lo que queda: disponible para gastar (mes en curso) o el sobrante estimado */}
+      {(showAvailable || activeRecurring.length > 0) && (() => {
+        const a = showAvailable ? available : null
+        const total = a ? a.total : availableEstimate
+        const over = total < 0
+        const label = a ? (over ? 'Te has pasado este mes' : 'Disponible para gastar') : forecastWhen < 0 ? 'Sobrante del mes' : 'Disponible estimado'
+        return (
+          <div className="mt-3">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4">
+              <p className="text-sm text-slate-600">💶 {label}</p>
+              <p className={`text-xl lg:text-2xl font-bold tabular-nums ${over ? 'text-rose-500' : 'text-violet-600'}`}>{formatEur(a ? Math.abs(total) : total)}</p>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Forecast widget (compact) ── */}
-      {forecastMonth != null && (activeRecurring.length > 0 || budgetProgress.length > 0) && (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-cyan-200 p-4 lg:p-6">
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">
-              📋 {forecastWhen < 0 ? 'Cierre del mes' : 'Previsión del mes'}
-            </p>
-            <div className="flex items-center gap-2">
-              <p className="hidden lg:block text-xs text-slate-400">{MONTH_NAMES[currentMonth]} {currentYear}</p>
-              <a href="#/gastos-fijos" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium">Ver todo →</a>
-            </div>
-          </div>
-
-          {/* Forecast metrics */}
-          {activeRecurring.length > 0 && (
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-3 mb-4">
-              <div className="bg-emerald-500/10 rounded-xl p-3">
-                <p className="text-[11px] text-emerald-600 uppercase font-semibold">Ingresos fijos</p>
-                <p className="text-lg font-bold text-emerald-600">{formatEur(fixedIncomeMonthly)}</p>
-                {fixedIncomeMonthly > 0 && forecastWhen <= 0 && (() => {
-                  // Mes en curso con algo por cobrar: lo que falta; si no, la diferencia con lo previsto
-                  const pendingNow = forecastWhen === 0 && fixedIncomePending > 0.005
-                  const diff = Math.round((fixedIncomeReceived - fixedIncomeMonthly) * 100) / 100
-                  const pct = Math.max(0, Math.min(100, (fixedIncomeReceived / fixedIncomeMonthly) * 100))
-                  return (
-                    <>
-                      <div className="mt-1.5 h-1.5 bg-emerald-500/15 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${pct}%` }} />
-                      </div>
-                      <p className="mt-1 text-[11px] text-slate-500">
-                        Recibido <span className="font-semibold text-slate-700">{formatEur(fixedIncomeReceived)}</span>
-                      </p>
-                      <p className={`text-[11px] font-medium ${pendingNow ? 'text-slate-500' : diff < 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {pendingNow ? `Falta por cobrar ${formatEur(fixedIncomePending)}`
-                          : diff === 0 ? '✓ Lo previsto'
-                          : diff > 0 ? `+${formatEur(diff)} más de lo previsto`
-                          : `${formatEur(-diff)} menos de lo previsto`}
-                      </p>
-                    </>
-                  )
-                })()}
-              </div>
-              <div className="bg-rose-500/10 rounded-xl p-3">
-                <p className="text-[11px] text-rose-500 uppercase font-semibold">Gastos fijos</p>
-                <p className="text-lg font-bold text-rose-500">{formatEur(fixedExpenseMonthly)}</p>
-              </div>
-              <div className="bg-amber-500/10 rounded-xl p-3">
-                <p className="text-[11px] text-amber-600 uppercase font-semibold">Gastos variables</p>
-                <p className="text-lg font-bold text-amber-600">{formatEur(variableSpentThisMonth)}</p>
-              </div>
-              <div className="bg-sky-500/10 rounded-xl p-3">
-                <p className="text-[11px] text-sky-600 uppercase font-semibold">{forecastWhen < 0 ? 'Pagados / No pagados' : 'Pagados / Pendientes'}</p>
-                <p className="text-lg font-bold text-sky-600">
-                  {fixedStatus.filter((r) => r.paid).length} / {fixedStatus.filter((r) => !r.paid).length}
+            {a && (
+              <>
+                <p className="text-xs text-slate-500 lg:text-right">
+                  {over
+                    ? 'Has gastado más de lo que vas a ingresar este mes'
+                    : <><strong className="text-slate-700">{formatEur(a.perDay)} al día</strong> · {a.daysLeft === 1 ? 'último día del mes' : `quedan ${a.daysLeft} días`}</>}
                 </p>
-              </div>
-              <div className={`rounded-xl p-3 ${availableEstimate >= 0 ? 'bg-violet-500/10' : 'bg-red-500/10'}`}>
-                <p className={`text-[11px] uppercase font-semibold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{forecastWhen < 0 ? 'Sobrante del mes' : 'Disponible estimado'}</p>
-                <p className={`text-lg font-bold ${availableEstimate >= 0 ? 'text-violet-600' : 'text-red-500'}`}>{formatEur(availableEstimate)}</p>
-              </div>
-            </div>
-          )}
+                <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                  Ingresos {formatEur(a.income.expected)} ({INCOME_BASIS[a.income.basis](a.income)})
+                  {' '}− gastado {formatEur(a.spent)}
+                  {a.pendingFixed > 0 && <> − {a.pendingFixedCount === 1 ? '1 gasto fijo pendiente' : `${a.pendingFixedCount} gastos fijos pendientes`} {formatEur(a.pendingFixed)}</>}
+                  {a.savings > 0 && <> − por apartar para <Link to="/ahorro" className="text-indigo-500 hover:text-indigo-700">ahorro y metas</Link> {formatEur(a.savings)}</>}
+                </p>
+                {a.income.basis === 'media' && (
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    Para afinarlo, añade tu nómina en <Link to="/gastos-fijos" className="text-indigo-500 hover:text-indigo-700 font-medium">Gastos fijos</Link>.
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        )
+      })()}
 
-          {/* Top budget bars (up to 4) */}
-          {budgetProgress.length > 0 && (
-            <div className="space-y-2">
-              <p className="text-[11px] text-slate-400 uppercase font-semibold">Presupuestos</p>
-              {budgetProgress.slice(0, 4).map((b) => (
-                <div key={b.categoriaId}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: b.cat.color }} />
-                      <span className="text-xs text-slate-600">{b.cat.nombre}</span>
-                    </div>
-                    <span className={`text-xs font-semibold ${b.over ? 'text-red-500' : 'text-slate-500'}`}>
-                      {formatEur(b.spent)} / {formatEur(b.limite)}
-                    </span>
-                  </div>
-                  <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${b.over ? 'bg-red-400' : b.pct > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                      style={{ width: `${b.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* Fijos y variables */}
+      {activeRecurring.length > 0 && (
+        <div className="grid lg:gap-3 lg:grid-cols-3 mt-3">
+          {fixedIncomeMonthly > 0 && (
+            <ForecastItem title="Ingresos fijos" titleClass="text-emerald-600"
+              value={forecastWhen > 0
+                ? <><span className="font-bold text-emerald-600 tabular-nums">{formatEur(fixedIncomeMonthly)}</span> previstos</>
+                : <><span className="hidden lg:inline">Cobrado </span><span className="font-bold text-emerald-600 tabular-nums">{formatEur(fixedIncomeReceived)}</span> <span className="text-slate-400">de {formatEur(fixedIncomeMonthly)}</span></>}>
+              {forecastWhen <= 0 && <MiniBar value={fixedIncomeReceived} total={fixedIncomeMonthly} className="bg-emerald-500" />}
+              {incomeNote && <p className="text-[11px] font-medium mt-1 text-right lg:text-left">{incomeNote}</p>}
+            </ForecastItem>
+          )}
+          {fixedExpenseItems.length > 0 && (
+            <ForecastItem title="Gastos fijos" titleClass="text-rose-500"
+              value={forecastWhen > 0
+                ? <><span className="font-bold text-rose-500 tabular-nums">{formatEur(fixedExpenseMonthly)}</span> previstos</>
+                : <><span className="hidden lg:inline">Pagado </span><span className="font-bold text-rose-500 tabular-nums">{formatEur(fixedPaidTotal)}</span> <span className="text-slate-400">de {formatEur(fixedExpenseMonthly)}</span></>}>
+              {forecastWhen <= 0 && <MiniBar value={fixedPaidTotal} total={fixedExpenseMonthly} className="bg-rose-400" />}
+              <p className="text-[11px] font-medium mt-1 text-slate-500 text-right lg:text-left">
+                {fixedExpensePending === 0 ? '✓ Todo pagado'
+                  : `${fixedExpensePending} de ${fixedExpenseItems.length} ${forecastWhen < 0 ? 'sin pagar' : 'pendientes'}`}
+              </p>
+            </ForecastItem>
+          )}
+          {forecastWhen <= 0 && (
+            <ForecastItem title="Gastos variables" titleClass="text-amber-600"
+              value={<span className="font-bold text-amber-600 tabular-nums">{formatEur(variableSpentThisMonth)}</span>}>
+              <p className="hidden lg:block text-[11px] text-slate-500 mt-1">Lo gastado aparte de los fijos</p>
+            </ForecastItem>
           )}
         </div>
       )}
 
-      {/* ── 2. Monthly bar chart ── */}
+      {/* Presupuestos (los 4 más apurados) */}
+      {budgetProgress.length > 0 && (
+        <div className="space-y-2 mt-4">
+          <p className="text-[11px] text-slate-400 uppercase font-semibold">Presupuestos</p>
+          {budgetProgress.slice(0, 4).map((b) => (
+            <div key={b.categoriaId}>
+              <div className="flex items-center justify-between gap-2 mb-0.5">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: b.cat.color }} />
+                  <span className="text-xs text-slate-600 truncate">{b.cat.nombre}</span>
+                </div>
+                <span className={`text-xs font-semibold tabular-nums whitespace-nowrap ${b.over ? 'text-red-500' : 'text-slate-500'}`}>
+                  {formatEur(b.spent)} / {formatEur(b.limite)}
+                </span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full ${b.over ? 'bg-red-400' : b.pct > 75 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                  style={{ width: `${b.pct}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+
+  const evolucionCard = (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 lg:p-6">
         <div className="flex items-center justify-between mb-1">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📊 Evolución mensual</p>
@@ -886,15 +918,15 @@ export default function Dashboard() {
         <p className="text-slate-400 text-xs mb-5">Gastos e ingresos mes a mes · {selectedYear}</p>
         <div>
         <ResponsiveContainer width="100%" height={180}>
-          <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="28%">
+          <BarChart data={monthlyData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} {...BAR_GAP}>
             <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
             <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
             <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} scale={logScale ? 'sqrt' : 'auto'} domain={logScale ? [0, 'auto'] : [0, 'auto']} />
             <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
             <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
-            <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
-            {taxTx.length > 0 && <Bar dataKey="impuestos" name="Impuestos" fill="#fcd34d" radius={[4, 4, 0, 0]} />}
+            <Bar dataKey="gastos"   name="Gastos"   fill={BAR.gastos} radius={[4, 4, 0, 0]} />
+            <Bar dataKey="ingresos" name="Ingresos" fill={BAR.ingresos} radius={[4, 4, 0, 0]} />
+            {taxTx.length > 0 && <Bar dataKey="impuestos" name="Impuestos" fill={BAR.impuestos} radius={[4, 4, 0, 0]} />}
           </BarChart>
         </ResponsiveContainer>
         </div>
@@ -906,21 +938,22 @@ export default function Dashboard() {
               <p className="text-slate-500 text-xs font-medium">Gastos: {selectedYear} vs {prevYear}</p>
             </div>
             <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={monthCompareData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+              <BarChart data={monthCompareData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }} {...BAR_GAP}>
                 <CartesianGrid strokeDasharray="3 3" stroke={dark ? '#404040' : '#f1f5f9'} />
                 <XAxis dataKey="mes" tick={{ fontSize: 12, fill: dark ? '#82b4c8' : '#64748b' }} axisLine={false} tickLine={false} />
                 <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
                 <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
                 <Legend formatter={(value) => <span className="text-xs text-slate-600">{value}</span>} iconType="circle" iconSize={8} />
-                <Bar dataKey={`gastos_${selectedYear}`} name={`${selectedYear}`} fill="#fca5a5" radius={[4, 4, 0, 0]} />
-                <Bar dataKey={`gastos_${prevYear}`} name={`${prevYear}`} fill="#c4b5fd" radius={[4, 4, 0, 0]} />
+                <Bar dataKey={`gastos_${selectedYear}`} name={`${selectedYear}`} fill={BAR.gastos} radius={[4, 4, 0, 0]} />
+                <Bar dataKey={`gastos_${prevYear}`} name={`${prevYear}`} fill={BAR.anterior} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
       </div>
+    )
 
-      {/* ── 3. Pie / line chart (standalone) ── */}
+  const distribucionCard = (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-4 lg:p-6">
         <div className="flex flex-wrap items-start gap-3 lg:gap-4 mb-4">
           <div className="w-full sm:w-auto sm:flex-1 min-w-0">
@@ -999,7 +1032,7 @@ export default function Dashboard() {
               <XAxis dataKey="mes" tick={{ fontSize: 11, fill: dark ? '#82b4c8' : '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomLineTooltip />} />
-              <Line type="monotone" dataKey="total" stroke="#c4b5fd" strokeWidth={2} dot={{ r: 3, fill: '#c4b5fd' }} activeDot={{ r: 5 }} />
+              <Line type="monotone" dataKey="total" stroke={BAR.anterior} strokeWidth={2} dot={{ r: 3, fill: BAR.anterior }} activeDot={{ r: 5 }} />
             </LineChart>
           </ResponsiveContainer>
         ) : top8.length === 0 ? (
@@ -1027,18 +1060,17 @@ export default function Dashboard() {
           </>
         )}
       </div>
+    )
 
-      {/* ── 4. Gastos mensuales por categoría ── */}
-      {top6gastoCats.length > 0 && (
+  const gastosMesCard = top6gastoCats.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-rose-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">📅 Gastos mensuales por categoría</p>
           <p className="text-slate-400 text-xs mb-4">Top {top6gastoCats.length} categorías de gasto por mes · {selectedYear}</p>
           <MonthlyTable rows={gastosMonthlySummary} cols={top6gastoCats} colMaxima={gastosColMaxima} isIncome={false} />
         </div>
-      )}
+      )
 
-      {/* ── 5. Ingresos mensuales (categoría Ingresos + subcategorías) ── */}
-      {hasIngresoData && (
+  const ingresosMesCard = hasIngresoData && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-emerald-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">📅 Ingresos mensuales por subcategoría</p>
           <p className="text-slate-400 text-xs mb-4">
@@ -1048,10 +1080,9 @@ export default function Dashboard() {
           </p>
           <MonthlyTable rows={ingresosMonthlySummaryFinal} cols={ingresoColDefs} colMaxima={ingresosColMaxima} isIncome={true} />
         </div>
-      )}
+      )
 
-      {/* ── 6. Comparativa anual ── */}
-      {yearlyComparison.length > 1 && (
+  const anualCard = yearlyComparison.length > 1 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-indigo-200 p-4 lg:p-6">
           <div className="flex items-center justify-between mb-0.5">
             <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📅 Comparativa anual</p>
@@ -1067,25 +1098,25 @@ export default function Dashboard() {
               <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
               <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
-              <Bar dataKey="gastos"   name="Gastos"   fill="#fca5a5" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="ingresos" name="Ingresos" fill="#6ee7b7" radius={[4, 4, 0, 0]} />
-              {taxCatIds.size > 0 && <Bar dataKey="impuestos" name="Impuestos" fill="#fcd34d" radius={[4, 4, 0, 0]} />}
+              <Bar dataKey="gastos"   name="Gastos"   fill={BAR.gastos} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="ingresos" name="Ingresos" fill={BAR.ingresos} radius={[4, 4, 0, 0]} />
+              {taxCatIds.size > 0 && <Bar dataKey="impuestos" name="Impuestos" fill={BAR.impuestos} radius={[4, 4, 0, 0]} />}
             </BarChart>
           </ResponsiveContainer>
           </div>
 
           {/* Comparison table */}
           <div className="mt-5 overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-slate-100">
-                  <th className="text-left pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Año</th>
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Gastos</th>
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">vs anterior</th>
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Ingresos</th>
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">vs anterior</th>
-                  {taxCatIds.size > 0 && <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Impuestos</th>}
-                  <th className="text-right pb-2 text-slate-400 font-semibold text-xs uppercase tracking-wider">Balance</th>
+                  <th className="text-left pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Año</th>
+                  <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Gastos</th>
+                  <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">vs anterior</th>
+                  <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Ingresos</th>
+                  <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">vs anterior</th>
+                  {taxCatIds.size > 0 && <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Impuestos</th>}
+                  <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Balance</th>
                 </tr>
               </thead>
               <tbody>
@@ -1094,29 +1125,29 @@ export default function Dashboard() {
                   const gastoDiff   = prev && prev.gastos   > 0 ? ((row.gastos   - prev.gastos)   / prev.gastos)   * 100 : null
                   const ingresoDiff = prev && prev.ingresos > 0 ? ((row.ingresos - prev.ingresos) / prev.ingresos) * 100 : null
                   const Diff = ({ val, positiveIsGood = false }) => {
-                    if (val === null) return <span className="text-slate-300 text-xs">—</span>
+                    if (val === null) return <span className="text-slate-300">—</span>
                     const up = val > 0
                     const good = positiveIsGood ? up : !up
                     return (
-                      <span className={`text-xs font-medium ${good ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      <span className={`font-medium whitespace-nowrap ${good ? 'text-emerald-600' : 'text-rose-500'}`}>
                         {up ? '▲' : '▼'} {Math.abs(val).toFixed(1)}%
                       </span>
                     )
                   }
                   return (
                     <tr key={row.year} className={`border-b border-slate-50 last:border-b-0 ${row.year === selectedYear ? 'bg-indigo-50' : 'hover:bg-slate-50'} transition-colors`}>
-                      <td className={`py-2.5 font-semibold ${row.year === selectedYear ? 'text-indigo-700' : 'text-slate-700'}`}>{row.year}</td>
-                      <td className="py-2.5 text-right text-rose-500 font-medium whitespace-nowrap">{formatEur(row.gastos)}</td>
-                      <td className="py-2.5 text-right"><Diff val={gastoDiff} positiveIsGood={false} /></td>
-                      <td className="py-2.5 text-right text-emerald-600 font-medium whitespace-nowrap">{formatEur(row.ingresos)}</td>
-                      <td className="py-2.5 text-right"><Diff val={ingresoDiff} positiveIsGood={true} /></td>
+                      <td className={`py-2 pr-2 font-semibold ${row.year === selectedYear ? 'text-indigo-700' : 'text-slate-700'}`}>{row.year}</td>
+                      <td className="py-2 px-2 text-right text-rose-500 font-medium whitespace-nowrap">{formatEur(row.gastos)}</td>
+                      <td className="py-2 text-right"><Diff val={gastoDiff} positiveIsGood={false} /></td>
+                      <td className="py-2 px-2 text-right text-emerald-600 font-medium whitespace-nowrap">{formatEur(row.ingresos)}</td>
+                      <td className="py-2 text-right"><Diff val={ingresoDiff} positiveIsGood={true} /></td>
                       {taxCatIds.size > 0 && (
-                        <td className={`py-2.5 text-right font-medium whitespace-nowrap ${row.impuestos < 0 ? 'text-emerald-600' : 'text-amber-600'}`}
+                        <td className={`py-2 px-2 text-right font-medium whitespace-nowrap ${row.impuestos < 0 ? 'text-emerald-600' : 'text-amber-600'}`}
                           title={row.impuestos < 0 ? 'Devuelto' : 'Pagado'}>
                           {Math.abs(row.impuestos) < 0.005 ? '—' : row.impuestos < 0 ? `+${formatEur(-row.impuestos)}` : formatEur(row.impuestos)}
                         </td>
                       )}
-                      <td className={`py-2.5 text-right font-bold whitespace-nowrap ${row.balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(row.balance)}</td>
+                      <td className={`py-2 px-2 text-right font-bold whitespace-nowrap ${row.balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(row.balance)}</td>
                     </tr>
                   )
                 })}
@@ -1124,11 +1155,9 @@ export default function Dashboard() {
             </table>
           </div>
         </div>
-      )}
+      )
 
-
-      {/* ── 8. Desglose por categoría con subcategorías (al final) ── */}
-      {periodBreakdown.length > 0 && (
+  const desgloseCard = periodBreakdown.length > 0 && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-violet-200 p-4 lg:p-6">
           <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider mb-0.5">🏷️ Desglose por categoría</p>
           <p className="text-slate-400 text-xs mb-4">Distribución de gastos con subcategorías · {periodLabel({ year: selectedYear, month: selectedMonth })}</p>
@@ -1230,6 +1259,102 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+      )
+
+  const cards = {
+    prevision: previsionCard,
+    metas: activeGoals.length > 0 && <GoalsCard results={activeGoals} />,
+    evolucion: evolucionCard,
+    distribucion: distribucionCard,
+    gastosMes: gastosMesCard,
+    ingresosMes: ingresosMesCard,
+    anual: anualCard,
+    desglose: desgloseCard,
+  }
+
+  return (
+    <div className="dashboard-bg space-y-4 lg:space-y-6 lg:p-1">
+
+      {/* ── 1. Gradient header ── */}
+      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-3 lg:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-3 lg:mb-5">
+          <div className="hidden lg:block">
+            <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
+            <p className="text-slate-400 text-sm mt-0.5">{selectedMonth == null ? 'Resumen financiero anual' : 'Resumen financiero mensual'}</p>
+          </div>
+<PeriodPicker
+            value={{ year: selectedYear, month: selectedMonth }}
+            years={availableYears}
+            onChange={({ year, month }) => { setSelectedYear(year); setSelectedMonth(month) }}
+          />
+        </div>
+        {/* Móvil: todo el resumen en una tarjeta */}
+        <div className="lg:hidden rounded-2xl border border-violet-500/20 bg-white/70 backdrop-blur-sm px-4 py-2">
+          <SummaryRow label="Ingresos" value={formatEur(totalIngresos)} valueClass="text-emerald-600" />
+          <SummaryRow label="Gastos" value={formatEur(totalGastos)} valueClass="text-rose-500">
+            {showTaxes && (periodTaxNet < 0
+              ? <>+ Impuestos <span className="font-semibold text-amber-600 tabular-nums">{formatEur(-periodTaxNet)}</span></>
+              : <>Devolución de impuestos <span className="font-semibold text-emerald-600 tabular-nums">+{formatEur(periodTaxNet)}</span></>)}
+          </SummaryRow>
+          <div className="border-t border-slate-100" />
+          <SummaryRow label="Balance" value={formatEur(balance)} valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}>
+            {showTaxes && <>Con impuestos: <span className={`font-semibold tabular-nums ${netWithTaxes >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(netWithTaxes)}</span></>}
+            {showTaxes && rate != null && ' · '}
+            {rate != null && <>Tasa de ahorro <span className="font-semibold text-slate-700">{rate} %</span></>}
+          </SummaryRow>
+          {selectedMonth == null
+            ? <SummaryRow label="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} valueClass="text-amber-600">{mesMaxGasto && formatEur(mesMaxGasto.importe)}</SummaryRow>
+            : <SummaryRow label="Gasto diario" value={formatEur(gastoDiario)} valueClass="text-amber-600" />}
+          {projection && (
+            <p className="text-xs text-slate-600 leading-snug border-t border-slate-100 pt-2 pb-1 mt-1"><ProjectionText p={projection} /></p>
+          )}
+        </div>
+        <div className="hidden lg:grid grid-cols-4 gap-4">
+          <SummaryCard title="Gastos" value={formatEur(totalGastos)} subtitle={`${periodGastosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-rose-500" cardClass="bg-rose-500/10" borderClass="border-rose-500/20"
+            note={showTaxes && (periodTaxNet < 0
+              ? <span className="text-slate-500">+ Impuestos <span className="font-semibold text-amber-600 tabular-nums">{formatEur(-periodTaxNet)}</span></span>
+              : <span className="text-slate-500">Devolución de impuestos <span className="font-semibold text-emerald-600 tabular-nums">+{formatEur(periodTaxNet)}</span></span>)} />
+          <SummaryCard title="Ingresos" value={formatEur(totalIngresos)} subtitle={`${periodIngresosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
+          <SummaryCard title="Balance" value={formatEur(balance)} subtitle={`${showTaxes ? 'Ingresos − Gastos, sin impuestos' : 'Ingresos − Gastos'}${rate != null ? ` · Tasa de ahorro ${rate} %` : ''}`} subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20"
+            note={showTaxes && (
+              <span className="text-slate-500">Con impuestos: <span className={`font-semibold tabular-nums ${balance + periodTaxNet >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(netWithTaxes)}</span></span>
+            )} />
+          {selectedMonth == null
+            ? <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
+            : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle={showTaxes ? 'Media por día, sin impuestos' : 'Media por día'} subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
+        </div>
+        {projection && <p className="hidden lg:block mt-3 text-sm text-slate-600"><ProjectionText p={projection} /></p>}
+      </div>
+
+      {overBudgets.length > 0 && <BudgetAlert over={overBudgets} />}
+
+      {/* ── Recordatorio de copia de seguridad ── */}
+      {showBackupReminder && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4">
+          <span className="text-2xl leading-none">💾</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-amber-900">
+              {daysSinceBackup() == null ? 'Aún no has hecho ninguna copia de seguridad' : `Tu última copia es de hace ${daysSinceBackup()} días`}
+            </p>
+            <p className="text-xs text-amber-800 mt-0.5">Tus datos solo están en este {deviceName}: si lo cambias o desinstalas la app, se pierden.</p>
+            <div className="flex gap-4 mt-2">
+              <Link to="/exportar" className="text-sm font-semibold text-amber-900 underline">Hacer copia</Link>
+              <button onClick={() => { snoozeBackupReminder(); setShowBackupReminder(false) }} className="text-sm text-amber-700">Ahora no</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cardOrder.map((id) => cards[id] ? <Fragment key={id}>{cards[id]}</Fragment> : null)}
+
+      <div className="flex justify-center pb-2">
+        <button onClick={() => setOrdering(true)} className="text-xs text-slate-500 hover:text-slate-700 px-3 py-2 rounded-lg border border-slate-200 bg-white">↕ Ordenar tarjetas</button>
+      </div>
+      {ordering && (
+        <CardOrderSheet order={cardOrder}
+          onChange={(o) => { setCardOrderState(o); setCardOrder(o) }}
+          onReset={() => { setCardOrderState(defaultCardOrder()); setCardOrder(null) }}
+          onClose={() => setOrdering(false)} />
       )}
     </div>
   )
