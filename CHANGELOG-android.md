@@ -7,6 +7,39 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ---
 
+## [1.4.0] — 2026-11-14
+
+versionCode 1004000. Recoge lo de escritorio 0.11.0.
+
+### Añadido
+- **Resumen de Inicio en una tarjeta** — ingresos, gastos, balance y gasto diario (o el mes con más gasto en la vista anual) uno debajo de otro, en vez de cuatro KPI en cuadrícula
+- **Tasa de ahorro** — bajo el balance, el porcentaje de los ingresos que no has gastado
+- **«Al ritmo actual…»** — al final del resumen: cuánto ahorrarás (o el déficit) al terminar el mes o el año si sigues gastando al mismo ritmo (`src/insights/projection.js`)
+- **Ordenar las tarjetas de Inicio** — «↕ Ordenar tarjetas» al final de Inicio; se guarda en el móvil
+
+### Cambiado
+- **Previsión del mes en una sola tarjeta** — incluye «Disponible para gastar» (con un tamaño de cifra como el resto) y, en filas, ingresos fijos, gastos fijos y gastos variables, sin recuadros separados
+- **Evolución mensual** — barras más anchas (menos hueco entre meses) y con más color: en el móvil apenas se veían
+- **Más contraste en el modo claro** — textos secundarios más oscuros y fondos pastel más intensos
+- **Comparativa anual** — la tabla con el mismo tamaño de letra que las demás
+- **Gastos fijos** — presupuestos con los importes debajo del nombre, tarjetas de resumen que no se salen con letra grande y «Ver más» en Sugerencias detectadas
+
+### Corregido
+- **Subcategorías no mostraba las partidas de los movimientos desglosados**
+
+### Notas para Google Play («Novedades»)
+```
+• Inicio más claro: ingresos, gastos, balance y gasto diario en una tarjeta.
+• Nuevo: tasa de ahorro y cuánto ahorrarás este mes a tu ritmo de gasto.
+• Previsión del mes en una sola tarjeta, con lo que te queda para gastar.
+• Ordena las tarjetas de Inicio como prefieras.
+• Más contraste en el modo claro y barras de evolución más visibles.
+• Gastos fijos: presupuestos más legibles y «Ver más» en sugerencias.
+• Corregido: las partidas desglosadas aparecen en Subcategorías.
+```
+
+---
+
 ## [1.3.0] — 2026-11-13
 
 versionCode 1003000. Recoge lo de escritorio 0.10.0–0.10.4 que aplica al móvil.

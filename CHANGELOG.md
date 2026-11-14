@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.11.0] — 2026-11-14
+
+### Añadido
+- **Tasa de ahorro** — en el Dashboard, bajo Balance: el porcentaje de tus ingresos que no has gastado (con los impuestos incluidos, porque es dinero que sale igual)
+- **«Al ritmo actual…»** — debajo del resumen, una predicción: «Al ritmo actual (33,24 € al día de gasto variable), terminarás noviembre con un ahorro de 173,94 €» (o «un déficit de»). En el mes en curso extrapola solo el gasto variable (lo gastado menos lo pagado de los gastos fijos, que no se repiten cada día) y suma los fijos que faltan por pagar a los ingresos previstos; en la vista del año en curso, extrapola ingresos y gastos al año entero (`src/insights/projection.js`)
+- **Ordenar las tarjetas del Dashboard** — botón «↕ Ordenar tarjetas» al final: sube o baja cada tarjeta (previsión, ahorro y metas, evolución, distribución, tablas mensuales, comparativa anual, desglose). Se guarda en cada dispositivo; «Restablecer» vuelve al orden original. El resumen se queda arriba
+- **Gastos fijos: «Ver más» en Sugerencias detectadas** — se muestran 8 y el resto al pulsar (antes se cortaban en 12)
+
+### Cambiado
+- **Previsión del mes en una sola tarjeta** — «Disponible para gastar» pasa a estar dentro de la previsión (antes era una tarjeta aparte, con una cifra mucho más grande que el resto del Dashboard; «Te has pasado este mes» ya no destaca de más). Debajo: ingresos fijos (cobrado de lo previsto), gastos fijos (pagado de lo previsto y cuántos faltan), gastos variables y presupuestos. El título dice el mes («Previsión de noviembre», «Cierre de octubre»)
+- **Más contraste en el modo claro** — los textos grises secundarios son algo más oscuros, los fondos pastel de las tarjetas algo más intensos y las barras de los gráficos con más color
+- **Comparativa anual** — la tabla usa el mismo tamaño de letra que las demás tablas del Dashboard
+- **Presupuestos por categoría (Gastos fijos)** — los importes van debajo del nombre de la categoría para que no se amontonen
+
+### Corregido
+- **Subcategorías no mostraba las partidas de los movimientos desglosados** — ahora aparecen en la categoría de cada partida, marcadas «🧾 Partida» con su nota, y se puede cambiar su subcategoría (se guarda en el desglose del movimiento)
+
 ## [0.10.4] — 2026-11-13
 
 ### Corregido
