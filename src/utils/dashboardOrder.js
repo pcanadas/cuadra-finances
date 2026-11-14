@@ -7,6 +7,7 @@ const KEY = 'zenit.ordenDashboard'
 export const DASHBOARD_CARDS = [
   { id: 'prevision', label: '📋 Previsión del mes' },
   { id: 'metas', label: '🐷 Ahorro y metas' },
+  { id: 'compartidos', label: '👥 Gastos compartidos' },
   { id: 'evolucion', label: '📊 Evolución mensual' },
   { id: 'distribucion', label: '🥧 Distribución de gastos' },
   { id: 'gastosMes', label: '📅 Gastos mensuales por categoría' },

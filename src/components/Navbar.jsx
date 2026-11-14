@@ -14,9 +14,9 @@ const links = [
   { to: '/cuentas', label: 'Cuentas' },
   { to: '/gastos-fijos', label: 'Gastos fijos' },
   { to: '/ahorro', label: 'Ahorro' },
+  { to: '/compartidos', label: 'Compartidos' },
   { to: '/importar', label: 'Importar' },
   { to: '/categorias', label: 'Categorías' },
-  { to: '/subcategorias', label: 'Subcategorías' },
 ]
 
 // Móvil: barra inferior = Inicio · Registros · ➕ · Cuentas · Más
@@ -33,6 +33,7 @@ const MOBILE_MORE = [
   { to: '/exportar', label: 'Exportar datos', icon: '📤' },
   { to: '/gastos-fijos', label: 'Gastos fijos', icon: '📆' },
   { to: '/ahorro', label: 'Ahorro y metas', icon: '🐷' },
+  { to: '/compartidos', label: 'Gastos compartidos', icon: '👥' },
   { to: '/categorias', label: 'Categorías', icon: '🏷️' },
   { to: '/subcategorias', label: 'Subcategorías', icon: '🗂️' },
   { to: '/ajustes', label: 'Ajustes', icon: '⚙️' },
@@ -142,7 +143,7 @@ export default function Navbar() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-2">
               <span className="text-xl font-bold text-indigo-600">Zenit</span>
-              <span className="hidden xl:inline text-xs text-slate-400 font-medium">Finanzas personales</span>
+              <span className="hidden 2xl:inline text-xs text-slate-400 font-medium">Finanzas personales</span>
             </div>
             <div className="flex items-center gap-1">
               {links.map(({ to, label }) => (
@@ -151,7 +152,7 @@ export default function Navbar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) =>
-                    `px-3 xl:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    `px-3 xl:px-3.5 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                       isActive
                         ? 'bg-indigo-50 text-indigo-700'
                         : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -165,7 +166,7 @@ export default function Navbar() {
                 <button
                   onClick={() => setDesktopMoreOpen((o) => !o)}
                   aria-expanded={desktopMoreOpen}
-                  className={`px-3 xl:px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  className={`px-3 xl:px-3.5 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${
                     desktopMoreActive || desktopMoreOpen
                       ? 'bg-indigo-50 text-indigo-700'
                       : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'

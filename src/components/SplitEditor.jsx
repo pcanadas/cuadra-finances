@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { rescaleShare } from '../utils/shared'
 import { format } from 'date-fns'
 import { useBackHandler } from '../platform/back'
 import { hasSplit, splitRemainder } from '../utils/splits'
@@ -51,12 +52,17 @@ export default function SplitEditor({ transaction, categories, subcategories, on
     if (filled.some((p) => !(parseAmount(p.importe) > 0))) return setError('Cada partida necesita un importe mayor que cero')
     if (filled.some((p) => !p.categoria)) return setError('Cada partida necesita una categoría')
     if (remainder !== 0) return setError(`Las partidas deben sumar ${formatEur(total)}`)
-    onSave(filled.map((p) => ({
-      importe: sign * Math.round(parseAmount(p.importe) * 100) / 100,
-      categoria: p.categoria,
-      subcategoria: p.subcategoria || null,
-      notas: p.notas.trim(),
-    })))
+    onSave(filled.map((p) => {
+      const importe = sign * Math.round(parseAmount(p.importe) * 100) / 100
+      // Una partida compartida (ver utils/shared.js) conserva su reparto, ajustado al importe
+      return {
+        importe,
+        categoria: p.categoria,
+        subcategoria: p.subcategoria || null,
+        notas: p.notas.trim(),
+        ...(p.compartido ? { compartido: rescaleShare(p.compartido, importe) } : {}),
+      }
+    }))
   }
 
   const inputCls = 'w-full border border-slate-200 rounded-lg px-2 py-2 lg:py-1.5 text-base lg:text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300'

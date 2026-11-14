@@ -1,4 +1,5 @@
 import { Fragment, useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import useTransactionStore from '../store/useTransactionStore'
@@ -226,6 +227,21 @@ function AccountsModal({ accounts, onAdd, onUpdate, onDelete, onClose }) {
 }
 
 // ─── main component ───────────────────────────────────────────────────────────
+
+const formatEurBadge = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
+
+/** «👥 Compartido…» o «↩️ Reembolso…» (se gestionan en Gastos compartidos, ver utils/shared.js). */
+function SharedBadge({ t, inline = false }) {
+  const c = t.compartido
+  if (!c && !t.reembolso) return null
+  const text = c
+    ? `👥 Tu parte ${formatEurBadge(Math.abs(c.miParte))}${c.con ? ` · con ${c.con}` : ''}`
+    : `↩️ Reembolso${t.reembolso.de ? ` de ${t.reembolso.de}` : ''}`
+  return (
+    <Link to="/compartidos" title="Ver en Gastos compartidos"
+      className={`${inline ? 'ml-2' : 'block'} text-xs text-indigo-500 hover:text-indigo-700 truncate`}>{text}</Link>
+  )
+}
 
 export default function Movimientos() {
   const transactions        = useTransactionStore((s) => s.transactions)
@@ -472,7 +488,7 @@ export default function Movimientos() {
   // Con desglose, la categoría del movimiento queda vacía y manual (que no la recategoricen las
   // palabras clave); al quitarlo, el movimiento vuelve a quedar sin categoría
   function saveSplit(t, desglose) {
-    return trackAndUpdate(t.id, { desglose, categoria: null, subcategoria: null, categoriaManual: !!desglose, subcategoriaManual: !!desglose })
+    return trackAndUpdate(t.id, { desglose, categoria: null, subcategoria: null, categoriaManual: !!desglose, subcategoriaManual: !!desglose, compartido: null })
   }
 
   useBackHandler(selected.size > 0,() => { setSelected(new Set()); setBulkCategory(''); setBulkSubcategory('') })
@@ -714,6 +730,7 @@ export default function Movimientos() {
                       <td className="px-4 py-3 text-slate-700 max-w-xs">
                         <div className="truncate" title={t.descripcion}>{t.descripcion || '—'}</div>
                         {t.notas && <div className="text-xs italic text-slate-400 truncate" title={t.notas}>{t.notas}</div>}
+                        <SharedBadge t={t} />
                       </td>
                       <td className={`px-4 py-3 text-right font-medium whitespace-nowrap ${t.importe >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {formatEur(t.importe)}
@@ -823,6 +840,7 @@ export default function Movimientos() {
                           <td className="px-4 pb-2 pl-8 text-slate-500 max-w-xs">
                             <span className="text-slate-300 mr-1">{last ? '└' : '├'}</span>
                             {p.notas ? <span className="italic">{p.notas}</span> : <span className="text-slate-400">Partida {i + 1}</span>}
+                            <SharedBadge t={p} inline />
                           </td>
                           <td className={`px-4 pb-2 text-right whitespace-nowrap ${p.importe >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {formatEur(p.importe)}

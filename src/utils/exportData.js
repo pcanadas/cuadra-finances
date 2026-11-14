@@ -22,6 +22,9 @@ export async function exportTransactionsToExcel(transactions, { categories, subc
     Subcategoría: subMap[t.subcategoria] || '',
     Cuenta: accMap[t.accountId] || '',
     Notas: t.notas || '',
+    'Tu parte (compartido)': t.compartido ? t.compartido.miParte : '',
+    'Compartido con': t.compartido?.con || '',
+    'Reembolso de': t.reembolso ? (t.reembolso.de || 'sí') : '',
   }))
   const ws = XLSX.utils.json_to_sheet(rows)
   const wb = XLSX.utils.book_new()

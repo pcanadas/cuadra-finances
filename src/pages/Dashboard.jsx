@@ -6,7 +6,7 @@ import PeriodPicker from '../components/PeriodPicker'
 import SelectSheet from '../components/SelectSheet'
 import { periodLabel } from '../utils/period'
 import { isTransferTx } from '../utils/transferPairing'
-import { expandSplits } from '../utils/splits'
+import { forStats, refundItems, sharedItems, sharedSummary } from '../utils/shared'
 import { isIncomeTx } from '../insights/flows'
 import { getSeparateTaxes } from '../utils/taxSetting'
 import { activeInMonth, fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
@@ -358,9 +358,9 @@ function MonthlyTable({ rows, cols, colMaxima, isIncome = false }) {
 // ─── main component ──────────────────────────────────────────────────────────
 
 export default function Dashboard() {
-  // Los movimientos desglosados cuentan por partidas (ver utils/splits.js)
+  // Los desglosados cuentan por partidas y los compartidos solo por tu parte (ver utils/shared.js)
   const storedTransactions = useTransactionStore((s) => s.transactions)
-  const transactions  = useMemo(() => expandSplits(storedTransactions), [storedTransactions])
+  const transactions  = useMemo(() => forStats(storedTransactions), [storedTransactions])
   const categories    = useCategoryStore((s) => s.categories)
   const subcategories = useSubcategoryStore((s) => s.subcategories)
   const budgets       = useBudgetStore((s) => s.budgets)
@@ -848,6 +848,49 @@ export default function Dashboard() {
   if (transactions.length === 0) return <Welcome />
 
   // ── tarjetas (el orden lo elige el usuario, ver utils/dashboardOrder.js) ──
+
+  // Gastos compartidos del periodo (ver utils/shared.js y la sección Compartidos)
+  const inSelectedPeriod = (iso) => {
+    const d = new Date(iso)
+    return d.getFullYear() === selectedYear && (selectedMonth == null || d.getMonth() === selectedMonth)
+  }
+  const sharedPeriod = sharedSummary(
+    sharedItems(storedTransactions).filter((it) => inSelectedPeriod(it.fecha)),
+    refundItems(storedTransactions).filter((r) => inSelectedPeriod(r.fecha)),
+  )
+  const sharedCard = (sharedPeriod.pagado > 0 || sharedPeriod.devuelto > 0) && (
+    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 border-t-4 border-t-amber-200 p-4 lg:p-6">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">👥 Gastos compartidos</p>
+        <Link to="/compartidos" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium shrink-0">Ver todo →</Link>
+      </div>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-2">
+        {[
+          ['Pagado por ti', sharedPeriod.pagado, 'text-slate-700'],
+          ['Tu parte', sharedPeriod.miParte, 'text-rose-500'],
+          ['Has adelantado', sharedPeriod.otros, 'text-amber-600'],
+          ['Te han devuelto', sharedPeriod.devuelto, 'text-emerald-600'],
+        ].map(([label, value, cls]) => (
+          <div key={label} className="min-w-0">
+            <p className="text-[11px] uppercase font-semibold text-slate-500">{label}</p>
+            <p className={`text-base lg:text-lg font-bold tabular-nums ${cls}`}>{formatEur(value)}</p>
+          </div>
+        ))}
+      </div>
+      {sharedPeriod.personas.some((p) => p.nombre) && (
+        <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+          {sharedPeriod.personas.filter((p) => p.nombre).map((p, i) => {
+            const diff = Math.round((p.adelantado - p.devuelto) * 100) / 100
+            return (
+              <span key={p.nombre}>{i > 0 && ' · '}<strong className="text-slate-700">{p.nombre}</strong>: {Math.abs(diff) < 0.01 ? 'en paz' : diff > 0 ? `falta que te devuelva ${formatEur(diff)}` : `te ha devuelto ${formatEur(-diff)} de más`}</span>
+            )
+          })}
+          <span className="text-slate-400"> (orientativo)</span>
+        </p>
+      )}
+      <p className="text-[11px] text-slate-400 mt-2">El resto del Dashboard cuenta solo tu parte; lo que te devuelven no cuenta como ingreso.</p>
+    </div>
+  )
   // Previsión del mes: lo que dicen tus fijos (cuánto queda, qué falta por cobrar y pagar)
   const fixedExpenseItems = fixedStatus.filter((r) => !r.isIncome)
   const fixedExpensePending = fixedExpenseItems.filter((r) => !r.paid).length
@@ -868,7 +911,7 @@ export default function Dashboard() {
         <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">
           📋 {forecastWhen < 0 ? 'Cierre de' : 'Previsión de'} {MONTH_LONG[currentMonth]}{currentYear !== today.getFullYear() ? ` ${currentYear}` : ''}
         </p>
-        <a href="#/gastos-fijos" className="text-xs text-indigo-500 hover:text-indigo-700 font-medium shrink-0">Ver todo →</a>
+        <Link to={`/gastos-fijos?mes=${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`} className="text-xs text-indigo-500 hover:text-indigo-700 font-medium shrink-0">Ver todo →</Link>
       </div>
 
       {/* Lo que queda: disponible para gastar (mes en curso) o el sobrante estimado */}
@@ -1341,6 +1384,7 @@ export default function Dashboard() {
   const cards = {
     prevision: previsionCard,
     metas: activeGoals.length > 0 && <GoalsCard results={activeGoals} />,
+    compartidos: sharedCard,
     evolucion: evolucionCard,
     distribucion: distribucionCard,
     gastosMes: gastosMesCard,

@@ -36,6 +36,8 @@ export function expandSplits(transactions) {
         categoria: p.categoria || null,
         subcategoria: p.subcategoria || null,
         notas: p.notas || t.notas || '',
+        // Gasto compartido: el de la partida (ver shared.js)
+        compartido: p.compartido || undefined,
       }
     })
   })

@@ -20,6 +20,7 @@ import Privacidad from './pages/Privacidad'
 import Licencias from './pages/Licencias'
 import GastosFijos from './pages/GastosFijos'
 import Ahorro from './pages/Ahorro'
+import Compartidos from './pages/Compartidos'
 import useTransactionStore from './store/useTransactionStore'
 import useCategoryStore from './store/useCategoryStore'
 import useSubcategoryStore from './store/useSubcategoryStore'
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="cuentas" element={<Cuentas />} />
           <Route path="gastos-fijos" element={<GastosFijos />} />
           <Route path="ahorro" element={<Ahorro />} />
+          <Route path="compartidos" element={<Compartidos />} />
           <Route path="acerca" element={<Acerca />} />
           <Route path="ajustes" element={<Ajustes />} />
           <Route path="exportar" element={<Exportar />} />

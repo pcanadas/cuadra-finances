@@ -4,7 +4,7 @@ import useCategoryStore from '../store/useCategoryStore'
 import useAccountStore from '../store/useAccountStore'
 import useGoalStore from '../store/useGoalStore'
 import { evaluateGoals } from '../insights/goals'
-import { expandSplits } from '../utils/splits'
+import { forStats } from '../utils/shared'
 
 /** Planes de ahorro y metas evaluados con los datos actuales (ver insights/goals.js). */
 export default function useGoalResults() {
@@ -14,7 +14,7 @@ export default function useGoalResults() {
   const goals = useGoalStore((s) => s.goals)
   return useMemo(() => evaluateGoals({
     goals,
-    transactions: expandSplits(transactions),
+    transactions: forStats(transactions),
     transferCatIds: new Set(categories.filter((c) => c.esTransferencia).map((c) => c.id)),
     ingresoCatIds: new Set(categories.filter((c) => c.esIngreso).map((c) => c.id)),
     defaultAccountId: accounts[0]?.id ?? null,

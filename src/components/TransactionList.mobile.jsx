@@ -21,6 +21,15 @@ function dayLabel(iso) {
 
 // La nota se muestra salvo que repita la descripción (el alta rápida usa la nota como descripción)
 const noteOf = (t) => (t.notas && t.notas !== t.descripcion ? t.notas : '')
+// Gasto compartido o reembolso (se gestionan en Más → Gastos compartidos)
+const sharedLine = (t) => {
+  if (t.reembolso) return `↩️ Reembolso${t.reembolso.de ? ` de ${t.reembolso.de}` : ''}`
+  const parts = t.compartido ? [t.compartido] : (t.desglose ?? []).map((p) => p.compartido).filter(Boolean)
+  if (!parts.length) return ''
+  const mine = parts.reduce((s, c) => s + Math.abs(c.miParte), 0)
+  const con = [...new Set(parts.map((c) => c.con).filter(Boolean))].join(', ')
+  return `👥 Tu parte ${formatEur(mine)}${t.desglose && !t.compartido ? ' de lo compartido' : ''}${con ? ` · con ${con}` : ''}`
+}
 
 // Agrupa movimientos consecutivos con la misma fecha (respeta el orden actual)
 function groupByDay(transactions) {
@@ -100,6 +109,7 @@ function TransactionCard({ t, cat, sub, acc, catMap, showAccount, selected, sele
         <span className="flex-1 min-w-0">
           <span className="block text-sm text-slate-800 truncate">{t.descripcion || '—'}</span>
           {noteOf(t) && <span className="block text-xs italic text-slate-500 truncate">{noteOf(t)}</span>}
+          {sharedLine(t) && <span className="block text-xs text-indigo-500 truncate">{sharedLine(t)}</span>}
           <span className="block text-xs text-slate-400 truncate">
             {split
               ? `Desglosado: ${[...new Set(t.desglose.map((p) => catMap[p.categoria]?.nombre ?? 'Sin categoría'))].join(', ')}`

@@ -6,7 +6,7 @@ import { categorizeTransaction } from '../utils/categorize'
 import useSubcategoryStore from '../store/useSubcategoryStore'
 import { handleTransferPairing, undoTransferPairing, describeTransferSync } from '../utils/transferPairing'
 import SelectSheet from '../components/SelectSheet'
-import { expandSplits } from '../utils/splits'
+import { forStats } from '../utils/shared'
 
 const PRESET_COLORS = [
   '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
@@ -438,7 +438,7 @@ export default function Categorias() {
   const [newColor, setNewColor] = useState(PRESET_COLORS[0])
 
   const txCountByCategory = {}
-  expandSplits(transactions).forEach((t) => {
+  forStats(transactions).forEach((t) => {
     if (t.categoria) txCountByCategory[t.categoria] = (txCountByCategory[t.categoria] || 0) + 1
   })
 

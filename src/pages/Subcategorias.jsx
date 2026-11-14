@@ -662,7 +662,9 @@ export default function Subcategorias() {
                               <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{formatDate(t.fechaContable)}</td>
                               <td className="px-4 py-2 text-slate-700 max-w-xs">
                                 <p className="truncate">{t.descripcion}</p>
-                                {t.splitOf && <p className="text-xs text-slate-400 italic truncate">🧾 Partida{t.notas ? ` · ${t.notas}` : ''}</p>}
+                                {t.splitOf
+                                  ? <p className="text-xs text-slate-400 italic truncate">🧾 Partida{t.notas ? ` · ${t.notas}` : ''}</p>
+                                  : t.notas && t.notas !== t.descripcion && <p className="text-xs text-slate-400 italic truncate" title={t.notas}>{t.notas}</p>}
                               </td>
                               <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${Number(t.importe) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                                 {formatAmount(t.importe)}

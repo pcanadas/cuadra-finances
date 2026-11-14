@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import useTransactionStore from '../store/useTransactionStore'
 import useCategoryStore from '../store/useCategoryStore'
 import useSubcategoryStore from '../store/useSubcategoryStore'
@@ -6,8 +7,8 @@ import useBudgetStore from '../store/useBudgetStore'
 import useRecurringStore from '../store/useRecurringStore'
 import SelectSheet from '../components/SelectSheet'
 import { isTransferTx } from '../utils/transferPairing'
-import { expandSplits } from '../utils/splits'
-import { fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
+import { forStats } from '../utils/shared'
+import { activeInMonth, fixedStatusForMonth, isDueInMonth } from '../insights/fixedItems'
 
 const formatEur = (v) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(v)
 const PERIOD_FACTOR = { mensual: 1, bimestral: 0.5, trimestral: 1 / 3, semestral: 1 / 6, anual: 1 / 12 }
@@ -64,6 +65,18 @@ export default function GastosFijos() {
   const currentMonth = new Date().getMonth()
   const currentYear  = new Date().getFullYear()
 
+  // Mes del estado y de los presupuestos: el actual o el que se elija (?mes=AAAA-MM desde el Dashboard)
+  const [searchParams] = useSearchParams()
+  const [view, setView] = useState(() => {
+    const m = /^(\d{4})-(\d{2})$/.exec(searchParams.get('mes') ?? '')
+    return m ? { year: Number(m[1]), month: Number(m[2]) - 1 } : { year: currentYear, month: currentMonth }
+  })
+  const isCurrentView = view.year === currentYear && view.month === currentMonth
+  const stepMonth = (dir) => setView(({ year, month }) => {
+    const i = year * 12 + month + dir
+    return { year: Math.floor(i / 12), month: i % 12 }
+  })
+
   const activeItems = useMemo(
     () => recurringItems.filter((r) => r.activo && (!r.fechaFin || r.fechaFin >= today)),
     [recurringItems, today],
@@ -84,15 +97,18 @@ export default function GastosFijos() {
   // Month status: which fixed expenses already paid? (los traspasos entre cuentas no son pagos ni cobros;
   // los movimientos desglosados cuentan por partidas)
   const monthTx = useMemo(
-    () => expandSplits(transactions).filter((t) => {
+    () => forStats(transactions).filter((t) => {
       const d = new Date(t.fechaContable)
-      return d.getMonth() === currentMonth && d.getFullYear() === currentYear && !isTransferTx(t, transferCatIds)
+      return d.getMonth() === view.month && d.getFullYear() === view.year && !isTransferTx(t, transferCatIds)
     }),
-    [transactions, currentMonth, currentYear, transferCatIds],
+    [transactions, view, transferCatIds],
   )
 
   // Only items due this month
-  const dueThisMonth = useMemo(() => activeItems.filter((r) => isDueInMonth(r, currentMonth)), [activeItems, currentMonth])
+  const dueThisMonth = useMemo(
+    () => activeInMonth(recurringItems, view.year, view.month).filter((r) => isDueInMonth(r, view.month)),
+    [recurringItems, view],
+  )
 
   const fixedStatus = useMemo(() => fixedStatusForMonth(dueThisMonth, monthTx, ingresoCatIds), [dueThisMonth, monthTx, ingresoCatIds])
 
@@ -252,15 +268,30 @@ export default function GastosFijos() {
         </div>
       )}
 
-      {/* ── Status this month ── */}
-      {fixedStatus.length > 0 && (
+      {/* ── Estado del mes elegido ── */}
+      {activeItems.length > 0 && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-5">
-          <div className="flex items-baseline justify-between gap-2 mb-4">
-            <p className="text-sm font-semibold text-slate-700">Estado de {MONTH_LONG[currentMonth]}</p>
-            <p className="text-xs text-slate-400">
-              {fixedStatus.filter((r) => r.paid).length} de {fixedStatus.length} al día
-            </p>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-4">
+            <div className="flex items-center gap-1.5">
+              <button onClick={() => stepMonth(-1)} aria-label="Mes anterior"
+                className="w-8 h-8 rounded-full text-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200">‹</button>
+              <p className="text-sm font-semibold text-slate-700 min-w-[9.5rem] text-center">
+                Estado de {MONTH_LONG[view.month]}{view.year !== currentYear ? ` ${view.year}` : ''}
+              </p>
+              <button onClick={() => stepMonth(1)} aria-label="Mes siguiente"
+                className="w-8 h-8 rounded-full text-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200">›</button>
+              {!isCurrentView && (
+                <button onClick={() => setView({ year: currentYear, month: currentMonth })}
+                  className="ml-1 text-xs text-indigo-500 hover:text-indigo-700 font-medium">Mes actual</button>
+              )}
+            </div>
+            {fixedStatus.length > 0 && (
+              <p className="text-xs text-slate-400">
+                {fixedStatus.filter((r) => r.paid).length} de {fixedStatus.length} {view.year * 12 + view.month < currentYear * 12 + currentMonth ? 'pagados' : 'al día'}
+              </p>
+            )}
           </div>
+          {fixedStatus.length === 0 && <p className="text-sm text-slate-400">No había ningún gasto ni ingreso fijo previsto ese mes.</p>}
           <div className="grid lg:grid-cols-2 gap-5">
             {[true, false].map((isIncome) => {
               const list = fixedStatus.filter((r) => r.isIncome === isIncome)
@@ -277,7 +308,7 @@ export default function GastosFijos() {
 
       {/* ── Budgets by category ── */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 lg:p-5">
-        <p className="text-sm font-semibold text-slate-700 mb-1">Presupuestos por categoría</p>
+        <p className="text-sm font-semibold text-slate-700 mb-1">Presupuestos por categoría{!isCurrentView && ` · ${MONTH_LONG[view.month]}${view.year !== currentYear ? ` ${view.year}` : ''}`}</p>
         <p className="text-xs text-slate-400 mb-3">Límites de gasto mensual — los gastos fijos de cada categoría se muestran como referencia</p>
 
         {budgetProgress.length > 0 && (

@@ -46,6 +46,10 @@ const FAQ = [
     a: 'Sí: al final de la pantalla, pulsa «Ordenar tarjetas» y sube o baja cada una con las flechas. El orden se guarda en este dispositivo; «Restablecer» vuelve al orden original.',
   },
   {
+    q: 'Pago gastos que en parte son de otra persona (mi pareja, el piso, un viaje)',
+    a: `Ve a ${isMobile ? 'Más → Gastos compartidos' : 'Compartidos'} y pulsa «Compartir un gasto»: elige el movimiento y di qué parte es tuya (a medias, otro porcentaje, un importe o nada si todo es de la otra persona). ${isMobile ? 'Inicio' : 'El Dashboard'}, los presupuestos y los gastos fijos cuentan solo tu parte; el movimiento y el saldo de la cuenta no cambian. Cuando te devuelvan su parte (un Bizum, una transferencia), márcalo con «Marcar un reembolso» para que no cuente como ingreso. También se puede compartir una partida de un desglose. Quién debe a quién lo puedes seguir llevando en Splitwise o como lo hagáis; la sección te da una orientación por persona.`,
+  },
+  {
     q: '¿Puedo añadir una nota a un movimiento?',
     a: `Sí: ${isMobile ? 'en Registros, toca el movimiento y escribe en «Nota»' : 'pulsa el icono del bocadillo a la derecha del movimiento y escríbela'}, por ejemplo «Pago muebles» para una transferencia que en el banco solo dice «Transferencia a otras entidades». La nota se ve debajo de la descripción y también se busca con el buscador.`,
   },

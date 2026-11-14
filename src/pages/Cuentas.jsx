@@ -170,7 +170,10 @@ function DuplicatesSection({ groups, onDelete }) {
               <tr key={t.id} className={`${rowClass} cursor-pointer`} onClick={() => toggle(t.id)}>
                 <td className="px-4 py-2"><input type="checkbox" checked={selected.has(t.id)} onChange={() => toggle(t.id)} onClick={(e) => e.stopPropagation()} /></td>
                 <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{format(new Date(t.fechaContable), 'dd/MM/yyyy')}</td>
-                <td className="px-4 py-2 text-slate-700 max-w-xs truncate" title={t.descripcion}>{t.descripcion || '—'}</td>
+                <td className="px-4 py-2 text-slate-700 max-w-xs" title={t.descripcion}>
+                <p className="truncate">{t.descripcion || '—'}</p>
+                {t.notas && t.notas !== t.descripcion && <p className="text-xs italic text-slate-400 truncate" title={t.notas}>{t.notas}</p>}
+              </td>
                 <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${t.importe >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatEur(t.importe)}</td>
                 <td className="px-4 py-2 text-right text-slate-500 whitespace-nowrap">{t.saldo != null ? formatEur(t.saldo) : '—'}</td>
                 <td className="px-4 py-2 text-slate-500 max-w-xs truncate">
@@ -212,7 +215,10 @@ function IssuesTable({ rows, isAcknowledged, onAcknowledge, onUnacknowledge, onE
           {rows.map((t) => (
             <tr key={t.id} className={`${rowClass} ${isAcknowledged ? 'opacity-50' : ''}`}>
               <td className="px-4 py-2 text-slate-500 whitespace-nowrap">{format(new Date(t.fechaContable), 'dd/MM/yyyy')}</td>
-              <td className="px-4 py-2 text-slate-700 max-w-xs truncate" title={t.descripcion}>{t.descripcion || '—'}</td>
+              <td className="px-4 py-2 text-slate-700 max-w-xs" title={t.descripcion}>
+                <p className="truncate">{t.descripcion || '—'}</p>
+                {t.notas && t.notas !== t.descripcion && <p className="text-xs italic text-slate-400 truncate" title={t.notas}>{t.notas}</p>}
+              </td>
               <td className={`px-4 py-2 text-right whitespace-nowrap font-medium ${t.importe >= 0 ? 'text-green-600' : 'text-red-500'}`}>{formatEur(t.importe)}</td>
               <td className="px-4 py-2 text-right font-semibold text-slate-700 whitespace-nowrap">{formatEur(t.saldo)}</td>
               <td className="px-4 py-2 text-right text-slate-500 whitespace-nowrap">{formatEur(Math.round((t.saldo - t.importe) * 100) / 100)}</td>
