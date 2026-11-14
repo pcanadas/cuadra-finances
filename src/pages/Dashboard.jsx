@@ -102,19 +102,56 @@ function SummaryRow({ label, value, valueClass, children }) {
         <p className="text-sm text-slate-500">{label}</p>
         <p className={`text-lg font-bold tabular-nums ${valueClass}`}>{value}</p>
       </div>
-      {children && <div className="text-xs text-slate-500 text-right leading-tight">{children}</div>}
+      {children && <div className="text-xs text-slate-500 text-right leading-snug">{children}</div>}
     </div>
   )
 }
 
-/** «Al ritmo actual…»: extrapolación del gasto (ver insights/projection.js). */
-function ProjectionText({ p }) {
+/** Tasa de ahorro: ↗ en verde si ahorras, ↘ en rojo si gastas más de lo que ingresas. */
+function SavingsRate({ rate }) {
+  const up = rate >= 0
+  return (
+    <span className={`font-semibold ${up ? 'text-emerald-600' : 'text-rose-500'}`}>
+      {up ? '↗' : '↘'} Tasa de ahorro {rate} %
+    </span>
+  )
+}
+
+/**
+ * «Si sigues gastando…»: extrapolación del gasto (ver insights/projection.js), diciendo qué entra:
+ * el gasto variable al ritmo actual y lo que falta por cobrar y por pagar de los fijos.
+ */
+function ProjectionText({ p, detail = true }) {
   const deficit = p.savings < 0
+  const result = (
+    <>
+      {deficit ? ' un déficit de ' : ' un ahorro de '}
+      <strong className={`tabular-nums ${deficit ? 'text-rose-500' : 'text-emerald-600'}`}>{formatEur(Math.abs(p.savings))}</strong>
+      {p.noTaxes && ', sin impuestos'}.
+    </>
+  )
+  if (p.kind === 'año') {
+    return (
+      <>🔮 Si sigues ingresando y gastando como en lo que va de año ({formatEur(p.perDay)} al día de gasto), terminarás {p.until} con{result}</>
+    )
+  }
+  const pending = []
+  if (p.pendingIncome > 0.005) pending.push(<>cobras lo que falta de tus ingresos {p.incomeBasis === 'media' ? 'estimados' : 'fijos'} ({formatEur(p.pendingIncome)})</>)
+  if (p.pendingExpense > 0.005) pending.push(<>pagas los gastos fijos pendientes ({formatEur(p.pendingExpense)})</>)
   return (
     <>
-      🔮 Al ritmo actual ({formatEur(p.perDay)} al día{p.kind === 'mes' ? ' de gasto variable' : ' de gasto'}), terminarás {p.until} con
-      {deficit ? ' un déficit de ' : ' un ahorro de '}
-      <strong className={`tabular-nums ${deficit ? 'text-rose-500' : 'text-emerald-600'}`}>{formatEur(Math.abs(p.savings))}</strong>{p.noTaxes && ', sin impuestos'}.
+      🔮 Si sigues gastando {formatEur(p.perDay)} al día en gastos variables
+      {pending.map((x, i) => <span key={i}>{' y '}{x}</span>)}, terminarás {p.until} con{result}
+      {detail && (
+        <span className="block mt-1 text-[11px] text-slate-400 leading-relaxed">
+          Ingresado {formatEur(p.received)}
+          {p.pendingIncome > 0.005 && <> + por cobrar {formatEur(p.pendingIncome)}</>}
+          {' '}− gastado {formatEur(p.spent)}
+          {p.daysLeft > 0 && <> − {p.daysLeft} {p.daysLeft === 1 ? 'día' : 'días'} × {formatEur(p.perDay)}</>}
+          {p.pendingExpense > 0.005 && <> − fijos por pagar {formatEur(p.pendingExpense)}</>}
+          {' '}= {formatEur(p.savings)}
+        </span>
+      )}
     </>
   )
 }
@@ -665,7 +702,9 @@ export default function Dashboard() {
       const gastos   = flows.filter((t) => t.importe < 0 && !ingresoCatIds.has(t.categoria)).reduce((s, t) => s + Math.abs(t.importe), 0)
       const ingresos = flows.filter((t) => isIncomeTx(t, ingresoCatIds)).reduce((s, t) => s + t.importe, 0)
       const impuestos = -txYear.filter((t) => taxCatIds.has(t.categoria)).reduce((s, t) => s + t.importe, 0) // neto pagado
-      return { year, gastos, ingresos, impuestos, balance: ingresos - gastos }
+      // Gastos totales = gastos + impuestos pagados; una devolución de la renta suma al balance
+      const impuestosPagados = Math.max(0, impuestos)
+      return { year, gastos, ingresos, impuestos, impuestosPagados, gastosTotal: gastos + impuestosPagados, balance: ingresos - gastos - impuestos }
     })
   }, [availableYears, transactions, transferCatIds, ingresoCatIds, taxCatIds])
 
@@ -730,7 +769,18 @@ export default function Dashboard() {
     }).reduce((s, t) => s + Math.abs(t.importe), 0)
   }, [transactions, currentYear, currentMonth, transferCatIds, ingresoCatIds])
 
-  const variableSpentThisMonth = totalSpentThisMonth - fixedPaidTotal
+  // Impuestos pagados y devueltos (con «Separar impuestos» o sin él): en la predicción son pagos
+  // puntuales, nunca parte del ritmo diario (ver insights/projection.js)
+  const allTaxCatIds = useMemo(
+    () => new Set(categories.filter((c) => c.esImpuesto && !c.esTransferencia && !c.esIngreso).map((c) => c.id)),
+    [categories],
+  )
+  // Impuestos pagados en el mes de la previsión: no son gasto variable (son un pago puntual)
+  const forecastTaxPaid = useMemo(() => transactions.filter((t) => {
+    const d = new Date(t.fechaContable)
+    return d.getFullYear() === currentYear && d.getMonth() === currentMonth && t.importe < 0 && allTaxCatIds.has(t.categoria) && !isTransferTx(t, transferCatIds)
+  }).reduce((s, t) => s - t.importe, 0), [transactions, currentYear, currentMonth, allTaxCatIds, transferCatIds])
+  const variableSpentThisMonth = totalSpentThisMonth - fixedPaidTotal - forecastTaxPaid
 
   // Disponible para gastar hasta fin de mes (solo el mes en curso), descontando lo que falta por apartar
   const goals = useGoalResults()
@@ -738,23 +788,20 @@ export default function Dashboard() {
     () => (forecastWhen === 0 ? availableToSpend({ transactions, transferCatIds, ingresoCatIds, recurringItems, savings: goals.pendingThisMonth }) : null),
     [forecastWhen, transactions, transferCatIds, ingresoCatIds, recurringItems, goals],
   )
-  const availableEstimate = available ? available.total : fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
+  // Meses pasados: lo que de verdad entró y salió (el balance del resumen); futuros: según los fijos
+  const isPastForecast = forecastWhen < 0 && selectedMonth != null
+  const availableEstimate = available ? available.total
+    : isPastForecast ? balance
+    : fixedIncomeMonthly - fixedExpenseMonthly - variableSpentThisMonth
   const isCurrentMonthView = selectedMonth === today.getMonth() && selectedYear === today.getFullYear()
   const showAvailable = available && isCurrentMonthView
   const overBudgets = isCurrentMonthView ? budgetProgress.filter((b) => b.over) : []
   const activeGoals = isCurrentMonthView ? goals.results.filter((r) => r.current) : []
 
   // ── resumen: tasa de ahorro y predicción al ritmo actual (ver insights/projection.js) ──
-  // Con los impuestos incluidos: es dinero que sale igual
   const netWithTaxes = balance + periodTaxNet
-  const rate = savingsRate(totalIngresos + Math.max(0, periodTaxNet), netWithTaxes)
+  const rate = savingsRate(totalIngresos, balance) // sobre el balance que se ve (sin impuestos si se separan)
   const isCurrentYearView = selectedMonth == null && selectedYear === today.getFullYear()
-  // Impuestos pagados y devueltos (con «Separar impuestos» o sin él): en la predicción son pagos
-  // puntuales, nunca parte del ritmo diario (ver insights/projection.js)
-  const allTaxCatIds = useMemo(
-    () => new Set(categories.filter((c) => c.esImpuesto && !c.esTransferencia && !c.esIngreso).map((c) => c.id)),
-    [categories],
-  )
   const taxesOf = (list) => list.reduce((acc, t) => {
     if (!allTaxCatIds.has(t.categoria)) return acc
     if (t.importe < 0) acc.paid -= t.importe
@@ -777,7 +824,14 @@ export default function Dashboard() {
         day: today.getDate(),
         daysInMonth: new Date(selectedYear, selectedMonth + 1, 0).getDate(),
       })
-      return p && { ...p, kind: 'mes', until: MONTH_LONG[selectedMonth], noTaxes: separated }
+      return p && {
+        ...p, kind: 'mes', until: MONTH_LONG[selectedMonth], noTaxes: separated,
+        received: available.income.received - (separated ? tax.refund : 0),
+        pendingIncome: Math.max(0, available.income.expected - available.income.received),
+        incomeBasis: available.income.basis,
+        spent: available.spent - (separated ? tax.paid : 0),
+        pendingExpense: available.pendingFixed,
+      }
     }
     if (isCurrentYearView) {
       const day = Math.floor((today - new Date(selectedYear, 0, 1)) / 86400000) + 1
@@ -822,13 +876,18 @@ export default function Dashboard() {
         const a = showAvailable ? available : null
         const total = a ? a.total : availableEstimate
         const over = total < 0
-        const label = a ? (over ? 'Te has pasado este mes' : 'Disponible para gastar') : forecastWhen < 0 ? 'Sobrante del mes' : 'Disponible estimado'
+        const label = a ? (over ? 'Te has pasado este mes' : 'Disponible para gastar') : forecastWhen < 0 ? 'Resultado del mes' : 'Disponible estimado'
         return (
           <div className="mt-3">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4">
               <p className="text-sm text-slate-600">💶 {label}</p>
-              <p className={`text-xl lg:text-2xl font-bold tabular-nums ${over ? 'text-rose-500' : 'text-violet-600'}`}>{formatEur(a ? Math.abs(total) : total)}</p>
+              <p className={`text-xl lg:text-2xl font-bold tabular-nums ${over ? 'text-rose-500' : isPastForecast && !a ? 'text-emerald-600' : 'text-violet-600'}`}>{formatEur(a ? Math.abs(total) : total)}</p>
             </div>
+            {!a && isPastForecast && (
+              <p className="text-[11px] text-slate-400 mt-0.5 leading-relaxed">
+                Ingresos reales {formatEur(totalIngresos)} − gastos reales {formatEur(totalGastos)}{showTaxes ? ', sin impuestos' : ''}
+              </p>
+            )}
             {a && (
               <>
                 <p className="text-xs text-slate-500 lg:text-right">
@@ -880,7 +939,7 @@ export default function Dashboard() {
           {forecastWhen <= 0 && (
             <ForecastItem title="Gastos variables" titleClass="text-amber-600"
               value={<span className="font-bold text-amber-600 tabular-nums">{formatEur(variableSpentThisMonth)}</span>}>
-              <p className="hidden lg:block text-[11px] text-slate-500 mt-1">Lo gastado aparte de los fijos</p>
+              <p className="hidden lg:block text-[11px] text-slate-500 mt-1">Lo gastado aparte de los fijos{forecastTaxPaid > 0 ? ' y los impuestos' : ''}</p>
             </ForecastItem>
           )}
         </div>
@@ -944,9 +1003,10 @@ export default function Dashboard() {
             <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} scale={logScale ? 'sqrt' : 'auto'} domain={logScale ? [0, 'auto'] : [0, 'auto']} />
             <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
             <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
-            <Bar dataKey="gastos"   name="Gastos"   fill={BAR.gastos} radius={[4, 4, 0, 0]} />
+            {/* Con «Separar impuestos», los impuestos van encima de los gastos, en otro color */}
+            <Bar dataKey="gastos"   name="Gastos"   stackId="gastos" fill={BAR.gastos} radius={taxTx.length > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
+            {taxTx.length > 0 && <Bar dataKey="impuestos" name="Impuestos" stackId="gastos" fill={BAR.impuestos} radius={[4, 4, 0, 0]} />}
             <Bar dataKey="ingresos" name="Ingresos" fill={BAR.ingresos} radius={[4, 4, 0, 0]} />
-            {taxTx.length > 0 && <Bar dataKey="impuestos" name="Impuestos" fill={BAR.impuestos} radius={[4, 4, 0, 0]} />}
           </BarChart>
         </ResponsiveContainer>
         </div>
@@ -1107,7 +1167,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between mb-0.5">
             <p className="text-slate-600 font-semibold text-sm uppercase tracking-wider">📅 Comparativa anual</p>
           </div>
-          <p className="text-slate-400 text-xs mb-5">Evolución de gastos, ingresos y balance por año</p>
+          <p className="text-slate-400 text-xs mb-5">Evolución de gastos, ingresos y balance por año{taxCatIds.size > 0 ? ' · los gastos incluyen los impuestos, en amarillo' : ''}</p>
 
           {/* Bar chart */}
           <div>
@@ -1118,9 +1178,9 @@ export default function Dashboard() {
               <YAxis width={44} tick={{ fontSize: 11, fill: dark ? '#5a90a8' : '#94a3b8' }} tickFormatter={formatYAxis} axisLine={false} tickLine={false} />
               <Tooltip content={<CustomBarTooltip />} cursor={{ fill: dark ? '#404040' : '#f8fafc' }} />
               <Legend formatter={(value) => <span className="text-xs text-slate-600 capitalize">{value}</span>} iconType="circle" iconSize={8} />
-              <Bar dataKey="gastos"   name="Gastos"   fill={BAR.gastos} radius={[4, 4, 0, 0]} />
+              <Bar dataKey="gastos"   name="Gastos"   stackId="gastos" fill={BAR.gastos} radius={taxCatIds.size > 0 ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
+              {taxCatIds.size > 0 && <Bar dataKey="impuestosPagados" name="Impuestos" stackId="gastos" fill={BAR.impuestos} radius={[4, 4, 0, 0]} />}
               <Bar dataKey="ingresos" name="Ingresos" fill={BAR.ingresos} radius={[4, 4, 0, 0]} />
-              {taxCatIds.size > 0 && <Bar dataKey="impuestos" name="Impuestos" fill={BAR.impuestos} radius={[4, 4, 0, 0]} />}
             </BarChart>
           </ResponsiveContainer>
           </div>
@@ -1135,14 +1195,13 @@ export default function Dashboard() {
                   <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">vs anterior</th>
                   <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Ingresos</th>
                   <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">vs anterior</th>
-                  {taxCatIds.size > 0 && <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Impuestos</th>}
                   <th className="text-right pb-2 text-slate-400 font-semibold uppercase tracking-wider px-2 whitespace-nowrap">Balance</th>
                 </tr>
               </thead>
               <tbody>
                 {yearlyComparison.slice().reverse().map((row, i, arr) => {
                   const prev = arr[i + 1]
-                  const gastoDiff   = prev && prev.gastos   > 0 ? ((row.gastos   - prev.gastos)   / prev.gastos)   * 100 : null
+                  const gastoDiff   = prev && prev.gastosTotal > 0 ? ((row.gastosTotal - prev.gastosTotal) / prev.gastosTotal) * 100 : null
                   const ingresoDiff = prev && prev.ingresos > 0 ? ((row.ingresos - prev.ingresos) / prev.ingresos) * 100 : null
                   const Diff = ({ val, positiveIsGood = false }) => {
                     if (val === null) return <span className="text-slate-300">—</span>
@@ -1157,16 +1216,14 @@ export default function Dashboard() {
                   return (
                     <tr key={row.year} className={`border-b border-slate-50 last:border-b-0 ${row.year === selectedYear ? 'bg-indigo-50' : 'hover:bg-slate-50'} transition-colors`}>
                       <td className={`py-2 pr-2 font-semibold ${row.year === selectedYear ? 'text-indigo-700' : 'text-slate-700'}`}>{row.year}</td>
-                      <td className="py-2 px-2 text-right text-rose-500 font-medium whitespace-nowrap">{formatEur(row.gastos)}</td>
+                      <td className="py-2 px-2 text-right font-medium whitespace-nowrap">
+                        <span className="text-rose-500">{formatEur(row.gastosTotal)}</span>
+                        {taxCatIds.size > 0 && row.impuestos > 0.005 && <span className="block text-[10px] text-amber-600">de ellos impuestos {formatEur(row.impuestos)}</span>}
+                        {taxCatIds.size > 0 && row.impuestos < -0.005 && <span className="block text-[10px] text-emerald-600">devolución de impuestos +{formatEur(-row.impuestos)}</span>}
+                      </td>
                       <td className="py-2 text-right"><Diff val={gastoDiff} positiveIsGood={false} /></td>
                       <td className="py-2 px-2 text-right text-emerald-600 font-medium whitespace-nowrap">{formatEur(row.ingresos)}</td>
                       <td className="py-2 text-right"><Diff val={ingresoDiff} positiveIsGood={true} /></td>
-                      {taxCatIds.size > 0 && (
-                        <td className={`py-2 px-2 text-right font-medium whitespace-nowrap ${row.impuestos < 0 ? 'text-emerald-600' : 'text-amber-600'}`}
-                          title={row.impuestos < 0 ? 'Devuelto' : 'Pagado'}>
-                          {Math.abs(row.impuestos) < 0.005 ? '—' : row.impuestos < 0 ? `+${formatEur(-row.impuestos)}` : formatEur(row.impuestos)}
-                        </td>
-                      )}
                       <td className={`py-2 px-2 text-right font-bold whitespace-nowrap ${row.balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(row.balance)}</td>
                     </tr>
                   )
@@ -1296,7 +1353,7 @@ export default function Dashboard() {
     <div className="dashboard-bg space-y-4 lg:space-y-6 lg:p-1">
 
       {/* ── 1. Gradient header ── */}
-      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 rounded-2xl p-3 lg:p-6">
+      <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200/70 shadow-sm rounded-2xl p-3 lg:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-3 lg:mb-5">
           <div className="hidden lg:block">
             <h1 className="text-2xl font-bold text-slate-700">Dashboard</h1>
@@ -1318,9 +1375,8 @@ export default function Dashboard() {
           </SummaryRow>
           <div className="border-t border-slate-100" />
           <SummaryRow label="Balance" value={formatEur(balance)} valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'}>
-            {showTaxes && <>Con impuestos: <span className={`font-semibold tabular-nums ${netWithTaxes >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(netWithTaxes)}</span></>}
-            {showTaxes && rate != null && ' · '}
-            {rate != null && <>Tasa de ahorro <span className="font-semibold text-slate-700">{rate} %</span></>}
+            {showTaxes && <p>Con impuestos: <span className={`font-semibold tabular-nums ${netWithTaxes >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(netWithTaxes)}</span></p>}
+            {rate != null && <p className="mt-0.5"><SavingsRate rate={rate} /></p>}
           </SummaryRow>
           {selectedMonth == null
             ? <SummaryRow label="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} valueClass="text-amber-600">{mesMaxGasto && formatEur(mesMaxGasto.importe)}</SummaryRow>
@@ -1335,15 +1391,18 @@ export default function Dashboard() {
               ? <span className="text-slate-500">+ Impuestos <span className="font-semibold text-amber-600 tabular-nums">{formatEur(-periodTaxNet)}</span></span>
               : <span className="text-slate-500">Devolución de impuestos <span className="font-semibold text-emerald-600 tabular-nums">+{formatEur(periodTaxNet)}</span></span>)} />
           <SummaryCard title="Ingresos" value={formatEur(totalIngresos)} subtitle={`${periodIngresosTx.length} movimientos`} subtitleClass="hidden lg:block" valueClass="text-emerald-600" cardClass="bg-emerald-500/10" borderClass="border-emerald-500/20" />
-          <SummaryCard title="Balance" value={formatEur(balance)} subtitle={`${showTaxes ? 'Ingresos − Gastos, sin impuestos' : 'Ingresos − Gastos'}${rate != null ? ` · Tasa de ahorro ${rate} %` : ''}`} subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20"
-            note={showTaxes && (
-              <span className="text-slate-500">Con impuestos: <span className={`font-semibold tabular-nums ${balance + periodTaxNet >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(netWithTaxes)}</span></span>
+          <SummaryCard title="Balance" value={formatEur(balance)} subtitle={showTaxes ? 'Ingresos − Gastos, sin impuestos' : 'Ingresos − Gastos'} subtitleClass="hidden lg:block" valueClass={balance >= 0 ? 'text-emerald-600' : 'text-rose-500'} cardClass="bg-violet-500/10" borderClass="border-violet-500/20"
+            note={(showTaxes || rate != null) && (
+              <>
+                {showTaxes && <p className="text-slate-500">Con impuestos: <span className={`font-semibold tabular-nums ${netWithTaxes >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{formatEur(netWithTaxes)}</span></p>}
+                {rate != null && <p className="mt-0.5"><SavingsRate rate={rate} /></p>}
+              </>
             )} />
           {selectedMonth == null
             ? <SummaryCard title="Mes con más gasto" value={mesMaxGasto ? mesMaxGasto.nombre : '—'} subtitle={mesMaxGasto ? formatEur(mesMaxGasto.importe) : 'Sin datos'} valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />
             : <SummaryCard title="Gasto diario" value={formatEur(gastoDiario)} subtitle={showTaxes ? 'Media por día, sin impuestos' : 'Media por día'} subtitleClass="hidden lg:block" valueClass="text-amber-600" cardClass="bg-amber-500/10" borderClass="border-amber-500/20" />}
         </div>
-        {projection && <p className="hidden lg:block mt-3 text-sm text-slate-600"><ProjectionText p={projection} /></p>}
+        {projection && <p className="hidden lg:block mt-3 text-sm text-slate-600 leading-snug"><ProjectionText p={projection} /></p>}
       </div>
 
       {overBudgets.length > 0 && <BudgetAlert over={overBudgets} />}

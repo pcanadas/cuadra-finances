@@ -94,6 +94,7 @@ html.dark input::placeholder { color: #737373; }
 /* Gradient header */
 html.dark .from-violet-50 { --tw-gradient-from: #171717 !important; }
 html.dark .to-indigo-50   { --tw-gradient-to:   #262626 !important; }
+html.dark .border-violet-200\/70 { border-color: #3a3448 !important; }
 
 /* Pastel card tints */
 html.dark .bg-rose-50    { background-color: #2a1515 !important; }

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.11.2] — 2026-11-14
+
+### Cambiado
+- **Tasa de ahorro en su propia línea** — bajo el balance, con una flecha ↗ en verde si ahorras o ↘ en rojo si gastas más de lo que ingresas. Se calcula sobre el balance que se ve (sin impuestos si se separan)
+- **La predicción dice qué cuenta** — «Si sigues gastando 246,18 € al día en gastos variables y cobras lo que falta de tus ingresos fijos (7000,00 €), terminarás noviembre con un déficit de…». Debajo, la cuenta completa: ingresado + por cobrar − gastado − días que quedan × gasto variable al día − fijos por pagar
+- **Impuestos dentro de los gastos en los gráficos** — con «Separar impuestos», la comparativa anual ya no tiene columna de impuestos: la columna de gastos los incluye y debajo indica cuántos son impuestos (o la devolución); en el gráfico, y también en la evolución mensual, los impuestos van apilados encima de la barra de gastos, en amarillo. El balance de la comparativa los descuenta
+- **Cabecera del Dashboard** — con borde y sombra: el degradado se confundía con el fondo por la izquierda y el bloque parecía descuadrado
+
+### Corregido
+- **El cierre de un mes pasado no era real** — «Sobrante del mes» se calculaba con los ingresos fijos previstos; ahora es «Resultado del mes», con lo que de verdad se ingresó y se gastó
+- **Gastos variables de la previsión** — ya no incluyen los impuestos (son un pago puntual, como en la predicción)
+
 ## [0.11.1] — 2026-11-14
 
 ### Corregido

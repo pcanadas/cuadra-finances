@@ -9,12 +9,12 @@ Cada versión incluye las **notas para Google Play** («Novedades», máximo 500
 
 ## [1.4.0] — 2026-11-14
 
-versionCode 1004000. Recoge lo de escritorio 0.11.0.
+versionCode 1004000. Recoge lo de escritorio 0.11.0–0.11.2.
 
 ### Añadido
 - **Resumen de Inicio en una tarjeta** — ingresos, gastos, balance y gasto diario (o el mes con más gasto en la vista anual) uno debajo de otro, en vez de cuatro KPI en cuadrícula
-- **Tasa de ahorro** — bajo el balance, el porcentaje de los ingresos que no has gastado
-- **«Al ritmo actual…»** — al final del resumen: cuánto ahorrarás (o el déficit) al terminar el mes o el año si sigues gastando al mismo ritmo (`src/insights/projection.js`)
+- **Tasa de ahorro** — bajo el balance, el porcentaje de los ingresos que no has gastado, con ↗ en verde o ↘ en rojo
+- **Predicción** — al final del resumen: cuánto ahorrarás (o el déficit) al terminar el mes o el año si sigues gastando al mismo ritmo y se cobran y pagan los fijos pendientes, con la cuenta debajo (`src/insights/projection.js`)
 - **Ordenar las tarjetas de Inicio** — «↕ Ordenar tarjetas» al final de Inicio; se guarda en el móvil
 
 ### Cambiado
@@ -26,6 +26,9 @@ versionCode 1004000. Recoge lo de escritorio 0.11.0.
 
 ### Corregido
 - **Subcategorías no mostraba las partidas de los movimientos desglosados**
+- **Predicción con impuestos** — un pago de impuestos (la renta) no se reparte entre los días del mes: cuenta una sola vez; con «Separar impuestos» activado queda fuera, como en el resto del resumen
+- **Cierre de un mes pasado** — con los ingresos y gastos reales, no con los fijos previstos
+- **Impuestos en los gráficos** — con «Separar impuestos», dentro de la barra y la columna de gastos, en otro color
 
 ### Notas para Google Play («Novedades»)
 ```

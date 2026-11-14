@@ -1,11 +1,11 @@
 {
-  "version": "0.11.1",
-  "notes": "Corregido: la predicción «al ritmo actual» ya no reparte un pago de impuestos (la renta) entre los días del mes; y en modo oscuro, los recuadros de la previsión del mes ya no salen claros.",
-  "pub_date": "2026-11-14T12:00:00Z",
+  "version": "0.11.2",
+  "notes": "Tasa de ahorro con flecha bajo el balance; la predicción explica qué cuenta (gasto variable y fijos pendientes) y muestra el cálculo; el cierre de un mes pasado usa los ingresos y gastos reales; con impuestos separados, los gráficos los muestran dentro de los gastos, en otro color.",
+  "pub_date": "2026-11-14T15:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQUw1cWZabDkwQmlHM1RnNlJ2TW94L24rcXppYzZFSmhhVlFaS3dkaHZvcU80T0x3WlJaYlF3bHZLbldFYkp0bnpyRjFmdlVZa25xd0tJTldZd2czTlFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjQ2NzU4CWZpbGU6WmVuaXRfMC4xMS4xX3g2NC1zZXR1cC5leGUKZkp4Tzd6TitYeS8wK0FDQ3JuTStETkJDN2VqMkx2NjlQdzkySTBXdndWT3NGOGhIUHMxMVZzK1FCdjR4ZEh4MnhFSTYxWDRYY0ZoaXA4aG1xVnN4QVE9PQo=",
-      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.11.1/Zenit_0.11.1_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVRY3ExM1I1Q1NzQVB5SVgyalVqWWg0WE9FVDlVb0pKaUZURmNiL21IVmt1R0tuSGgrRUxJYnBWWWl0ZFdISU9JUk9oTGp2NFl6Yzg4V01MU1BTbGdHczNPTHFVTlFTdEE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk0NjQ5NTY3CWZpbGU6WmVuaXRfMC4xMS4yX3g2NC1zZXR1cC5leGUKSmRKUnNWeVMvbEVUaFdITmpWaXF1b3V1aHhDQ3RiZHl3aTd6V2hxOU0rK0xGUXAyU1h4Y0dabVQxVkZsWFo0NjZsRUwyNEk0aW1vV0NWQ00zUGxTRFE9PQo=",
+      "url": "https://github.com/pcanadas/cuadra-finances/releases/download/v0.11.2/Zenit_0.11.2_x64-setup.exe"
     }
   }
 }
